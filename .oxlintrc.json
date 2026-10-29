@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "oxc", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-implied-eval": "error",
+    "react/react-in-jsx-scope": "off",
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expectNodalError"]
+      }
+    ]
+  },
+  "ignorePatterns": [".vite/**", "out/**", "node_modules/**"]
+}
