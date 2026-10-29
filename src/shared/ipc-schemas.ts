@@ -10,7 +10,9 @@ import {
   CONTENT_TYPES,
   DESCRIPTION_MAX_LENGTH,
   DOCUMENT_BODY_MAX_LENGTH,
+  EDGE_LABEL_MAX_LENGTH,
   NODE_TYPES,
+  RELATION_TYPE_NAME_MAX_LENGTH,
   SUMMARY_MAX_LENGTH,
   TAG_NAME_MAX_LENGTH,
   TITLE_MAX_LENGTH,
@@ -154,6 +156,62 @@ export const updateTagInputSchema = z.strictObject({
   color: colorSchema.optional(),
 });
 
+export const relationTypeNameSchema = label(
+  'Le nom du type de relation',
+  RELATION_TYPE_NAME_MAX_LENGTH,
+);
+export const createRelationTypeInputSchema = z.strictObject({
+  name: relationTypeNameSchema,
+  color: colorSchema.optional(),
+});
+export const updateRelationTypeInputSchema = z.strictObject({
+  id: idSchema,
+  name: relationTypeNameSchema.optional(),
+  color: colorSchema.optional(),
+});
+
+/** Libellé facultatif d'une relation : vide → null. */
+const edgeLabelSchema = z
+  .string()
+  .trim()
+  .max(
+    EDGE_LABEL_MAX_LENGTH,
+    `Le libellé ne doit pas dépasser ${EDGE_LABEL_MAX_LENGTH} caractères.`,
+  )
+  .refine((value) => !CONTROL_CHARS.test(value), {
+    message: 'Le libellé contient des caractères non autorisés.',
+  })
+  .transform((value) => (value.length === 0 ? null : value))
+  .nullable();
+
+export const createEdgeInputSchema = z.strictObject({
+  sourceId: idSchema,
+  targetId: idSchema,
+  relationTypeId: idSchema,
+  label: edgeLabelSchema.optional(),
+  description: optionalText(
+    'La description',
+    DESCRIPTION_MAX_LENGTH,
+  ).optional(),
+});
+export const updateEdgeInputSchema = z.strictObject({
+  id: idSchema,
+  relationTypeId: idSchema.optional(),
+  label: edgeLabelSchema.optional(),
+  description: optionalText(
+    'La description',
+    DESCRIPTION_MAX_LENGTH,
+  ).optional(),
+});
+
+/** Coordonnées d'affichage : nombres finis, bornés pour rester raisonnables. */
+const coordinate = z.number().finite().min(-1e7).max(1e7);
+export const savePositionsInputSchema = z.strictObject({
+  positions: z
+    .array(z.strictObject({ id: idSchema, x: coordinate, y: coordinate }))
+    .max(100_000),
+});
+
 const noArgs = z.tuple([]);
 const one = <T extends z.ZodType>(schema: T) => z.tuple([schema]);
 
@@ -197,4 +255,17 @@ export const ipcArgsSchemas = {
   'attachment:add': one(z.strictObject({ nodeId: idSchema })),
   'attachment:save': one(idInput),
   'attachment:delete': one(idInput),
+
+  'relationType:list': noArgs,
+  'relationType:create': one(createRelationTypeInputSchema),
+  'relationType:update': one(updateRelationTypeInputSchema),
+  'relationType:delete': one(idInput),
+
+  'edge:listForNode': one(idInput),
+  'edge:create': one(createEdgeInputSchema),
+  'edge:update': one(updateEdgeInputSchema),
+  'edge:delete': one(idInput),
+
+  'graph:get': noArgs,
+  'graph:savePositions': one(savePositionsInputSchema),
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

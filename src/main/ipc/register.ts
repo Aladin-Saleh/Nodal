@@ -11,7 +11,10 @@ import type { FileDialogs } from '../file-dialogs';
 import { AttachmentService } from '../knowledge/attachment-service';
 import type { ContextProvider } from '../knowledge/context';
 import { DocumentService } from '../knowledge/document-service';
+import { EdgeService } from '../knowledge/edge-service';
+import { GraphService } from '../knowledge/graph-service';
 import { NodeService } from '../knowledge/node-service';
+import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SettingsService } from '../knowledge/settings-service';
 import { TagService } from '../knowledge/tag-service';
 import {
@@ -46,6 +49,9 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const tags = new TagService(context);
   const attachments = new AttachmentService(context);
   const settings = new SettingsService(context);
+  const relationTypes = new RelationTypeService(context);
+  const edges = new EdgeService(context);
+  const graph = new GraphService(context);
 
   const remember = (info: WorkspaceInfo) => {
     recent.touch(info.filePath, info.name);
@@ -173,6 +179,28 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
     'attachment:delete': ({ id }) => {
       attachments.delete(id);
+      return null;
+    },
+
+    'relationType:list': () => relationTypes.list(),
+    'relationType:create': (input) => relationTypes.create(input),
+    'relationType:update': (input) => relationTypes.update(input),
+    'relationType:delete': ({ id }) => {
+      relationTypes.delete(id);
+      return null;
+    },
+
+    'edge:listForNode': ({ id }) => edges.listForNode(id),
+    'edge:create': (input) => edges.create(input),
+    'edge:update': (input) => edges.update(input),
+    'edge:delete': ({ id }) => {
+      edges.delete(id);
+      return null;
+    },
+
+    'graph:get': () => graph.get(),
+    'graph:savePositions': ({ positions }) => {
+      graph.savePositions(positions);
       return null;
     },
   };

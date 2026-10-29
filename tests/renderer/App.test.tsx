@@ -54,6 +54,21 @@ function fakeClient(overrides: Handlers = {}) {
     'workspace:create': () => workspace,
     'workspace:close': () => null,
     'node:list': () => [...nodes],
+    'graph:get': () => ({
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        parentId: node.parentId,
+        title: node.title,
+        nodeType: node.nodeType,
+        color: node.color,
+        x: null,
+        y: null,
+        tagIds: [],
+      })),
+      edges: [],
+      relationTypes: [],
+    }),
+    'edge:listForNode': () => [],
     'tag:list': () => [],
     'node:create': ({ parentId, title, nodeType }) => {
       const node: NodeSummary = {

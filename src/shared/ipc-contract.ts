@@ -11,10 +11,15 @@ import type {
   AttachmentInfo,
   ChildrenStrategy,
   DocumentInfo,
+  EdgeInfo,
+  GraphData,
   NodeDeletionImpact,
   NodeDetail,
+  NodePosition,
+  NodeRelation,
   NodeSummary,
   RecentWorkspace,
+  RelationTypeInfo,
   TagInfo,
   WorkspaceSettings,
 } from './model';
@@ -106,6 +111,31 @@ export interface UpdateTagInput {
 export interface AddAttachmentsInput {
   nodeId: string;
 }
+export interface CreateRelationTypeInput {
+  name: string;
+  color?: string | null;
+}
+export interface UpdateRelationTypeInput {
+  id: string;
+  name?: string;
+  color?: string | null;
+}
+export interface CreateEdgeInput {
+  sourceId: string;
+  targetId: string;
+  relationTypeId: string;
+  label?: string | null;
+  description?: string | null;
+}
+export interface UpdateEdgeInput {
+  id: string;
+  relationTypeId?: string;
+  label?: string | null;
+  description?: string | null;
+}
+export interface SavePositionsInput {
+  positions: NodePosition[];
+}
 
 /** Arguments et résultat de chaque canal (renderer → main). */
 export interface IpcContract {
@@ -163,6 +193,26 @@ export interface IpcContract {
   /** Enregistre une copie sur le disque ; `false` si annulé. */
   'attachment:save': { args: [IdInput]; result: boolean };
   'attachment:delete': { args: [IdInput]; result: null };
+
+  'relationType:list': { args: []; result: RelationTypeInfo[] };
+  'relationType:create': {
+    args: [CreateRelationTypeInput];
+    result: RelationTypeInfo;
+  };
+  'relationType:update': {
+    args: [UpdateRelationTypeInput];
+    result: RelationTypeInfo;
+  };
+  /** Refusé si des relations utilisent encore ce type. */
+  'relationType:delete': { args: [IdInput]; result: null };
+
+  'edge:listForNode': { args: [IdInput]; result: NodeRelation[] };
+  'edge:create': { args: [CreateEdgeInput]; result: EdgeInfo };
+  'edge:update': { args: [UpdateEdgeInput]; result: EdgeInfo };
+  'edge:delete': { args: [IdInput]; result: null };
+
+  'graph:get': { args: []; result: GraphData };
+  'graph:savePositions': { args: [SavePositionsInput]; result: null };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -205,6 +255,16 @@ export const IPC_CHANNELS = [
   'attachment:add',
   'attachment:save',
   'attachment:delete',
+  'relationType:list',
+  'relationType:create',
+  'relationType:update',
+  'relationType:delete',
+  'edge:listForNode',
+  'edge:create',
+  'edge:update',
+  'edge:delete',
+  'graph:get',
+  'graph:savePositions',
 ] as const satisfies readonly IpcChannel[];
 
 /** Événements main → renderer. */

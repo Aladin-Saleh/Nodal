@@ -26,8 +26,20 @@ pièces jointes en BLOB).
   - état d'enregistrement dans la barre d'état, enregistrement forcé à la
     fermeture de la fenêtre.
 
-Graphe (lot 3), éditeurs riches et rendu Markdown / Mermaid (lot 4), recherche
-et export (lot 5) restent à faire.
+- **Lot 3 — Graphe** :
+  - vue Graphe (Cytoscape.js) à côté de la vue Documents : forme et couleur
+    par type de nœud, relations fléchées et libellées, hiérarchie en
+    pointillés, zoom, recentrage, déplacement des nœuds (positions
+    enregistrées), disposition automatique ;
+  - portée « tout l'espace » ou « voisinage » du nœud sélectionné sur 1 à 5
+    niveaux, filtres par type de nœud, tag et type de relation ;
+  - relations : création depuis le graphe (« Relier… » puis clic sur la
+    cible) ou depuis le panneau de droite, modification, suppression ;
+  - types de relations par espace : ajout, renommage, couleur, suppression
+    (refusée tant qu'ils sont utilisés).
+
+Éditeurs riches et rendu Markdown / Mermaid (lot 4), recherche et export
+(lot 5) restent à faire.
 
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `F2` renommer, `Suppr` supprimer, flèches
@@ -36,7 +48,7 @@ pour parcourir l'arborescence.
 ## Stack
 
 - Electron 45 + Electron Forge 8 (Vite 8), makers Squirrel (installateur) et ZIP
-- React 19 + TypeScript 6 (strict)
+- React 19 + TypeScript 6 (strict), Cytoscape.js pour le graphe
 - SQLite via le module intégré **`node:sqlite`** (`DatabaseSync`)
 - zod pour la validation des messages IPC
 - Vitest + Testing Library, oxlint + oxfmt
@@ -63,7 +75,7 @@ src/
   shared/      contrat IPC typé, schémas zod, modèle et constantes du domaine
   renderer/
     app/       racine, contexte (client, suivi d'enregistrement), barre d'état
-    features/  workspace, nodes, documents, tags, attachments
+    features/  workspace, nodes, documents, tags, attachments, graph, relations
     components/ modale, confirmation
 tests/         tests Vitest (base, services, IPC, renderer)
 ```

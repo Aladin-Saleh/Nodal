@@ -1,0 +1,230 @@
+/* Vue graphe et relations (lot 3). */
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.segmented button {
+  align-self: stretch;
+  padding: 5px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 0;
+}
+
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+
+.segmented button[aria-pressed='true'] {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+.top-bar .segmented {
+  margin-left: auto;
+}
+
+.content-pane.graph-mode {
+  padding: 0;
+  overflow: hidden;
+}
+
+.graph-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.graph-toolbar button {
+  padding: 4px 10px;
+}
+
+.graph-toolbar .checkbox {
+  font-weight: normal;
+}
+
+.inline-label {
+  font-weight: normal;
+  color: var(--muted);
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.filters {
+  position: relative;
+}
+
+.filters summary {
+  padding: 4px 10px;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  list-style: none;
+}
+
+.filters summary::-webkit-details-marker {
+  display: none;
+}
+
+.filters-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 260px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.filters-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.filters-panel legend {
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.filters-panel p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.graph-hint {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--selected);
+}
+
+.graph-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.graph-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.graph-legend {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.graph-legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.graph-count {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  margin: 0;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+/* Relations dans le panneau de propriétés */
+
+.relations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relation-group h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.relation-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.relation-type {
+  flex: none;
+  padding: 1px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.relation-target {
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--accent);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sans nœud sélectionné, la zone centrale prend la place du panneau droit. */
+.panes.no-properties {
+  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+}

@@ -3,8 +3,10 @@ import type { NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
   ChildrenStrategy,
+  GraphData,
   NodeDeletionImpact,
   NodeDetail,
+  NodePosition,
   NodeSummary,
   TagInfo,
 } from '../../../shared/model';
@@ -15,6 +17,7 @@ import {
   useSaveTracker,
 } from '../../app/context';
 import { DocumentsPanel } from '../documents/DocumentsPanel';
+import { GraphPanel } from '../graph/GraphPanel';
 import {
   DeleteNodeDialog,
   DuplicateNodeDialog,
@@ -25,6 +28,7 @@ import { NodeHeader } from '../nodes/NodeHeader';
 import { NodeProperties } from '../nodes/NodeProperties';
 import { NodeTree } from '../nodes/NodeTree';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
+import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
 
@@ -34,7 +38,30 @@ type DialogState =
   | { kind: 'duplicate'; node: NodeSummary }
   | { kind: 'delete'; node: NodeSummary; impact: NodeDeletionImpact }
   | { kind: 'tags' }
+  | { kind: 'relationTypes' }
   | { kind: 'settings' };
+
+type ViewMode = 'documents' | 'graph';
+const VIEW_STORAGE_KEY = 'nodal.view';
+
+/** Vue mémorisée par poste : simple confort, absente en navigation privée. */
+function readStoredView(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_STORAGE_KEY) === 'graph'
+      ? 'graph'
+      : 'documents';
+  } catch {
+    return 'documents';
+  }
+}
+
+function storeView(view: ViewMode): void {
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, view);
+  } catch {
+    // Stockage indisponible : la vue par défaut sera utilisée.
+  }
+}
 
 export interface WorkspaceScreenProps {
   workspace: WorkspaceInfo;
@@ -44,8 +71,8 @@ export interface WorkspaceScreenProps {
 }
 
 /**
- * Espace ouvert (§7) : arborescence à gauche, documents au centre,
- * propriétés à droite.
+ * Espace ouvert (§7) : arborescence à gauche, documents ou graphe au centre,
+ * propriétés et relations à droite.
  */
 export function WorkspaceScreen({
   workspace,
@@ -64,13 +91,29 @@ export function WorkspaceScreen({
   const [detail, setDetail] = useState<NodeDetail | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [graph, setGraph] = useState<GraphData | null>(null);
+  const [view, setViewState] = useState<ViewMode>(readStoredView);
+  const [relationsRevision, setRelationsRevision] = useState(0);
+
+  const setView = (next: ViewMode) => {
+    setViewState(next);
+    storeView(next);
+  };
   const titleInput = useRef<HTMLInputElement>(null);
 
   const index = useMemo(() => buildTreeIndex(nodes), [nodes]);
   const selected = selectedId ? (index.byId.get(selectedId) ?? null) : null;
 
+  /** Recharge l'arborescence et le graphe (données légères). */
   const refreshNodes = useCallback(
-    () => client.call('node:list').then(setNodes, reportError),
+    () =>
+      Promise.all([client.call('node:list'), client.call('graph:get')]).then(
+        ([list, graphData]) => {
+          setNodes(list);
+          setGraph(graphData);
+        },
+        reportError,
+      ),
     [client, reportError],
   );
   const refreshTags = useCallback(
@@ -141,6 +184,26 @@ export function WorkspaceScreen({
   const nodeChanged = () => {
     void refreshNodes();
     refreshDetail();
+  };
+
+  const relationsChanged = () => {
+    setRelationsRevision((revision) => revision + 1);
+    nodeChanged();
+  };
+
+  /** Positions déjà enregistrées : mise à jour locale, sans recharger. */
+  const positionsSaved = (positions: NodePosition[]) => {
+    const byId = new Map(positions.map((position) => [position.id, position]));
+    setGraph(
+      (current) =>
+        current && {
+          ...current,
+          nodes: current.nodes.map((node) => {
+            const position = byId.get(node.id);
+            return position ? { ...node, x: position.x, y: position.y } : node;
+          }),
+        },
+    );
   };
 
   // --- Actions sur les nœuds -------------------------------------------------
@@ -264,6 +327,22 @@ export function WorkspaceScreen({
         <h1 className="workspace-name" title={workspace.filePath}>
           {workspace.name}
         </h1>
+        <div className="segmented" role="group" aria-label="Vue centrale">
+          <button
+            type="button"
+            aria-pressed={view === 'documents'}
+            onClick={() => setView('documents')}
+          >
+            Documents
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === 'graph'}
+            onClick={() => setView('graph')}
+          >
+            Graphe
+          </button>
+        </div>
         <div className="top-actions">
           <button
             type="button"
@@ -271,6 +350,13 @@ export function WorkspaceScreen({
             onClick={() => setDialog({ kind: 'tags' })}
           >
             Tags
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setDialog({ kind: 'relationTypes' })}
+          >
+            Types de relations
           </button>
           <button
             type="button"
@@ -285,7 +371,7 @@ export function WorkspaceScreen({
         </div>
       </header>
 
-      <div className="panes">
+      <div className={shownDetail ? 'panes' : 'panes no-properties'}>
         <nav className="tree-pane" aria-label="Navigation">
           <div className="toolbar" aria-label="Actions sur les nœuds">
             <button
@@ -339,8 +425,28 @@ export function WorkspaceScreen({
           />
         </nav>
 
-        <main className="content-pane">
-          {shownDetail && selected ? (
+        <main
+          className={
+            view === 'graph' ? 'content-pane graph-mode' : 'content-pane'
+          }
+        >
+          {view === 'graph' ? (
+            graph && (
+              <GraphPanel
+                graph={graph}
+                nodes={nodes}
+                tags={tags}
+                selectedId={selectedId}
+                onSelect={select}
+                onOpen={(id) => {
+                  select(id);
+                  setView('documents');
+                }}
+                onPositionsSaved={positionsSaved}
+                onRelationsChanged={relationsChanged}
+              />
+            )
+          ) : shownDetail && selected ? (
             <>
               <NodeHeader
                 key={`${shownDetail.id}:${shownDetail.title}`}
@@ -385,12 +491,24 @@ export function WorkspaceScreen({
             key={shownDetail.id}
             node={shownDetail}
             allTags={tags}
+            nodes={nodes}
+            relationTypes={graph?.relationTypes ?? []}
+            relationsRevision={relationsRevision}
+            onNavigate={select}
             onNodeChanged={nodeChanged}
             onTagsChanged={() => void refreshTags()}
+            onRelationsChanged={relationsChanged}
           />
         )}
       </div>
 
+      {dialog?.kind === 'relationTypes' && (
+        <RelationTypeManagerDialog
+          relationTypes={graph?.relationTypes ?? []}
+          onChanged={() => void refreshNodes()}
+          onClose={() => setDialog(null)}
+        />
+      )}
       {dialog?.kind === 'new' && (
         <NewNodeDialog
           parentTitle={

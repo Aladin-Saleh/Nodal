@@ -86,3 +86,5 @@ export const DOCUMENT_BODY_MAX_LENGTH = 5_000_000;
 /** Taille maximale par pièce jointe (§5.1, §8) : défaut et bornes réglables. */
 export const ATTACHMENT_MAX_SIZE_DEFAULT_BYTES = 25 * 1024 * 1024;
 export const ATTACHMENT_MAX_SIZE_LIMIT_BYTES = 200 * 1024 * 1024;
+export const RELATION_TYPE_NAME_MAX_LENGTH = 60;
+export const EDGE_LABEL_MAX_LENGTH = 120;

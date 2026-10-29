@@ -99,3 +99,58 @@ export interface RecentWorkspace {
   lastOpenedAt: string;
   exists: boolean;
 }
+
+/** Type de relation propre à l'espace (§5.3, §13). */
+export interface RelationTypeInfo {
+  id: string;
+  name: string;
+  color: string | null;
+  isBuiltin: boolean;
+  /** Nombre de relations de ce type. */
+  usageCount: number;
+}
+
+/** Relation transversale entre deux nœuds, indépendante de la hiérarchie. */
+export interface EdgeInfo {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relationTypeId: string;
+  /** Libellé propre à la relation ; sinon le nom du type est affiché. */
+  label: string | null;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Relation vue depuis un nœud (panneau de propriétés, §7). */
+export interface NodeRelation extends EdgeInfo {
+  direction: 'outgoing' | 'incoming';
+  otherNodeId: string;
+  otherNodeTitle: string;
+  relationTypeName: string;
+}
+
+export interface GraphNode {
+  id: string;
+  parentId: string | null;
+  title: string;
+  nodeType: NodeType;
+  color: string | null;
+  x: number | null;
+  y: number | null;
+  tagIds: string[];
+}
+
+/** Données légères du graphe : aucun contenu documentaire (§9). */
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: EdgeInfo[];
+  relationTypes: RelationTypeInfo[];
+}
+
+export interface NodePosition {
+  id: string;
+  x: number;
+  y: number;
+}

@@ -5,29 +5,46 @@ import {
   SUMMARY_MAX_LENGTH,
   type NodeType,
 } from '../../../shared/domain';
-import type { NodeDetail, TagInfo } from '../../../shared/model';
+import type {
+  NodeDetail,
+  NodeSummary,
+  RelationTypeInfo,
+  TagInfo,
+} from '../../../shared/model';
 import { useAutosave, useClient, useRunner } from '../../app/context';
 import { AttachmentList } from '../attachments/AttachmentList';
+import { RelationList } from '../relations/RelationList';
 import { TagEditor } from '../tags/TagEditor';
 
 export interface NodePropertiesProps {
   node: NodeDetail;
   allTags: TagInfo[];
+  nodes: readonly NodeSummary[];
+  relationTypes: readonly RelationTypeInfo[];
+  /** Change quand les relations ont été modifiées ailleurs (ex. graphe). */
+  relationsRevision: number;
+  onNavigate(id: string): void;
   /** Les données du nœud ont changé : recharger la fiche. */
   onNodeChanged(): void;
   /** Les tags de l'espace ont changé. */
   onTagsChanged(): void;
+  onRelationsChanged(): void;
 }
 
 /**
- * Panneau de propriétés (§7) : type, résumé, couleur, tags, pièces jointes et
- * métadonnées. À remonter (prop `key`) quand le nœud affiché change.
+ * Panneau de propriétés (§7) : type, résumé, couleur, relations, tags,
+ * pièces jointes et métadonnées. À remonter (prop `key`) quand le nœud affiché change.
  */
 export function NodeProperties({
   node,
   allTags,
+  nodes,
+  relationTypes,
+  relationsRevision,
+  onNavigate,
   onNodeChanged,
   onTagsChanged,
+  onRelationsChanged,
 }: NodePropertiesProps) {
   const client = useClient();
   const run = useRunner();
@@ -102,6 +119,18 @@ export function NodeProperties({
             <span className="muted">Couleur du type</span>
           )}
         </div>
+      </section>
+
+      <section>
+        <h3>Relations</h3>
+        <RelationList
+          key={relationsRevision}
+          nodeId={node.id}
+          nodes={nodes}
+          relationTypes={relationTypes}
+          onNavigate={onNavigate}
+          onChanged={onRelationsChanged}
+        />
       </section>
 
       <section>
