@@ -24,6 +24,8 @@ export interface FileDialogs {
   pickAttachmentPaths(): Promise<string[]>;
   /** Destination d'une copie de pièce jointe ; `null` si annulé. */
   pickAttachmentSavePath(fileName: string): Promise<string | null>;
+  /** Dossier dans lequel créer un export ; `null` si annulé. */
+  pickExportParentDirectory(): Promise<string | null>;
   /** Demande de confirmation native ; `true` si l'utilisateur confirme. */
   confirm(options: {
     message: string;
@@ -83,6 +85,14 @@ export function createFileDialogs(
         defaultPath: toFileName(fileName, 'piece-jointe'),
       });
       return result.canceled || !result.filePath ? null : result.filePath;
+    },
+
+    async pickExportParentDirectory() {
+      const result = await open({
+        title: 'Choisir le dossier où créer l’export',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
     },
 
     async confirm({ message, detail, confirmLabel }) {

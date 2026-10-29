@@ -12,7 +12,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Modal } from '../../components/Modal';
 import { DocumentEditor } from './DocumentEditor';
 
-type Language = (typeof CODE_LANGUAGES)[number];
+export type Language = (typeof CODE_LANGUAGES)[number];
 
 export interface DocumentsPanelProps {
   nodeId: string;
@@ -177,7 +177,7 @@ export function DocumentsPanel({
   );
 }
 
-function NewDocumentDialog({
+export function NewDocumentDialog({
   onSubmit,
   onCancel,
 }: {

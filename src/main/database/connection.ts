@@ -147,7 +147,13 @@ export function createNodalDatabase(filePath: string): DatabaseSync {
 export function closeNodalDatabase(db: DatabaseSync): void {
   if (!db.isOpen) return;
   try {
-    db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    try {
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch {
+      // Après l'échec d'une écriture ayant déclenché l'index FTS5, la première
+      // instruction suivante peut recevoir un SQLITE_LOCKED transitoire.
+      db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    }
   } finally {
     db.close();
   }

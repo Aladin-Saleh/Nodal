@@ -16,6 +16,8 @@ interface AppServices {
   tracker: SaveTracker;
   /** Affiche une erreur lisible dans le bandeau de l'application. */
   reportError(error: unknown): void;
+  /** Affiche un message d'information (ex. export terminé). */
+  reportInfo(message: string): void;
 }
 
 const ServicesContext = createContext<AppServices | null>(null);
@@ -24,10 +26,13 @@ export function ServicesProvider({
   client,
   tracker,
   reportError,
+  reportInfo,
   children,
 }: AppServices & { children: ReactNode }) {
   return (
-    <ServicesContext.Provider value={{ client, tracker, reportError }}>
+    <ServicesContext.Provider
+      value={{ client, tracker, reportError, reportInfo }}
+    >
       {children}
     </ServicesContext.Provider>
   );
@@ -42,6 +47,7 @@ function useServices(): AppServices {
 export const useClient = () => useServices().client;
 export const useSaveTracker = () => useServices().tracker;
 export const useReportError = () => useServices().reportError;
+export const useReportInfo = () => useServices().reportInfo;
 
 /**
  * Exécute une écriture suivie par l'indicateur d'enregistrement ; une erreur

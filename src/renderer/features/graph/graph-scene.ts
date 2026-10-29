@@ -21,12 +21,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { NodeType } from '../../../shared/domain';
 import type {
+  DocumentSummary,
   GraphNode,
   NodePosition,
   RelationTypeInfo,
 } from '../../../shared/model';
 import { hasPosition, seedPositions, type VisibleGraph } from './graph-model';
 import {
+  createDocumentPage,
+  PAGE_HEIGHT,
+  PAGE_WIDTH,
   createLabel,
   createNodeGeometry,
   disposeObject,
@@ -40,6 +44,24 @@ export interface GraphSceneCallbacks {
   onOpen(id: string): void;
   onLink(sourceId: string, targetId: string): void;
   onPositionsChanged(positions: NodePosition[]): void;
+  /** Clic sur la carte d'un document du nœud sélectionné. */
+  onOpenDocument(documentId: string): void;
+  /** Clic sur la carte « + Document » du nœud sélectionné. */
+  onAddDocument(nodeId: string): void;
+  /** Ctrl+clic sur un nœud : l'ajoute ou le retire de la sélection multiple. */
+  onToggleSelect(id: string): void;
+  /** Double-clic dans le vide : créer un nœud à cet endroit. */
+  onCreateAt(position: { x: number; y: number; z: number }): void;
+}
+
+type CardTarget =
+  | { kind: 'document'; id: string }
+  | { kind: 'add-document'; nodeId: string };
+
+interface DocumentCard {
+  target: CardTarget;
+  object: THREE.Group;
+  line: THREE.Line<THREE.BufferGeometry, THREE.LineBasicMaterial>;
 }
 
 interface SimNode extends SimulationNode {
@@ -75,6 +97,7 @@ interface LinkEntry {
 type PointerMode =
   | { kind: 'idle' }
   | { kind: 'orbit'; startX: number; startY: number }
+  | { kind: 'card'; target: CardTarget; startX: number; startY: number }
   | {
       kind: 'link' | 'move';
       nodeId: string;
@@ -92,6 +115,11 @@ const LABEL_OFFSET = NODE_RADIUS + 3;
 /** Hauteur des étiquettes en fraction de la hauteur de la vue. */
 const NODE_LABEL_HEIGHT = 0.036;
 const EDGE_LABEL_HEIGHT = 0.026;
+/** Cartes des documents : hauteur (fraction de la vue) et espacement. */
+const CARD_LABEL_HEIGHT = 0.03;
+/** Distance de la caméra après un zoom sur un nœud. */
+const FOCUS_DISTANCE = NODE_RADIUS * 17;
+const FLIGHT_MS = 450;
 
 function round(value: number | undefined): number {
   return Math.round((value ?? 0) * 10) / 10;
@@ -113,6 +141,17 @@ export class GraphScene {
   private theme: GraphTheme = readTheme();
   private relationTypes = new Map<string, RelationTypeInfo>();
   private selectedId: string | null = null;
+  private searchMatches: ReadonlySet<string> | null = null;
+  private readonly cardsGroup = new THREE.Group();
+  private cards: { nodeId: string; items: DocumentCard[] } | null = null;
+  private multiSelection: ReadonlySet<string> = new Set();
+  private flight: {
+    fromPosition: THREE.Vector3;
+    fromTarget: THREE.Vector3;
+    toPosition: THREE.Vector3;
+    toTarget: THREE.Vector3;
+    start: number;
+  } | null = null;
   private hoveredId: string | null = null;
   private linkTargetId: string | null = null;
   private pointer: PointerMode = { kind: 'idle' };
@@ -139,7 +178,7 @@ export class GraphScene {
     this.camera.add(light);
     this.scene.add(this.camera);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.4));
-    this.scene.add(this.nodesGroup, this.linksGroup);
+    this.scene.add(this.nodesGroup, this.linksGroup, this.cardsGroup);
     this.applyThemeToScene();
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -203,6 +242,7 @@ export class GraphScene {
         this.nodes.delete(id);
       }
     }
+    if (this.cards && !wanted.has(this.cards.nodeId)) this.clearCards();
 
     let hasFree = false;
     for (const data of visible.nodes) {
@@ -220,17 +260,21 @@ export class GraphScene {
         if (!dragging) this.fixAt(entry.sim, data.x, data.y, data.z);
         continue;
       }
-      hasFree = true;
-      // Un nœud déjà libre (simulation en cours) n'est pas replacé.
-      if (isNew || entry.sim.fx != null) {
-        entry.sim.fx = entry.sim.fy = entry.sim.fz = null;
+      if (isNew) {
+        // Nouveau dans la scène : position de départ près de ses voisins.
         const seed = seeds.get(data.id);
         if (seed) {
           entry.sim.x = seed.x;
           entry.sim.y = seed.y;
           entry.sim.z = seed.z;
         }
+        hasFree = true;
+      } else if (entry.sim.fx == null) {
+        // Déjà en cours de placement par la simulation.
+        hasFree = true;
       }
+      // Sinon : position déjà calculée dans la scène mais pas encore
+      // enregistrée (rechargement arrivé avant l'écriture) ; on la garde.
     }
 
     const linkSpecs: SimLink[] = [
@@ -274,7 +318,159 @@ export class GraphScene {
   setSelection(id: string | null): void {
     this.selectedId = id;
     this.applyHighlight();
-    if (id) this.reveal(id);
+    if (id) this.flyTo(id);
+  }
+
+  /** Sélection multiple (Ctrl+clic, Ctrl+A), mise en évidence. */
+  setMultiSelection(ids: ReadonlySet<string>): void {
+    this.multiSelection = ids;
+    this.applyHighlight();
+  }
+
+  /** Nœuds trouvés par la recherche, mis en évidence ; `null` sans recherche. */
+  setSearchMatches(matches: ReadonlySet<string> | null): void {
+    this.searchMatches = matches;
+    this.applyHighlight();
+  }
+
+  /**
+   * Documents du nœud sélectionné, affichés en « pages » 3D à côté de lui
+   * (uniquement pour ce nœud, pour ne pas surcharger le graphe).
+   */
+  setDocuments(
+    nodeId: string | null,
+    documents: readonly DocumentSummary[],
+  ): void {
+    this.clearCards();
+    if (!nodeId || !this.nodes.has(nodeId)) return;
+    const colors = this.labelColors();
+    const targets: { target: CardTarget; object: THREE.Group }[] =
+      documents.map((doc) => ({
+        target: { kind: 'document', id: doc.id },
+        object: createDocumentPage(doc.title, doc.contentType, doc.language, {
+          labelHeight: CARD_LABEL_HEIGHT,
+          ...colors,
+        }),
+      }));
+    targets.push({
+      target: { kind: 'add-document', nodeId },
+      object: createDocumentPage('Nouveau document', 'add', null, {
+        labelHeight: CARD_LABEL_HEIGHT,
+        ...colors,
+      }),
+    });
+    const items: DocumentCard[] = targets.map(({ target, object }) => {
+      object.traverse((child) => {
+        child.userData.card = target;
+      });
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(new Float32Array(6), 3),
+      );
+      const line = new THREE.Line(
+        geometry,
+        new THREE.LineBasicMaterial({
+          color: this.theme.accent,
+          transparent: true,
+          opacity: 0.5,
+        }),
+      );
+      line.frustumCulled = false;
+      this.cardsGroup.add(line, object);
+      return { target, object, line };
+    });
+    this.cards = { nodeId, items };
+    this.layoutCards();
+    this.markDirty();
+  }
+
+  private clearCards(): void {
+    if (!this.cards) return;
+    for (const { object, line } of this.cards.items) {
+      this.cardsGroup.remove(object, line);
+      disposeObject(object);
+      disposeObject(line);
+    }
+    this.cards = null;
+    this.markDirty();
+  }
+
+  /**
+   * Place les pages en colonne à droite du nœud, face à la caméra (elles
+   * pivotent avec la vue pour rester lisibles).
+   */
+  private layoutCards(): void {
+    if (!this.cards) return;
+    const center = this.position(this.cards.nodeId);
+    if (!center) return;
+    const right = new THREE.Vector3().setFromMatrixColumn(
+      this.camera.matrixWorld,
+      0,
+    );
+    const up = new THREE.Vector3().setFromMatrixColumn(
+      this.camera.matrixWorld,
+      1,
+    );
+    const start = center.clone().addScaledVector(right, NODE_RADIUS * 1.2);
+    const columnX = NODE_RADIUS * 2.4 + PAGE_WIDTH / 2;
+    const spacing = PAGE_HEIGHT * 1.3;
+    const count = this.cards.items.length;
+    this.cards.items.forEach(({ object, line }, index) => {
+      const offset = ((count - 1) / 2 - index) * spacing;
+      const anchor = center
+        .clone()
+        .addScaledVector(right, columnX)
+        .addScaledVector(up, offset);
+      object.position.copy(anchor);
+      object.quaternion.copy(this.camera.quaternion);
+      const end = anchor.clone().addScaledVector(right, -PAGE_WIDTH / 2);
+      const attribute = line.geometry.getAttribute(
+        'position',
+      ) as THREE.BufferAttribute;
+      attribute.setXYZ(0, start.x, start.y, start.z);
+      attribute.setXYZ(1, end.x, end.y, end.z);
+      attribute.needsUpdate = true;
+    });
+  }
+
+  /** Zoom animé sur un nœud (et ses documents, affichés à sa droite). */
+  private flyTo(id: string): void {
+    const center = this.position(id);
+    if (!center) return;
+    const right = new THREE.Vector3().setFromMatrixColumn(
+      this.camera.matrixWorld,
+      0,
+    );
+    const target = center.clone().addScaledVector(right, NODE_RADIUS * 2.5);
+    const direction = this.camera.position
+      .clone()
+      .sub(this.controls.target)
+      .normalize();
+    this.flight = {
+      fromPosition: this.camera.position.clone(),
+      fromTarget: this.controls.target.clone(),
+      toPosition: target.clone().addScaledVector(direction, FOCUS_DISTANCE),
+      toTarget: target,
+      start: performance.now(),
+    };
+    this.markDirty();
+  }
+
+  private advanceFlight(): void {
+    const flight = this.flight;
+    if (!flight) return;
+    const t = Math.min((performance.now() - flight.start) / FLIGHT_MS, 1);
+    // Accélération puis décélération douces.
+    const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    this.camera.position.lerpVectors(
+      flight.fromPosition,
+      flight.toPosition,
+      eased,
+    );
+    this.controls.target.lerpVectors(flight.fromTarget, flight.toTarget, eased);
+    if (t >= 1) this.flight = null;
+    this.dirty = true;
   }
 
   /** Cadre tout le graphe affiché. */
@@ -339,6 +535,20 @@ export class GraphScene {
   }
 
   dispose(): void {
+    // Enregistrer les positions encore en cours de calcul : sinon, quitter la
+    // vue avant la fin de la simulation relancerait la disposition au retour.
+    const unsettled: NodePosition[] = [];
+    for (const { sim } of this.nodes.values()) {
+      if (sim.fx != null || sim.x === undefined || Number.isNaN(sim.x))
+        continue;
+      unsettled.push({
+        id: sim.id,
+        x: round(sim.x),
+        y: round(sim.y),
+        z: round(sim.z),
+      });
+    }
+    if (unsettled.length > 0) this.callbacks.onPositionsChanged(unsettled);
     this.disposed = true;
     this.renderer.setAnimationLoop(null);
     this.simulation.on('tick', null).on('end', null).stop();
@@ -611,31 +821,43 @@ export class GraphScene {
         if (entry.targetId === focus) close.add(entry.sourceId);
       }
     }
+    const matches = this.searchMatches;
+    // Avec une recherche active, seuls les nœuds trouvés restent nets (§6.9).
+    const shown = (id: string) =>
+      id === focus ||
+      this.multiSelection.has(id) ||
+      ((!focus || close.has(id)) && (!matches || matches.has(id)));
     const accent = new THREE.Color(this.theme.accent);
+    const black = new THREE.Color(0x000000);
     for (const [id, entry] of this.nodes) {
-      const visible = !focus || close.has(id);
+      const visible = shown(id);
       const opacity = visible ? 1 : FADED_OPACITY;
       entry.mesh.material.opacity = opacity;
       entry.mesh.material.depthWrite = visible;
       entry.label.material.opacity = opacity;
-      const emphasized = id === focus || id === this.linkTargetId;
-      entry.mesh.material.emissive.copy(
-        emphasized ? accent : new THREE.Color(0x000000),
-      );
-      entry.mesh.material.emissiveIntensity = emphasized ? 0.55 : 0;
+      const matched = !!matches?.has(id) || this.multiSelection.has(id);
+      const emphasized = id === focus || id === this.linkTargetId || matched;
+      entry.mesh.material.emissive.copy(emphasized ? accent : black);
+      entry.mesh.material.emissiveIntensity =
+        id === focus || id === this.linkTargetId ? 0.55 : matched ? 0.4 : 0;
       const scale =
         id === focus
           ? 1.3
-          : id === this.hoveredId || id === this.linkTargetId
-            ? 1.15
-            : 1;
+          : matched
+            ? 1.2
+            : id === this.hoveredId || id === this.linkTargetId
+              ? 1.15
+              : 1;
       entry.mesh.scale.setScalar(scale);
     }
     const crowded = this.links.size > EDGE_LABEL_LIMIT;
     for (const entry of this.links.values()) {
       const touches =
         !!focus && (entry.sourceId === focus || entry.targetId === focus);
-      const opacity = !focus || touches ? 1 : FADED_OPACITY;
+      const opacity =
+        touches || (!focus && shown(entry.sourceId) && shown(entry.targetId))
+          ? 1
+          : FADED_OPACITY;
       entry.line.material.opacity = opacity;
       if (entry.arrow) entry.arrow.material.opacity = opacity;
       if (entry.label) {
@@ -643,22 +865,6 @@ export class GraphScene {
         entry.label.visible = !crowded || touches;
       }
     }
-    this.markDirty();
-  }
-
-  /** Recentre la vue sur un nœud s'il est hors champ. */
-  private reveal(id: string): void {
-    const target = this.position(id);
-    if (!target) return;
-    const projected = target.clone().project(this.camera);
-    const inside =
-      Math.abs(projected.x) < 0.9 &&
-      Math.abs(projected.y) < 0.9 &&
-      projected.z < 1;
-    if (inside) return;
-    const offset = this.camera.position.clone().sub(this.controls.target);
-    this.controls.target.copy(target);
-    this.camera.position.copy(target).add(offset);
     this.markDirty();
   }
 
@@ -680,6 +886,24 @@ export class GraphScene {
     }
     const [first] = this.raycaster.intersectObjects(targets, false);
     return (first?.object.userData.id as string | undefined) ?? null;
+  }
+
+  /** Carte de document sous le pointeur, prioritaire sur les nœuds. */
+  private hitCard(event: PointerEvent | MouseEvent): CardTarget | null {
+    if (!this.cards) return null;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.raycaster.setFromCamera(
+      new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1,
+      ),
+      this.camera,
+    );
+    const [first] = this.raycaster.intersectObjects(
+      this.cards.items.map((item) => item.object),
+      true,
+    );
+    return (first?.object.userData.card as CardTarget | undefined) ?? null;
   }
 
   private planeThrough(id: string): THREE.Plane {
@@ -706,7 +930,21 @@ export class GraphScene {
   }
 
   private readonly onPointerDown = (event: PointerEvent) => {
+    // Toute interaction de la souris interrompt un zoom animé en cours.
+    this.flight = null;
     if (event.button !== 0) return;
+    const card = this.hitCard(event);
+    if (card) {
+      this.controls.enabled = false;
+      this.renderer.domElement.setPointerCapture(event.pointerId);
+      this.pointer = {
+        kind: 'card',
+        target: card,
+        startX: event.clientX,
+        startY: event.clientY,
+      };
+      return;
+    }
     const id = this.hit(event);
     if (!id) {
       this.pointer = {
@@ -733,6 +971,10 @@ export class GraphScene {
     const pointer = this.pointer;
     const canvas = this.renderer.domElement;
     if (pointer.kind === 'idle') {
+      if (this.hitCard(event)) {
+        canvas.style.cursor = 'pointer';
+        return;
+      }
       const id = this.hit(event);
       if (id !== this.hoveredId) {
         this.hoveredId = id;
@@ -745,7 +987,7 @@ export class GraphScene {
         : 'grab';
       return;
     }
-    if (pointer.kind === 'orbit') return;
+    if (pointer.kind === 'orbit' || pointer.kind === 'card') return;
 
     if (
       !pointer.moved &&
@@ -824,6 +1066,20 @@ export class GraphScene {
       if (still && event.type === 'pointerup') this.callbacks.onSelect(null);
       return;
     }
+    if (pointer.kind === 'card') {
+      const still =
+        Math.hypot(
+          event.clientX - pointer.startX,
+          event.clientY - pointer.startY,
+        ) <= CLICK_TOLERANCE_PX;
+      if (!still || event.type !== 'pointerup') return;
+      if (pointer.target.kind === 'document') {
+        this.callbacks.onOpenDocument(pointer.target.id);
+      } else {
+        this.callbacks.onAddDocument(pointer.target.nodeId);
+      }
+      return;
+    }
     if (pointer.kind === 'idle') return;
 
     if (this.tempLine) {
@@ -836,7 +1092,11 @@ export class GraphScene {
     this.applyHighlight();
 
     if (!pointer.moved || event.type === 'pointercancel') {
-      this.callbacks.onSelect(pointer.nodeId);
+      if (event.ctrlKey || event.metaKey) {
+        this.callbacks.onToggleSelect(pointer.nodeId);
+      } else {
+        this.callbacks.onSelect(pointer.nodeId);
+      }
       return;
     }
     if (pointer.kind === 'move') {
@@ -855,8 +1115,25 @@ export class GraphScene {
   };
 
   private readonly onDoubleClick = (event: MouseEvent) => {
+    if (this.hitCard(event)) return;
     const id = this.hit(event);
-    if (id) this.callbacks.onOpen(id);
+    if (id) {
+      this.callbacks.onOpen(id);
+      return;
+    }
+    // Dans le vide : point du plan face à la caméra passant par le centre de la vue.
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      this.camera.getWorldDirection(new THREE.Vector3()),
+      this.controls.target,
+    );
+    const point = this.pointOnPlane(event as PointerEvent, plane);
+    if (point) {
+      this.callbacks.onCreateAt({
+        x: round(point.x),
+        y: round(point.y),
+        z: round(point.z),
+      });
+    }
   };
 
   private readonly onPointerLeave = () => {
@@ -874,9 +1151,11 @@ export class GraphScene {
 
   private readonly loop = () => {
     // Rendu à la demande : rien n'est dessiné tant que la scène est immobile.
+    this.advanceFlight();
     const moving = this.controls.update();
     if (!moving && !this.dirty) return;
     this.dirty = false;
+    this.layoutCards();
     this.renderer.render(this.scene, this.camera);
   };
 

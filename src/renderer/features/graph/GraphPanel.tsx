@@ -1,10 +1,11 @@
-import { useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   NODE_TYPES,
   NODE_TYPE_LABELS,
   type NodeType,
 } from '../../../shared/domain';
 import type {
+  DocumentSummary,
   GraphData,
   NodePosition,
   NodeSummary,
@@ -35,10 +36,25 @@ export interface GraphPanelProps {
   /** Positions enregistrées : à reporter dans les données locales. */
   onPositionsSaved(positions: NodePosition[]): void;
   onRelationsChanged(): void;
+  /** Documents du nœud sélectionné (cartes affichées dans le graphe). */
+  selectedDocuments: readonly DocumentSummary[] | null;
+  /** Nœuds trouvés par la recherche ; `null` sans recherche active. */
+  searchMatches: ReadonlySet<string> | null;
+  onOpenDocument(documentId: string): void;
+  onAddDocument(nodeId: string): void;
+  /** Sélection multiple et actions groupées. */
+  multiSelection: ReadonlySet<string>;
+  onToggleSelect(id: string): void;
+  onSetMultiSelection(ids: ReadonlySet<string>): void;
+  onBulkMove(): void;
+  onBulkSetType(nodeType: NodeType): void;
+  onBulkDelete(): void;
+  /** Double-clic dans le vide : créer un nœud à cet endroit. */
+  onCreateAt(position: { x: number; y: number; z: number }): void;
 }
 
 const GRAPH_HELP =
-  'Glisser d’un nœud à un autre : relier · Maj + glisser : déplacer · Double-clic : ouvrir · Glisser le fond : pivoter · Clic droit : déplacer la vue · Molette : zoom';
+  'Clic : zoom et documents · Ctrl+clic / Ctrl+A : sélection multiple · Glisser d’un nœud à un autre : relier · Maj + glisser : déplacer · Double-clic dans le vide : nouveau nœud · Double-clic sur un nœud : ouvrir · Fond : pivoter (clic droit : déplacer) · Molette : zoom';
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   const next = new Set(set);
@@ -60,11 +76,23 @@ export function GraphPanel({
   onOpen,
   onPositionsSaved,
   onRelationsChanged,
+  selectedDocuments,
+  searchMatches,
+  onOpenDocument,
+  onAddDocument,
+  multiSelection,
+  onToggleSelect,
+  onSetMultiSelection,
+  onBulkMove,
+  onBulkSetType,
+  onBulkDelete,
+  onCreateAt,
 }: GraphPanelProps) {
   const client = useClient();
   const run = useRunner();
   const view = useRef<Graph3DViewHandle>(null);
   const depthId = useId();
+  const bulkTypeId = useId();
   const [scopeKind, setScopeKind] = useState<'all' | 'neighborhood'>(
     graph.nodes.length > LARGE_GRAPH_THRESHOLD ? 'neighborhood' : 'all',
   );
@@ -86,6 +114,42 @@ export function GraphPanel({
     // oxlint-disable-next-line react/exhaustive-deps
     [graph, filters, scope.kind, selectedId, depth],
   );
+  const visibleIds = useMemo(
+    () => new Set(visible.nodes.map((node) => node.id)),
+    [visible],
+  );
+  const selectionShortcuts = useRef({
+    visibleIds,
+    multiSelection,
+    onSetMultiSelection,
+  });
+  useEffect(() => {
+    selectionShortcuts.current = {
+      visibleIds,
+      multiSelection,
+      onSetMultiSelection,
+    };
+  });
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [role="dialog"]')) return;
+      const {
+        visibleIds: ids,
+        multiSelection: current,
+        onSetMultiSelection: set,
+      } = selectionShortcuts.current;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        set(ids);
+      } else if (event.key === 'Escape' && current.size > 0) {
+        set(new Set());
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const savePositions = async (positions: NodePosition[]) => {
     if (positions.length === 0) return;
     onPositionsSaved(positions);
@@ -288,6 +352,54 @@ export function GraphPanel({
         </p>
       )}
 
+      {multiSelection.size > 0 && (
+        <div
+          className="bulk-bar"
+          role="toolbar"
+          aria-label="Actions sur la sélection"
+        >
+          <strong>
+            {multiSelection.size} nœud{multiSelection.size > 1 ? 's' : ''}{' '}
+            sélectionné{multiSelection.size > 1 ? 's' : ''}
+          </strong>
+          <button type="button" className="secondary" onClick={onBulkMove}>
+            Déplacer sous…
+          </button>
+          <label className="visually-hidden" htmlFor={bulkTypeId}>
+            Changer le type
+          </label>
+          <select
+            id={bulkTypeId}
+            value=""
+            onChange={(event) => {
+              if (event.target.value)
+                onBulkSetType(event.target.value as NodeType);
+            }}
+          >
+            <option value="">Changer le type…</option>
+            {NODE_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {NODE_TYPE_LABELS[type]}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="secondary danger-text"
+            onClick={onBulkDelete}
+          >
+            Supprimer…
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => onSetMultiSelection(new Set())}
+          >
+            Désélectionner
+          </button>
+        </div>
+      )}
+
       <div className="graph-stage">
         {graph.nodes.length === 0 ? (
           <p className="muted empty-state">Aucun nœud à afficher.</p>
@@ -297,6 +409,13 @@ export function GraphPanel({
             visible={visible}
             relationTypes={graph.relationTypes}
             selectedId={selectedId}
+            selectedDocuments={selectedDocuments}
+            searchMatches={searchMatches}
+            onOpenDocument={onOpenDocument}
+            onAddDocument={onAddDocument}
+            multiSelection={multiSelection}
+            onToggleSelect={onToggleSelect}
+            onCreateAt={onCreateAt}
             onSelect={onSelect}
             onOpen={onOpen}
             onLink={(sourceId, targetId) =>

@@ -339,3 +339,62 @@ describe('tags d’un nœud', () => {
     expect(nodes.get(node.id).tags.map((t) => t.name)).toEqual(['ok']);
   });
 });
+
+describe('opérations groupées', () => {
+  it('déplace plusieurs nœuds sous un parent, puis à la racine', () => {
+    const parent = create('Parent');
+    const a = create('A');
+    const b = create('B');
+    nodes.moveMany({ ids: [a.id, b.id], parentId: parent.id });
+    expect(childTitles(parent.id)).toEqual(['A', 'B']);
+    nodes.moveMany({ ids: [a.id, b.id], parentId: null });
+    expect(childTitles(null)).toEqual(['Parent', 'A', 'B']);
+  });
+
+  it('refuse tout le lot si un déplacement créerait un cycle', () => {
+    const a = create('A');
+    const child = create('Enfant', a.id);
+    const b = create('B');
+    expect(() =>
+      nodes.moveMany({ ids: [b.id, a.id], parentId: child.id }),
+    ).toThrowError(expect.objectContaining({ code: 'CONFLICT' }));
+    expect(nodes.get(b.id).parentId).toBeNull();
+  });
+
+  it('change le type de plusieurs nœuds', () => {
+    const a = create('A');
+    const b = create('B');
+    nodes.setTypeMany({ ids: [a.id, b.id], nodeType: 'data' });
+    expect(nodes.list().map((n) => n.nodeType)).toEqual(['data', 'data']);
+  });
+
+  it('calcule l’impact cumulé sans compter deux fois la sélection', () => {
+    const a = create('A');
+    const child = create('Enfant', a.id);
+    create('Petit-enfant', child.id);
+    const b = create('B');
+    documents.create({ nodeId: b.id, title: 'Doc', contentType: 'text' });
+    expect(nodes.getDeletionImpactMany([a.id, child.id, b.id])).toEqual({
+      nodeCount: 3,
+      childCount: 1,
+      descendantCount: 1,
+      node: { documentCount: 1, attachmentCount: 0, edgeCount: 0 },
+      subtree: { documentCount: 1, attachmentCount: 0, edgeCount: 0 },
+    });
+  });
+
+  it('supprime une sélection imbriquée sans erreur, quelle que soit la stratégie', () => {
+    const a = create('A');
+    const child = create('Enfant', a.id);
+    create('Petit-enfant', child.id);
+    const keep = create('Gardé');
+    nodes.deleteMany({ ids: [a.id, child.id], childrenStrategy: 'delete' });
+    expect(nodes.list().map((n) => n.id)).toEqual([keep.id]);
+
+    const p = create('P');
+    const q = create('Q', p.id);
+    create('R', q.id);
+    nodes.deleteMany({ ids: [p.id, q.id], childrenStrategy: 'reparent' });
+    expect(childTitles(null)).toEqual(['Gardé', 'R']);
+  });
+});

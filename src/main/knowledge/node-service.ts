@@ -2,13 +2,18 @@ import { TITLE_MAX_LENGTH } from '../../shared/domain';
 import { NodalError } from '../../shared/errors';
 import type {
   CreateNodeInput,
+  DeleteManyNodesInput,
   DeleteNodeInput,
   DuplicateNodeInput,
+  MoveManyNodesInput,
   MoveNodeInput,
+  SetNodesTypeInput,
   SetNodeTagsInput,
   UpdateNodeInput,
 } from '../../shared/ipc-contract';
 import type {
+  BulkDeletionImpact,
+  ChildrenStrategy,
   DeletionCounts,
   NodeDeletionImpact,
   NodeDetail,
@@ -124,6 +129,67 @@ function countsFor(ctx: ServiceContext, nodeIds: string[]): DeletionCounts {
       ids,
     ),
   };
+}
+
+/** Vérifie qu'un déplacement sous `parentId` ne crée pas de cycle (§5.4). */
+function assertMovable(
+  ctx: ServiceContext,
+  id: string,
+  parentId: string | null,
+): void {
+  if (parentId === null) return;
+  getNodeRow(ctx, parentId);
+  if (parentId === id || descendantIds(ctx, id).includes(parentId)) {
+    throw new NodalError(
+      'CONFLICT',
+      'Un nœud ne peut pas être déplacé sous lui-même ou sous l’un de ses descendants.',
+    );
+  }
+}
+
+/** Déplacement sans transaction propre (à appeler dans une transaction). */
+function moveWithinTransaction(
+  ctx: ServiceContext,
+  node: NodeRow,
+  parentId: string | null,
+  index?: number,
+): void {
+  const siblings = siblingIds(ctx, parentId).filter((id) => id !== node.id);
+  const position = Math.min(index ?? siblings.length, siblings.length);
+  siblings.splice(position, 0, node.id);
+  if (node.parent_id !== parentId) {
+    ctx.db
+      .prepare('UPDATE node SET parent_id = ?, updated_at = ? WHERE id = ?')
+      .run(parentId, ctx.now(), node.id);
+    writeSiblingOrder(
+      ctx,
+      siblingIds(ctx, node.parent_id).filter((id) => id !== node.id),
+    );
+  }
+  writeSiblingOrder(ctx, siblings);
+}
+
+/** Suppression sans transaction propre (à appeler dans une transaction). */
+function deleteWithinTransaction(
+  ctx: ServiceContext,
+  node: NodeRow,
+  strategy: ChildrenStrategy,
+): void {
+  if (strategy === 'delete') {
+    deleteNodes(ctx, [node.id, ...descendantIds(ctx, node.id)]);
+    return;
+  }
+  // Les enfants prennent la place du nœud supprimé parmi ses frères.
+  const children = siblingIds(ctx, node.id);
+  const siblings = siblingIds(ctx, node.parent_id);
+  siblings.splice(siblings.indexOf(node.id), 1, ...children);
+  const reparent = ctx.db.prepare(
+    'UPDATE node SET parent_id = ?, updated_at = ? WHERE id = ?',
+  );
+  const timestamp = ctx.now();
+  for (const child of children) reparent.run(node.parent_id, timestamp, child);
+  deleteNodes(ctx, [node.id]);
+  writeSiblingOrder(ctx, siblings);
 }
 
 /** Supprime des nœuds avec leurs documents, pièces jointes et relations. */
@@ -247,35 +313,40 @@ export class NodeService {
   move(input: MoveNodeInput): void {
     const ctx = this.context();
     const node = getNodeRow(ctx, input.id);
-    if (input.parentId !== null) {
-      getNodeRow(ctx, input.parentId);
-      if (
-        input.parentId === input.id ||
-        descendantIds(ctx, input.id).includes(input.parentId)
-      ) {
-        throw new NodalError(
-          'CONFLICT',
-          'Un nœud ne peut pas être déplacé sous lui-même ou sous l’un de ses descendants.',
-        );
-      }
-    }
+    assertMovable(ctx, input.id, input.parentId);
+    inTransaction(ctx.db, () =>
+      moveWithinTransaction(ctx, node, input.parentId, input.index),
+    );
+  }
 
+  /**
+   * Déplace plusieurs nœuds sous un même parent (ou à la racine), tout ou
+   * rien : un seul déplacement invalide annule l'ensemble.
+   */
+  moveMany(input: MoveManyNodesInput): void {
+    const ctx = this.context();
+    const ids = [...new Set(input.ids)];
+    const rows = ids.map((id) => getNodeRow(ctx, id));
+    for (const id of ids) assertMovable(ctx, id, input.parentId);
     inTransaction(ctx.db, () => {
-      const siblings = siblingIds(ctx, input.parentId).filter(
-        (id) => id !== input.id,
-      );
-      const index = Math.min(input.index ?? siblings.length, siblings.length);
-      siblings.splice(index, 0, input.id);
-      if (node.parent_id !== input.parentId) {
-        ctx.db
-          .prepare('UPDATE node SET parent_id = ?, updated_at = ? WHERE id = ?')
-          .run(input.parentId, ctx.now(), input.id);
-        writeSiblingOrder(
-          ctx,
-          siblingIds(ctx, node.parent_id).filter((id) => id !== input.id),
-        );
+      for (const row of rows) {
+        // Relire : un déplacement précédent a pu changer ses frères.
+        moveWithinTransaction(ctx, getNodeRow(ctx, row.id), input.parentId);
       }
-      writeSiblingOrder(ctx, siblings);
+    });
+  }
+
+  /** Change le type de plusieurs nœuds. */
+  setTypeMany(input: SetNodesTypeInput): void {
+    const ctx = this.context();
+    const ids = [...new Set(input.ids)];
+    for (const id of ids) getNodeRow(ctx, id);
+    const update = ctx.db.prepare(
+      'UPDATE node SET node_type = ?, updated_at = ? WHERE id = ?',
+    );
+    inTransaction(ctx.db, () => {
+      const timestamp = ctx.now();
+      for (const id of ids) update.run(input.nodeType, timestamp, id);
     });
   }
 
@@ -319,24 +390,54 @@ export class NodeService {
   delete(input: DeleteNodeInput): void {
     const ctx = this.context();
     const node = getNodeRow(ctx, input.id);
+    inTransaction(ctx.db, () =>
+      deleteWithinTransaction(ctx, node, input.childrenStrategy),
+    );
+  }
+
+  /** Impact cumulé de la suppression de plusieurs nœuds. */
+  getDeletionImpactMany(ids: string[]): BulkDeletionImpact {
+    const ctx = this.context();
+    const selection = new Set(ids);
+    for (const id of selection) getNodeRow(ctx, id);
+    const children = new Set<string>();
+    const descendants = new Set<string>();
+    for (const id of selection) {
+      for (const child of siblingIds(ctx, id)) children.add(child);
+      for (const descendant of descendantIds(ctx, id))
+        descendants.add(descendant);
+    }
+    const outside = (set: Set<string>) =>
+      [...set].filter((id) => !selection.has(id));
+    return {
+      nodeCount: selection.size,
+      childCount: outside(children).length,
+      descendantCount: outside(descendants).length,
+      node: countsFor(ctx, [...selection]),
+      subtree: countsFor(ctx, [...selection, ...outside(descendants)]),
+    };
+  }
+
+  /**
+   * Supprime plusieurs nœuds avec la même stratégie pour leurs enfants, en
+   * une seule transaction. Un nœud déjà supprimé avec le sous-arbre d'un
+   * autre nœud sélectionné est ignoré.
+   */
+  deleteMany(input: DeleteManyNodesInput): void {
+    const ctx = this.context();
+    const ids = [...new Set(input.ids)];
+    for (const id of ids) getNodeRow(ctx, id);
     inTransaction(ctx.db, () => {
-      if (input.childrenStrategy === 'delete') {
-        deleteNodes(ctx, [input.id, ...descendantIds(ctx, input.id)]);
-        return;
+      for (const id of ids) {
+        const node = asRow<NodeRow>(
+          ctx.db
+            .prepare(
+              `SELECT ${NODE_COLUMNS} FROM node WHERE id = ? AND workspace_id = ?`,
+            )
+            .get(id, ctx.workspaceId),
+        );
+        if (node) deleteWithinTransaction(ctx, node, input.childrenStrategy);
       }
-      // Les enfants prennent la place du nœud supprimé parmi ses frères.
-      const children = siblingIds(ctx, input.id);
-      const siblings = siblingIds(ctx, node.parent_id);
-      siblings.splice(siblings.indexOf(input.id), 1, ...children);
-      const reparent = ctx.db.prepare(
-        'UPDATE node SET parent_id = ?, updated_at = ? WHERE id = ?',
-      );
-      const timestamp = ctx.now();
-      for (const child of children) {
-        reparent.run(node.parent_id, timestamp, child);
-      }
-      deleteNodes(ctx, [input.id]);
-      writeSiblingOrder(ctx, siblings);
     });
   }
 

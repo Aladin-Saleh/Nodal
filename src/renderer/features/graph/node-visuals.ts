@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { NodeType } from '../../../shared/domain';
+import type { ContentType, NodeType } from '../../../shared/domain';
 
 /** Rayon de référence d'un nœud (unités de la scène). */
 export const NODE_RADIUS = 9;
@@ -125,4 +125,92 @@ export function disposeObject(object: THREE.Object3D): void {
       material.dispose();
     }
   });
+}
+
+const CARD_BADGES: Record<
+  ContentType | 'add',
+  { text: string; color: string }
+> = {
+  markdown: { text: 'MD', color: '#4dabf7' },
+  text: { text: 'TXT', color: '#adb5bd' },
+  json: { text: 'JSON', color: '#fab005' },
+  code: { text: 'CODE', color: '#38d9a9' },
+  mermaid: { text: 'MMD', color: '#da77f2' },
+  add: { text: '+', color: '#5c7cfa' },
+};
+
+/** Dimensions d'une page de document (unités de la scène). */
+export const PAGE_WIDTH = 12;
+export const PAGE_HEIGHT = 15;
+const PAGE_DEPTH = 1.6;
+
+/** Face avant d'une page : badge du type (ou du langage) en grand. */
+function pageFaceTexture(text: string, color: string): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 180;
+  canvas.height = 230;
+  const context = canvas.getContext('2d')!;
+  context.fillStyle = '#f8f9fa';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  // Bandeau coloré et lignes de texte stylisées.
+  context.fillStyle = color;
+  context.fillRect(0, 0, canvas.width, 56);
+  context.fillStyle = '#ced4da';
+  for (let y = 150; y < 215; y += 16) {
+    context.fillRect(22, y, canvas.width - 44 - (y % 32 === 0 ? 30 : 0), 6);
+  }
+  context.fillStyle = '#212529';
+  const size = text.length > 4 ? 40 : 54;
+  context.font = `800 ${size}px "Segoe UI", system-ui, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, canvas.width / 2, 103);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/**
+ * Document représenté par une « page » 3D (même échelle que les nœuds) :
+ * face avant marquée du type, tranche colorée, titre à droite. Le groupe est
+ * orienté face à la caméra par la scène.
+ */
+export function createDocumentPage(
+  title: string,
+  kind: ContentType | 'add',
+  language: string | null,
+  options: { labelHeight: number; background: string; color: string },
+): THREE.Group {
+  const badge = CARD_BADGES[kind];
+  const badgeText =
+    kind === 'code' && language
+      ? language.toUpperCase().slice(0, 6)
+      : badge.text;
+  const side = new THREE.MeshStandardMaterial({
+    color: badge.color,
+    roughness: 0.5,
+    metalness: 0.05,
+  });
+  const front = new THREE.MeshStandardMaterial({
+    map: pageFaceTexture(badgeText, badge.color),
+    roughness: 0.6,
+    transparent: kind === 'add',
+    opacity: kind === 'add' ? 0.75 : 1,
+  });
+  // Ordre des faces d'une boîte : +x, -x, +y, -y, +z (avant), -z.
+  const page = new THREE.Mesh(
+    new THREE.BoxGeometry(PAGE_WIDTH, PAGE_HEIGHT, PAGE_DEPTH),
+    [side, side, side, side, front, side],
+  );
+  const label = createLabel(title, {
+    height: options.labelHeight,
+    background: options.background,
+    color: options.color,
+  });
+  label.center.set(0, 0.5);
+  label.position.set(PAGE_WIDTH / 2 + 1.5, 0, 0);
+  const group = new THREE.Group();
+  group.add(page, label);
+  return group;
 }

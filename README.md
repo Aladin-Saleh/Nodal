@@ -44,12 +44,28 @@ pièces jointes en BLOB).
     types de relations par espace (ajout, renommage, couleur, suppression
     refusée tant qu'ils sont utilisés).
 
-Éditeurs riches et rendu Markdown / Mermaid (lot 4), recherche et export
-(lot 5) restent à faire.
+- **Graphe — compléments** :
+  - clic sur un nœud : zoom animé et documents affichés en pages 3D à côté
+    de lui (clic sur une page : édition par-dessus le graphe) ; documents
+    aussi listés dans le panneau latéral ;
+  - double-clic dans le vide : nouveau nœud à cet endroit (parent au choix) ;
+  - sélection multiple (Ctrl+clic, Ctrl+A) et actions groupées : déplacer
+    sous un parent ou à la racine, changer le type, supprimer ;
+  - champ « Parent » pour passer un nœud en racine ou le rattacher à un autre.
+- **Recherche (lot 5, en partie)** : index plein texte SQLite FTS5
+  (migration 003, tenu à jour par triggers) sur les titres, résumés et
+  contenus des documents, code compris, sans tenir compte des accents ;
+  les nœuds trouvés sont mis en évidence dans le graphe et l'arborescence.
+- **Export (lot 5, en partie)** : dossier portable avec `manifest.json`
+  versionné, documents au format source, pièces jointes et `LISEZMOI.txt`.
+
+Éditeurs riches et rendu Markdown / Mermaid (lot 4), import d'un export et
+export TOON pour les LLM restent à faire.
 
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
-`Ctrl+S` enregistrer immédiatement, `F2` renommer, `Suppr` supprimer, flèches
-pour parcourir l'arborescence.
+`Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
+sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
+`F2` renommer, `Suppr` supprimer, flèches pour parcourir l'arborescence.
 
 ## Stack
 

@@ -12,9 +12,11 @@ import { AttachmentService } from '../knowledge/attachment-service';
 import type { ContextProvider } from '../knowledge/context';
 import { DocumentService } from '../knowledge/document-service';
 import { EdgeService } from '../knowledge/edge-service';
+import { exportWorkspace } from '../knowledge/export-service';
 import { GraphService } from '../knowledge/graph-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
+import { SearchService } from '../knowledge/search-service';
 import { SettingsService } from '../knowledge/settings-service';
 import { TagService } from '../knowledge/tag-service';
 import {
@@ -52,6 +54,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const relationTypes = new RelationTypeService(context);
   const edges = new EdgeService(context);
   const graph = new GraphService(context);
+  const search = new SearchService(context);
 
   const remember = (info: WorkspaceInfo) => {
     recent.touch(info.filePath, info.name);
@@ -133,6 +136,19 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return null;
     },
     'node:setTags': (input) => nodes.setTags(input),
+    'node:moveMany': (input) => {
+      nodes.moveMany(input);
+      return null;
+    },
+    'node:setTypeMany': (input) => {
+      nodes.setTypeMany(input);
+      return null;
+    },
+    'node:getDeletionImpactMany': ({ ids }) => nodes.getDeletionImpactMany(ids),
+    'node:deleteMany': (input) => {
+      nodes.deleteMany(input);
+      return null;
+    },
 
     'document:get': ({ id }) => documents.get(id),
     'document:create': (input) => documents.create(input),
@@ -202,6 +218,29 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     'graph:savePositions': ({ positions }) => {
       graph.savePositions(positions);
       return null;
+    },
+
+    'search:query': ({ query }) => search.search(query),
+    'workspace:export': async () => {
+      const current = workspaces.getCurrent();
+      if (!current) {
+        throw new NodalError('NO_WORKSPACE_OPEN', "Aucun espace n'est ouvert.");
+      }
+      const parentDir = await dialogs.pickExportParentDirectory();
+      if (!parentDir) return null;
+      const info = deps.getAppInfo();
+      try {
+        return exportWorkspace(workspaces.getContext(), current, parentDir, {
+          name: info.appName,
+          version: info.appVersion,
+        });
+      } catch (cause) {
+        throw new NodalError(
+          'IO_ERROR',
+          'L’export a échoué : vérifiez que le dossier est accessible en écriture et que l’espace disque est suffisant.',
+          { cause },
+        );
+      }
     },
   };
 }

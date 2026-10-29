@@ -10,6 +10,11 @@ export interface NodeTreeProps {
   onToggle(id: string, expanded: boolean): void;
   onDelete(id: string): void;
   onRename(id: string): void;
+  /** Nœuds trouvés par la recherche, mis en évidence. */
+  highlighted?: ReadonlySet<string> | null;
+  /** Sélection multiple (Ctrl+clic). */
+  multiSelection?: ReadonlySet<string>;
+  onToggleMulti?(id: string): void;
 }
 
 /**
@@ -25,6 +30,9 @@ export function NodeTree({
   onToggle,
   onDelete,
   onRename,
+  highlighted = null,
+  multiSelection,
+  onToggleMulti,
 }: NodeTreeProps) {
   const rows = visibleRows(index, expanded);
   const container = useRef<HTMLUListElement>(null);
@@ -114,9 +122,22 @@ export function NodeTree({
             aria-selected={selected}
             aria-expanded={row.hasChildren ? row.expanded : undefined}
             tabIndex={tabbable ? 0 : -1}
-            className={selected ? 'tree-row selected' : 'tree-row'}
+            className={[
+              'tree-row',
+              selected ? 'selected' : '',
+              highlighted?.has(row.node.id) ? 'search-match' : '',
+              multiSelection?.has(row.node.id) ? 'multi-selected' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             style={{ paddingLeft: `${row.depth * 16 + 4}px` }}
-            onClick={() => onSelect(row.node.id)}
+            onClick={(event) => {
+              if ((event.ctrlKey || event.metaKey) && onToggleMulti) {
+                onToggleMulti(row.node.id);
+              } else {
+                onSelect(row.node.id);
+              }
+            }}
           >
             <span
               className="tree-toggle"

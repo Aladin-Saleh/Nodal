@@ -81,6 +81,11 @@ export interface NodeDeletionImpact {
   subtree: DeletionCounts;
 }
 
+/** Impact cumulé d'une suppression groupée (enfants hors sélection). */
+export interface BulkDeletionImpact extends NodeDeletionImpact {
+  nodeCount: number;
+}
+
 /**
  * Sort des enfants d'un nœud supprimé (§5.4) :
  * - `reparent` : les enfants remontent au niveau du nœud supprimé ;
@@ -148,6 +153,30 @@ export interface GraphData {
   nodes: GraphNode[];
   edges: EdgeInfo[];
   relationTypes: RelationTypeInfo[];
+}
+
+/** Extrait de texte trouvé ; les termes trouvés sont encadrés par SEARCH_MARK_START et SEARCH_MARK_END. */
+export interface SearchMatch {
+  kind: 'node' | 'document';
+  documentId: string | null;
+  documentTitle: string | null;
+  snippet: string;
+}
+
+/** Résultat de recherche regroupé par nœud (§6.9). */
+export interface SearchHit {
+  nodeId: string;
+  nodeTitle: string;
+  nodeType: NodeType;
+  matches: SearchMatch[];
+}
+
+/** Bilan d'un export (§6.10). */
+export interface ExportResult {
+  folderPath: string;
+  nodeCount: number;
+  documentCount: number;
+  attachmentCount: number;
 }
 
 export interface NodePosition {

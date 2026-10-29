@@ -115,6 +115,7 @@ function setup(pickedPath: string | null, confirmed = true) {
     pickExistingWorkspacePath: vi.fn(async () => pickedPath),
     pickAttachmentPaths: vi.fn(async () => []),
     pickAttachmentSavePath: vi.fn(async () => null),
+    pickExportParentDirectory: vi.fn(async () => null),
     confirm: vi.fn(async () => confirmed),
   };
   const recent = {

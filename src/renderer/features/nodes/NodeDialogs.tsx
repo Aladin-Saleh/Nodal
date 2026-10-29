@@ -16,30 +16,41 @@ import { subtreeIds, visibleRows, type TreeIndex } from './tree';
 
 export function NewNodeDialog({
   parentTitle,
+  parentChoice,
   onSubmit,
   onCancel,
 }: {
   parentTitle: string | null;
-  onSubmit(title: string, nodeType: NodeType): void;
+  /** Si fourni, le parent se choisit dans la boîte (racine par défaut). */
+  parentChoice?: { index: TreeIndex; parentId: string | null };
+  onSubmit(title: string, nodeType: NodeType, parentId: string | null): void;
   onCancel(): void;
 }) {
   const titleId = useId();
   const typeId = useId();
+  const parentFieldId = useId();
   const [title, setTitle] = useState('');
   const [nodeType, setNodeType] = useState<NodeType>('concept');
+  const [chosenParent, setChosenParent] = useState(
+    parentChoice?.parentId ?? '',
+  );
   const trimmed = title.trim();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (trimmed) onSubmit(trimmed, nodeType);
+    if (!trimmed) return;
+    const parentId = parentChoice ? chosenParent || null : null;
+    onSubmit(trimmed, nodeType, parentId);
   };
 
   return (
     <Modal
       title={
-        parentTitle
-          ? `Nouveau nœud dans « ${parentTitle} »`
-          : 'Nouveau nœud racine'
+        parentChoice
+          ? 'Nouveau nœud'
+          : parentTitle
+            ? `Nouveau nœud dans « ${parentTitle} »`
+            : 'Nouveau nœud racine'
       }
       onClose={onCancel}
     >
@@ -65,6 +76,18 @@ export function NewNodeDialog({
             </option>
           ))}
         </select>
+        {parentChoice && (
+          <>
+            <label htmlFor={parentFieldId}>Parent</label>
+            <ParentSelect
+              id={parentFieldId}
+              index={parentChoice.index}
+              value={chosenParent}
+              forbidden={new Set()}
+              onChange={setChosenParent}
+            />
+          </>
+        )}
         <div className="modal-footer">
           <button type="button" className="secondary" onClick={onCancel}>
             Annuler
@@ -78,28 +101,66 @@ export function NewNodeDialog({
   );
 }
 
+/** Liste des parents possibles : racine puis arborescence indentée. */
+export function ParentSelect({
+  id,
+  index,
+  value,
+  forbidden,
+  onChange,
+}: {
+  id: string;
+  index: TreeIndex;
+  /** Identifiant du parent, ou chaîne vide pour la racine. */
+  value: string;
+  /** Nœuds interdits (le nœud déplacé et ses descendants). */
+  forbidden: ReadonlySet<string>;
+  onChange(value: string): void;
+}) {
+  const targets = visibleRows(index, new Set(index.byId.keys())).filter(
+    (row) => !forbidden.has(row.node.id),
+  );
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <option value="">(Racine de l’espace)</option>
+      {targets.map((row) => (
+        <option key={row.node.id} value={row.node.id}>
+          {`${'\u2003'.repeat(row.depth)}${row.node.title}`}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export function MoveNodeDialog({
   index,
-  node,
+  nodes,
   onSubmit,
   onCancel,
 }: {
   index: TreeIndex;
-  node: NodeSummary;
+  nodes: NodeSummary[];
   onSubmit(parentId: string | null): void;
   onCancel(): void;
 }) {
   const selectId = useId();
-  const forbidden = subtreeIds(index, node.id);
-  // Toute l'arborescence dépliée, sans le nœud ni ses descendants.
-  const targets = visibleRows(index, new Set(index.byId.keys())).filter(
-    (row) => !forbidden.has(row.node.id),
+  const forbidden = new Set(
+    nodes.flatMap((node) => [...subtreeIds(index, node.id)]),
   );
-  const [parentId, setParentId] = useState<string>(node.parentId ?? '');
+  const single = nodes.length === 1 ? nodes[0]! : null;
+  const [parentId, setParentId] = useState<string>(single?.parentId ?? '');
 
   return (
     <Modal
-      title={`Déplacer « ${node.title} »`}
+      title={
+        single
+          ? `Déplacer « ${single.title} »`
+          : `Déplacer ${nodes.length} nœuds`
+      }
       onClose={onCancel}
       footer={
         <>
@@ -108,7 +169,7 @@ export function MoveNodeDialog({
           </button>
           <button
             type="button"
-            disabled={(node.parentId ?? '') === parentId}
+            disabled={single !== null && (single.parentId ?? '') === parentId}
             onClick={() => onSubmit(parentId === '' ? null : parentId)}
           >
             Déplacer
@@ -117,21 +178,15 @@ export function MoveNodeDialog({
       }
     >
       <label htmlFor={selectId}>Nouveau parent</label>
-      <select
+      <ParentSelect
         id={selectId}
+        index={index}
         value={parentId}
-        data-autofocus
-        onChange={(event) => setParentId(event.target.value)}
-      >
-        <option value="">(Racine de l’espace)</option>
-        {targets.map((row) => (
-          <option key={row.node.id} value={row.node.id}>
-            {`${' '.repeat(row.depth)}${row.node.title}`}
-          </option>
-        ))}
-      </select>
+        forbidden={forbidden}
+        onChange={setParentId}
+      />
       <p className="muted">
-        Le nœud garde son identifiant, ses documents et ses relations.
+        Les nœuds gardent leur identifiant, leurs documents et leurs relations.
       </p>
     </Modal>
   );
@@ -180,13 +235,13 @@ const plural = (count: number, singular: string, pluralForm: string) =>
   `${count} ${count > 1 ? pluralForm : singular}`;
 
 export function DeleteNodeDialog({
-  node,
+  title,
   impact,
   busy,
   onSubmit,
   onCancel,
 }: {
-  node: NodeSummary;
+  title: string;
   impact: NodeDeletionImpact;
   busy: boolean;
   onSubmit(strategy: ChildrenStrategy): void;
@@ -212,7 +267,7 @@ export function DeleteNodeDialog({
 
   return (
     <ConfirmDialog
-      title={`Supprimer « ${node.title} » ?`}
+      title={title}
       confirmLabel="Supprimer définitivement"
       danger
       busy={busy}

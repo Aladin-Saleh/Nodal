@@ -17,7 +17,10 @@ export function App({ client }: AppProps) {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
   const [recent, setRecent] = useState<RecentWorkspace[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{
+    kind: 'error' | 'info';
+    message: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const tracker = useMemo(
@@ -28,7 +31,11 @@ export function App({ client }: AppProps) {
     [client],
   );
   const reportError = useCallback(
-    (err: unknown) => setError(describeError(err)),
+    (err: unknown) => setNotice({ kind: 'error', message: describeError(err) }),
+    [],
+  );
+  const reportInfo = useCallback(
+    (message: string) => setNotice({ kind: 'info', message }),
     [],
   );
 
@@ -70,7 +77,7 @@ export function App({ client }: AppProps) {
   /** Exécute une action d'espace en affichant l'erreur éventuelle. */
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
-    setError(null);
+    setNotice(null);
     try {
       await action();
     } catch (err) {
@@ -107,10 +114,15 @@ export function App({ client }: AppProps) {
       client={client}
       tracker={tracker}
       reportError={reportError}
+      reportInfo={reportInfo}
     >
       <div className="app">
-        {error && (
-          <ErrorMessage message={error} onDismiss={() => setError(null)} />
+        {notice && (
+          <ErrorMessage
+            message={notice.message}
+            kind={notice.kind}
+            onDismiss={() => setNotice(null)}
+          />
         )}
         {workspace ? (
           <WorkspaceScreen

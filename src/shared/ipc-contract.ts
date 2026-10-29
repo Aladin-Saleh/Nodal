@@ -9,9 +9,11 @@ import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
 import type {
   AttachmentInfo,
+  BulkDeletionImpact,
   ChildrenStrategy,
   DocumentInfo,
   EdgeInfo,
+  ExportResult,
   GraphData,
   NodeDeletionImpact,
   NodeDetail,
@@ -20,6 +22,7 @@ import type {
   NodeSummary,
   RecentWorkspace,
   RelationTypeInfo,
+  SearchHit,
   TagInfo,
   WorkspaceSettings,
 } from './model';
@@ -70,6 +73,21 @@ export interface MoveNodeInput {
   parentId: string | null;
   /** Position parmi les nouveaux frères ; à la fin si absente. */
   index?: number;
+}
+export interface MoveManyNodesInput {
+  ids: string[];
+  parentId: string | null;
+}
+export interface SetNodesTypeInput {
+  ids: string[];
+  nodeType: NodeType;
+}
+export interface IdsInput {
+  ids: string[];
+}
+export interface DeleteManyNodesInput {
+  ids: string[];
+  childrenStrategy: ChildrenStrategy;
 }
 export interface DuplicateNodeInput {
   id: string;
@@ -133,6 +151,9 @@ export interface UpdateEdgeInput {
   label?: string | null;
   description?: string | null;
 }
+export interface SearchInput {
+  query: string;
+}
 export interface SavePositionsInput {
   positions: NodePosition[];
 }
@@ -176,6 +197,13 @@ export interface IpcContract {
   'node:getDeletionImpact': { args: [IdInput]; result: NodeDeletionImpact };
   'node:delete': { args: [DeleteNodeInput]; result: null };
   'node:setTags': { args: [SetNodeTagsInput]; result: TagInfo[] };
+  'node:moveMany': { args: [MoveManyNodesInput]; result: null };
+  'node:setTypeMany': { args: [SetNodesTypeInput]; result: null };
+  'node:getDeletionImpactMany': {
+    args: [IdsInput];
+    result: BulkDeletionImpact;
+  };
+  'node:deleteMany': { args: [DeleteManyNodesInput]; result: null };
 
   'document:get': { args: [IdInput]; result: DocumentInfo };
   'document:create': { args: [CreateDocumentInput]; result: DocumentInfo };
@@ -213,6 +241,10 @@ export interface IpcContract {
 
   'graph:get': { args: []; result: GraphData };
   'graph:savePositions': { args: [SavePositionsInput]; result: null };
+
+  'search:query': { args: [SearchInput]; result: SearchHit[] };
+  /** Choix du dossier par le main ; `null` si annulé. */
+  'workspace:export': { args: []; result: ExportResult | null };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -243,6 +275,10 @@ export const IPC_CHANNELS = [
   'node:getDeletionImpact',
   'node:delete',
   'node:setTags',
+  'node:moveMany',
+  'node:setTypeMany',
+  'node:getDeletionImpactMany',
+  'node:deleteMany',
   'document:get',
   'document:create',
   'document:update',
@@ -265,6 +301,8 @@ export const IPC_CHANNELS = [
   'edge:delete',
   'graph:get',
   'graph:savePositions',
+  'search:query',
+  'workspace:export',
 ] as const satisfies readonly IpcChannel[];
 
 /** Événements main → renderer. */

@@ -1,5 +1,6 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import {
+  CONTENT_TYPE_LABELS,
   NODE_TYPES,
   NODE_TYPE_LABELS,
   SUMMARY_MAX_LENGTH,
@@ -15,6 +16,8 @@ import { useAutosave, useClient, useRunner } from '../../app/context';
 import { AttachmentList } from '../attachments/AttachmentList';
 import { RelationList } from '../relations/RelationList';
 import { TagEditor } from '../tags/TagEditor';
+import { ParentSelect } from './NodeDialogs';
+import { buildTreeIndex, subtreeIds } from './tree';
 
 export interface NodePropertiesProps {
   node: NodeDetail;
@@ -29,11 +32,13 @@ export interface NodePropertiesProps {
   /** Les tags de l'espace ont changé. */
   onTagsChanged(): void;
   onRelationsChanged(): void;
+  onOpenDocument(documentId: string): void;
+  onAddDocument(): void;
 }
 
 /**
- * Panneau de propriétés (§7) : type, résumé, couleur, relations, tags,
- * pièces jointes et métadonnées. À remonter (prop `key`) quand le nœud affiché change.
+ * Panneau de propriétés (§7) : type, parent, résumé, couleur, documents,
+ * relations, tags, pièces jointes et métadonnées. À remonter (prop `key`) quand le nœud affiché change.
  */
 export function NodeProperties({
   node,
@@ -45,12 +50,28 @@ export function NodeProperties({
   onNodeChanged,
   onTagsChanged,
   onRelationsChanged,
+  onOpenDocument,
+  onAddDocument,
 }: NodePropertiesProps) {
   const client = useClient();
   const run = useRunner();
   const typeId = useId();
   const summaryId = useId();
   const colorId = useId();
+  const parentId = useId();
+  const index = useMemo(() => buildTreeIndex([...nodes]), [nodes]);
+  const forbidden = useMemo(() => subtreeIds(index, node.id), [index, node.id]);
+
+  /** Change la place du nœud dans la hiérarchie (racine ou enfant). */
+  const changeParent = async (value: string) => {
+    const done = await run(() =>
+      client.call('node:move', {
+        id: node.id,
+        parentId: value === '' ? null : value,
+      }),
+    );
+    if (done !== undefined) onNodeChanged();
+  };
   const [summary, setSummary] = useState(node.summary ?? '');
 
   useAutosave({
@@ -89,6 +110,15 @@ export function NodeProperties({
           ))}
         </select>
 
+        <label htmlFor={parentId}>Parent</label>
+        <ParentSelect
+          id={parentId}
+          index={index}
+          value={node.parentId ?? ''}
+          forbidden={forbidden}
+          onChange={(value) => void changeParent(value)}
+        />
+
         <label htmlFor={summaryId}>Résumé</label>
         <textarea
           id={summaryId}
@@ -119,6 +149,35 @@ export function NodeProperties({
             <span className="muted">Couleur du type</span>
           )}
         </div>
+      </section>
+
+      <section>
+        <h3>Documents</h3>
+        {node.documents.length === 0 ? (
+          <p className="muted">Aucun document.</p>
+        ) : (
+          <ul className="side-documents">
+            {node.documents.map((doc) => (
+              <li key={doc.id}>
+                <button
+                  type="button"
+                  className="side-document"
+                  onClick={() => onOpenDocument(doc.id)}
+                >
+                  <span className={`doc-badge doc-${doc.contentType}`}>
+                    {doc.contentType === 'code' && doc.language
+                      ? doc.language
+                      : CONTENT_TYPE_LABELS[doc.contentType]}
+                  </span>
+                  <span className="side-document-title">{doc.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <button type="button" className="secondary" onClick={onAddDocument}>
+          + Document
+        </button>
       </section>
 
       <section>

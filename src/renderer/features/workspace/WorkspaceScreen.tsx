@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { NodeType } from '../../../shared/domain';
+import type { ContentType, NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
+  BulkDeletionImpact,
   ChildrenStrategy,
   GraphData,
   NodeDeletionImpact,
   NodeDetail,
   NodePosition,
   NodeSummary,
+  SearchHit,
   TagInfo,
 } from '../../../shared/model';
 import {
   useClient,
   useReportError,
+  useReportInfo,
   useRunner,
   useSaveTracker,
 } from '../../app/context';
-import { DocumentsPanel } from '../documents/DocumentsPanel';
+import { DocumentEditorDialog } from '../documents/DocumentEditorDialog';
+import {
+  DocumentsPanel,
+  NewDocumentDialog,
+  type Language,
+} from '../documents/DocumentsPanel';
 import { GraphPanel } from '../graph/GraphPanel';
 import {
   DeleteNodeDialog,
@@ -29,14 +37,21 @@ import { NodeProperties } from '../nodes/NodeProperties';
 import { NodeTree } from '../nodes/NodeTree';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
+import { SearchBox } from '../search/SearchBox';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
 
 type DialogState =
-  | { kind: 'new'; parentId: string | null }
-  | { kind: 'move'; node: NodeSummary }
+  | {
+      kind: 'new';
+      parentId: string | null;
+      /** Double-clic dans le graphe : position 3D et choix du parent. */
+      position?: { x: number; y: number; z: number };
+    }
+  | { kind: 'move'; nodes: NodeSummary[]; bulk: boolean }
   | { kind: 'duplicate'; node: NodeSummary }
   | { kind: 'delete'; node: NodeSummary; impact: NodeDeletionImpact }
+  | { kind: 'bulkDelete'; ids: string[]; impact: BulkDeletionImpact }
   | { kind: 'tags' }
   | { kind: 'relationTypes' }
   | { kind: 'settings' };
@@ -62,6 +77,7 @@ export function WorkspaceScreen({
   const client = useClient();
   const run = useRunner();
   const reportError = useReportError();
+  const reportInfo = useReportInfo();
   const tracker = useSaveTracker();
 
   const [nodes, setNodes] = useState<NodeSummary[]>([]);
@@ -74,6 +90,28 @@ export function WorkspaceScreen({
   // La vue Graphe est la vue par défaut à l'ouverture d'un espace.
   const [view, setView] = useState<ViewMode>('graph');
   const [relationsRevision, setRelationsRevision] = useState(0);
+  const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
+    null,
+  );
+  const [addingDocumentFor, setAddingDocumentFor] = useState<string | null>(
+    null,
+  );
+  const [exporting, setExporting] = useState(false);
+  const [multiSelection, setMultiSelection] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const toggleMulti = (id: string) => {
+    const next = new Set(multiSelection);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setMultiSelection(next);
+  };
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchMatches = useMemo(
+    () => (searchHits ? new Set(searchHits.map((hit) => hit.nodeId)) : null),
+    [searchHits],
+  );
 
   const titleInput = useRef<HTMLInputElement>(null);
 
@@ -176,7 +214,10 @@ export function WorkspaceScreen({
           ...current,
           nodes: current.nodes.map((node) => {
             const position = byId.get(node.id);
-            return position ? { ...node, x: position.x, y: position.y } : node;
+            // Les trois coordonnées : un z manquant ferait replacer le nœud.
+            return position
+              ? { ...node, x: position.x, y: position.y, z: position.z }
+              : node;
           }),
         },
     );
@@ -184,14 +225,27 @@ export function WorkspaceScreen({
 
   // --- Actions sur les nœuds -------------------------------------------------
 
-  const createNode = async (title: string, nodeType: NodeType) => {
+  const createNode = async (
+    title: string,
+    nodeType: NodeType,
+    chosenParentId: string | null,
+  ) => {
     if (dialog?.kind !== 'new') return;
-    const { parentId } = dialog;
+    const { position } = dialog;
+    const parentId = position ? chosenParentId : dialog.parentId;
     setDialog(null);
     const created = await run(() =>
       client.call('node:create', { parentId, title, nodeType }),
     );
     if (!created) return;
+    if (position) {
+      // Le nœud apparaît là où l'on a double-cliqué.
+      await run(() =>
+        client.call('graph:savePositions', {
+          positions: [{ id: created.id, ...position }],
+        }),
+      );
+    }
     await refreshNodes();
     if (parentId) setExpanded((current) => new Set([...current, parentId]));
     select(created.id);
@@ -213,6 +267,52 @@ export function WorkspaceScreen({
     if (done === undefined) return;
     if (parentId) setExpanded((current) => new Set([...current, parentId]));
     nodeChanged();
+  };
+
+  const bulkMove = async (parentId: string | null) => {
+    const ids = [...multiSelection];
+    setDialog(null);
+    const done = await run(() =>
+      client.call('node:moveMany', { ids, parentId }),
+    );
+    if (done === undefined) return;
+    if (parentId) setExpanded((current) => new Set([...current, parentId]));
+    nodeChanged();
+  };
+
+  const bulkSetType = async (nodeType: NodeType) => {
+    const ids = [...multiSelection];
+    const done = await run(() =>
+      client.call('node:setTypeMany', { ids, nodeType }),
+    );
+    if (done !== undefined) nodeChanged();
+  };
+
+  const askBulkDelete = async () => {
+    const ids = [...multiSelection];
+    try {
+      const impact = await client.call('node:getDeletionImpactMany', { ids });
+      setDialog({ kind: 'bulkDelete', ids, impact });
+    } catch (error) {
+      reportError(error);
+    }
+  };
+
+  const bulkDelete = async (
+    ids: string[],
+    childrenStrategy: ChildrenStrategy,
+  ) => {
+    setDialog(null);
+    await tracker.flushAll();
+    const done = await run(() =>
+      client.call('node:deleteMany', { ids, childrenStrategy }),
+    );
+    if (done === undefined) return;
+    setMultiSelection(new Set());
+    if (selectedId && ids.includes(selectedId)) select(null);
+    void refreshNodes();
+    void refreshTags();
+    refreshDetail();
   };
 
   const shift = (offset: -1 | 1) => {
@@ -271,11 +371,60 @@ export function WorkspaceScreen({
     return Boolean(updated);
   };
 
+  // --- Documents depuis le graphe ou la recherche --------------------------
+
+  const openDocument = (documentId: string, nodeId?: string) => {
+    if (nodeId && nodeId !== selectedId) select(nodeId);
+    setEditingDocumentId(documentId);
+  };
+
+  const createDocument = async (
+    nodeId: string,
+    title: string,
+    contentType: ContentType,
+    language: Language | null,
+  ) => {
+    setAddingDocumentFor(null);
+    const created = await run(() =>
+      client.call('document:create', { nodeId, title, contentType, language }),
+    );
+    if (!created) return;
+    refreshDetail();
+    setEditingDocumentId(created.id);
+  };
+
+  const exportWorkspace = async () => {
+    setExporting(true);
+    try {
+      // Exporter le contenu à jour : écrire d'abord ce qui est en attente.
+      await tracker.flushAll();
+      const result = await run(() => client.call('workspace:export'));
+      if (result) {
+        reportInfo(
+          `Espace exporté dans ${result.folderPath} (${result.nodeCount} nœuds, ${result.documentCount} documents, ${result.attachmentCount} pièces jointes).`,
+        );
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const showSearchResults = (hits: SearchHit[] | null) => {
+    setSearchHits(hits);
+    if (!hits || hits.length === 0) return;
+    // Déplier l'arborescence jusqu'aux nœuds trouvés.
+    const ancestors = hits.flatMap((hit) => ancestorIds(index, hit.nodeId));
+    if (ancestors.some((id) => !expanded.has(id))) {
+      setExpanded(new Set([...expanded, ...ancestors]));
+    }
+  };
+
   // --- Raccourcis clavier (§7.1) -------------------------------------------
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || dialog) return;
+      const modalOpen = dialog || editingDocumentId || addingDocumentFor;
+      if (!(event.ctrlKey || event.metaKey) || modalOpen) return;
       const key = event.key.toLowerCase();
       if (key === 'n') {
         event.preventDefault();
@@ -286,11 +435,15 @@ export function WorkspaceScreen({
       } else if (key === 's') {
         event.preventDefault();
         void tracker.flushAll();
+      } else if (key === 'f' || key === 'k') {
+        event.preventDefault();
+        searchInput.current?.focus();
+        searchInput.current?.select();
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dialog, selectedId, tracker]);
+  }, [dialog, editingDocumentId, addingDocumentFor, selectedId, tracker]);
 
   const siblings = selected ? siblingsOf(index, selected) : [];
   const siblingPosition = selected
@@ -303,6 +456,12 @@ export function WorkspaceScreen({
         <h1 className="workspace-name" title={workspace.filePath}>
           {workspace.name}
         </h1>
+        <SearchBox
+          inputRef={searchInput}
+          onResults={showSearchResults}
+          onSelectNode={(id) => select(id)}
+          onOpenDocument={openDocument}
+        />
         <div className="segmented" role="group" aria-label="Vue centrale">
           <button
             type="button"
@@ -333,6 +492,15 @@ export function WorkspaceScreen({
             onClick={() => setDialog({ kind: 'relationTypes' })}
           >
             Types de relations
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={exporting}
+            title="Exporter l’espace dans un dossier portable (manifest.json, documents, pièces jointes)"
+            onClick={() => void exportWorkspace()}
+          >
+            {exporting ? 'Export…' : 'Exporter'}
           </button>
           <button
             type="button"
@@ -398,6 +566,9 @@ export function WorkspaceScreen({
             onToggle={toggle}
             onDelete={(id) => void askDelete(id)}
             onRename={() => titleInput.current?.focus()}
+            highlighted={searchMatches}
+            multiSelection={multiSelection}
+            onToggleMulti={toggleMulti}
           />
         </nav>
 
@@ -420,6 +591,25 @@ export function WorkspaceScreen({
                 }}
                 onPositionsSaved={positionsSaved}
                 onRelationsChanged={relationsChanged}
+                selectedDocuments={shownDetail?.documents ?? null}
+                searchMatches={searchMatches}
+                onOpenDocument={(id) => openDocument(id)}
+                onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
+                multiSelection={multiSelection}
+                onToggleSelect={toggleMulti}
+                onSetMultiSelection={setMultiSelection}
+                onBulkMove={() =>
+                  setDialog({
+                    kind: 'move',
+                    nodes: nodes.filter((node) => multiSelection.has(node.id)),
+                    bulk: true,
+                  })
+                }
+                onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
+                onBulkDelete={() => void askBulkDelete()}
+                onCreateAt={(position) =>
+                  setDialog({ kind: 'new', parentId: null, position })
+                }
               />
             )
           ) : shownDetail && selected ? (
@@ -430,7 +620,9 @@ export function WorkspaceScreen({
                 titleInput={titleInput}
                 onNavigate={select}
                 onRename={renameNode}
-                onMove={() => setDialog({ kind: 'move', node: selected })}
+                onMove={() =>
+                  setDialog({ kind: 'move', nodes: [selected], bulk: false })
+                }
                 onDuplicate={() =>
                   setDialog({ kind: 'duplicate', node: selected })
                 }
@@ -474,10 +666,30 @@ export function WorkspaceScreen({
             onNodeChanged={nodeChanged}
             onTagsChanged={() => void refreshTags()}
             onRelationsChanged={relationsChanged}
+            onOpenDocument={(id) => openDocument(id)}
+            onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
           />
         )}
       </div>
 
+      {editingDocumentId && (
+        <DocumentEditorDialog
+          documentId={editingDocumentId}
+          onChanged={refreshDetail}
+          onClose={() => {
+            setEditingDocumentId(null);
+            refreshDetail();
+          }}
+        />
+      )}
+      {addingDocumentFor && (
+        <NewDocumentDialog
+          onSubmit={(title, contentType, language) =>
+            void createDocument(addingDocumentFor, title, contentType, language)
+          }
+          onCancel={() => setAddingDocumentFor(null)}
+        />
+      )}
       {dialog?.kind === 'relationTypes' && (
         <RelationTypeManagerDialog
           relationTypes={graph?.relationTypes ?? []}
@@ -492,15 +704,24 @@ export function WorkspaceScreen({
               ? (index.byId.get(dialog.parentId)?.title ?? null)
               : null
           }
-          onSubmit={(title, nodeType) => void createNode(title, nodeType)}
+          parentChoice={
+            dialog.position ? { index, parentId: dialog.parentId } : undefined
+          }
+          onSubmit={(title, nodeType, parentId) =>
+            void createNode(title, nodeType, parentId)
+          }
           onCancel={() => setDialog(null)}
         />
       )}
       {dialog?.kind === 'move' && (
         <MoveNodeDialog
           index={index}
-          node={dialog.node}
-          onSubmit={(parentId) => void moveTo(dialog.node, parentId)}
+          nodes={dialog.nodes}
+          onSubmit={(parentId) =>
+            dialog.bulk
+              ? void bulkMove(parentId)
+              : void moveTo(dialog.nodes[0]!, parentId)
+          }
           onCancel={() => setDialog(null)}
         />
       )}
@@ -516,10 +737,19 @@ export function WorkspaceScreen({
       )}
       {dialog?.kind === 'delete' && (
         <DeleteNodeDialog
-          node={dialog.node}
+          title={`Supprimer « ${dialog.node.title} » ?`}
           impact={dialog.impact}
           busy={false}
           onSubmit={(strategy) => void deleteNode(dialog.node, strategy)}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+      {dialog?.kind === 'bulkDelete' && (
+        <DeleteNodeDialog
+          title={`Supprimer ${dialog.impact.nodeCount} nœuds ?`}
+          impact={dialog.impact}
+          busy={false}
+          onSubmit={(strategy) => void bulkDelete(dialog.ids, strategy)}
           onCancel={() => setDialog(null)}
         />
       )}

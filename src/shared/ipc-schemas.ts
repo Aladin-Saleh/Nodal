@@ -13,6 +13,7 @@ import {
   EDGE_LABEL_MAX_LENGTH,
   NODE_TYPES,
   RELATION_TYPE_NAME_MAX_LENGTH,
+  SEARCH_QUERY_MAX_LENGTH,
   SUMMARY_MAX_LENGTH,
   TAG_NAME_MAX_LENGTH,
   TITLE_MAX_LENGTH,
@@ -219,6 +220,8 @@ export const savePositionsInputSchema = z.strictObject({
     .max(100_000),
 });
 
+const idListSchema = z.array(idSchema).min(1).max(10_000);
+
 const noArgs = z.tuple([]);
 const one = <T extends z.ZodType>(schema: T) => z.tuple([schema]);
 
@@ -247,6 +250,19 @@ export const ipcArgsSchemas = {
   'node:getDeletionImpact': one(idInput),
   'node:delete': one(deleteNodeInputSchema),
   'node:setTags': one(setNodeTagsInputSchema),
+  'node:moveMany': one(
+    z.strictObject({ ids: idListSchema, parentId: idSchema.nullable() }),
+  ),
+  'node:setTypeMany': one(
+    z.strictObject({ ids: idListSchema, nodeType: nodeTypeSchema }),
+  ),
+  'node:getDeletionImpactMany': one(z.strictObject({ ids: idListSchema })),
+  'node:deleteMany': one(
+    z.strictObject({
+      ids: idListSchema,
+      childrenStrategy: z.enum(['reparent', 'delete']),
+    }),
+  ),
 
   'document:get': one(idInput),
   'document:create': one(createDocumentInputSchema),
@@ -275,4 +291,9 @@ export const ipcArgsSchemas = {
 
   'graph:get': noArgs,
   'graph:savePositions': one(savePositionsInputSchema),
+
+  'search:query': one(
+    z.strictObject({ query: z.string().max(SEARCH_QUERY_MAX_LENGTH) }),
+  ),
+  'workspace:export': noArgs,
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

@@ -12,6 +12,8 @@ export interface ModalProps {
   children: ReactNode;
   /** Boutons d'action, alignés en bas à droite. */
   footer?: ReactNode;
+  /** `large` : boîte élargie, pour l'édition d'un document. */
+  size?: 'normal' | 'large';
 }
 
 const FOCUSABLE =
@@ -21,7 +23,13 @@ const FOCUSABLE =
  * Boîte de dialogue modale accessible : Échap ferme, le focus est placé dans
  * la boîte à l'ouverture, contenu dans la boîte, et restauré à la fermeture.
  */
-export function Modal({ title, onClose, children, footer }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  footer,
+  size = 'normal',
+}: ModalProps) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
 
@@ -60,7 +68,7 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
     <div className="modal-backdrop" onMouseDown={() => onClose()}>
       <div
         ref={panel}
-        className="modal"
+        className={size === 'large' ? 'modal modal-large' : 'modal'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

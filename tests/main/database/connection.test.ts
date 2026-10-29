@@ -26,7 +26,8 @@ const tableNames = (db: DatabaseSync) =>
   (
     db
       .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
+        // Les tables internes de FTS5 (search_index_*) sont exclues.
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT GLOB 'search_index_*' ORDER BY name",
       )
       .all() as { name: string }[]
   ).map((row) => row.name);
@@ -52,6 +53,7 @@ describe('createNodalDatabase', () => {
         'node',
         'node_tag',
         'relation_type',
+        'search_index',
         'tag',
         'workspace',
         'workspace_settings',

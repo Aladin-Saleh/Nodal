@@ -5,7 +5,7 @@ import {
   useState,
   type Ref,
 } from 'react';
-import type { NodePosition, RelationTypeInfo } from '../../../shared/model';
+import type { DocumentSummary, RelationTypeInfo } from '../../../shared/model';
 import type { VisibleGraph } from './graph-model';
 import { GraphScene, type GraphSceneCallbacks } from './graph-scene';
 
@@ -20,6 +20,12 @@ export interface Graph3DViewProps extends GraphSceneCallbacks {
   visible: VisibleGraph;
   relationTypes: readonly RelationTypeInfo[];
   selectedId: string | null;
+  /** Documents du nœud sélectionné, affichés en cartes à côté de lui. */
+  selectedDocuments: readonly DocumentSummary[] | null;
+  /** Nœuds trouvés par la recherche ; `null` sans recherche active. */
+  searchMatches: ReadonlySet<string> | null;
+  /** Sélection multiple (Ctrl+clic, Ctrl+A). */
+  multiSelection: ReadonlySet<string>;
 }
 
 /** Enveloppe React de la scène 3D ; toutes les données viennent des props. */
@@ -28,23 +34,20 @@ export function Graph3DView({
   visible,
   relationTypes,
   selectedId,
-  onSelect,
-  onOpen,
-  onLink,
-  onPositionsChanged,
+  selectedDocuments,
+  searchMatches,
+  multiSelection,
+  ...handlers
 }: Graph3DViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GraphScene | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   // La scène appelle toujours les derniers callbacks reçus.
-  const callbacks = useRef<GraphSceneCallbacks>({
-    onSelect,
-    onOpen,
-    onLink,
-    onPositionsChanged,
-  });
+  const callbacks = useRef<GraphSceneCallbacks>(handlers);
+  const latest = useRef({ selectedId, selectedDocuments });
   useEffect(() => {
-    callbacks.current = { onSelect, onOpen, onLink, onPositionsChanged };
+    callbacks.current = handlers;
+    latest.current = { selectedId, selectedDocuments };
   });
 
   useEffect(() => {
@@ -55,8 +58,12 @@ export function Graph3DView({
         onSelect: (id) => callbacks.current.onSelect(id),
         onOpen: (id) => callbacks.current.onOpen(id),
         onLink: (source, target) => callbacks.current.onLink(source, target),
-        onPositionsChanged: (positions: NodePosition[]) =>
+        onPositionsChanged: (positions) =>
           callbacks.current.onPositionsChanged(positions),
+        onOpenDocument: (id) => callbacks.current.onOpenDocument(id),
+        onAddDocument: (nodeId) => callbacks.current.onAddDocument(nodeId),
+        onToggleSelect: (id) => callbacks.current.onToggleSelect(id),
+        onCreateAt: (position) => callbacks.current.onCreateAt(position),
       });
     } catch (error) {
       console.error('[graph] rendu 3D indisponible', error);
@@ -73,12 +80,31 @@ export function Graph3DView({
   }, []);
 
   useEffect(() => {
-    sceneRef.current?.setData(visible, relationTypes);
+    const scene = sceneRef.current;
+    if (!scene) return;
+    scene.setData(visible, relationTypes);
+    // Les cartes suivent le nœud sélectionné (recréées s'il réapparaît).
+    scene.setDocuments(
+      latest.current.selectedId,
+      latest.current.selectedDocuments ?? [],
+    );
   }, [visible, relationTypes]);
 
   useEffect(() => {
     sceneRef.current?.setSelection(selectedId);
   }, [selectedId]);
+
+  useEffect(() => {
+    sceneRef.current?.setDocuments(selectedId, selectedDocuments ?? []);
+  }, [selectedId, selectedDocuments]);
+
+  useEffect(() => {
+    sceneRef.current?.setSearchMatches(searchMatches);
+  }, [searchMatches]);
+
+  useEffect(() => {
+    sceneRef.current?.setMultiSelection(multiSelection);
+  }, [multiSelection]);
 
   useImperativeHandle(
     ref,

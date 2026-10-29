@@ -87,4 +87,8 @@ export const DOCUMENT_BODY_MAX_LENGTH = 5_000_000;
 export const ATTACHMENT_MAX_SIZE_DEFAULT_BYTES = 25 * 1024 * 1024;
 export const ATTACHMENT_MAX_SIZE_LIMIT_BYTES = 200 * 1024 * 1024;
 export const RELATION_TYPE_NAME_MAX_LENGTH = 60;
+export const SEARCH_QUERY_MAX_LENGTH = 200;
+/** Marqueurs des termes trouvés dans les extraits de recherche. */
+export const SEARCH_MARK_START = '\u0002';
+export const SEARCH_MARK_END = '\u0003';
 export const EDGE_LABEL_MAX_LENGTH = 120;
