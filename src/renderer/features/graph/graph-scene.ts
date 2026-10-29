@@ -80,7 +80,8 @@ interface NodeEntry {
   sim: SimNode;
   group: THREE.Group;
   mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
-  label: THREE.Sprite;
+  /** Étiquette créée à la demande (voir LABEL_LIMIT). */
+  label: THREE.Sprite | null;
   labelKey: string;
 }
 
@@ -109,6 +110,12 @@ type PointerMode =
 
 /** Au-delà, les libellés des relations ne s'affichent qu'autour de la sélection. */
 const EDGE_LABEL_LIMIT = 120;
+/**
+ * Au-delà, seules les étiquettes utiles (sélection, voisins, survol,
+ * recherche, sélection multiple) sont créées : chaque étiquette est une
+ * texture, et des milliers satureraient la mémoire graphique.
+ */
+const LABEL_LIMIT = 250;
 const CLICK_TOLERANCE_PX = 5;
 const FADED_OPACITY = 0.15;
 const LABEL_OFFSET = NODE_RADIUS + 3;
@@ -595,22 +602,31 @@ export class GraphScene {
       }),
     );
     mesh.userData.id = data.id;
-    const label = createLabel(data.title, {
-      height: NODE_LABEL_HEIGHT,
-      ...this.labelColors(),
-    });
-    label.position.set(0, LABEL_OFFSET, 0);
-    label.userData.id = data.id;
-    group.add(mesh, label);
+    group.add(mesh);
     this.nodesGroup.add(group);
     return {
       data,
       sim: { id: data.id },
       group,
       mesh,
-      label,
-      labelKey: data.title,
+      label: null,
+      labelKey: '',
     };
+  }
+
+  /** Crée ou retire l'étiquette d'un nœud selon qu'elle doit être visible. */
+  private syncLabel(entry: NodeEntry, wanted: boolean): void {
+    if (!wanted) {
+      if (entry.label) {
+        entry.group.remove(entry.label);
+        disposeObject(entry.label);
+        entry.label = null;
+        entry.labelKey = '';
+      }
+      return;
+    }
+    if (entry.label && entry.labelKey === entry.data.title) return;
+    this.replaceNodeLabel(entry, entry.data.title);
   }
 
   private updateNode(entry: NodeEntry, data: GraphNode): void {
@@ -619,13 +635,17 @@ export class GraphScene {
       entry.mesh.geometry = createNodeGeometry(data.nodeType as NodeType);
     }
     entry.mesh.material.color.set(this.nodeColor(data));
-    if (entry.labelKey !== data.title) this.replaceNodeLabel(entry, data.title);
     entry.data = data;
+    if (entry.label && entry.labelKey !== data.title) {
+      this.replaceNodeLabel(entry, data.title);
+    }
   }
 
   private replaceNodeLabel(entry: NodeEntry, title: string): void {
-    entry.group.remove(entry.label);
-    disposeObject(entry.label);
+    if (entry.label) {
+      entry.group.remove(entry.label);
+      disposeObject(entry.label);
+    }
     entry.label = createLabel(title, {
       height: NODE_LABEL_HEIGHT,
       ...this.labelColors(),
@@ -834,7 +854,16 @@ export class GraphScene {
       const opacity = visible ? 1 : FADED_OPACITY;
       entry.mesh.material.opacity = opacity;
       entry.mesh.material.depthWrite = visible;
-      entry.label.material.opacity = opacity;
+      const labelled =
+        this.nodes.size <= LABEL_LIMIT ||
+        id === focus ||
+        (!!focus && close.has(id)) ||
+        id === this.hoveredId ||
+        id === this.linkTargetId ||
+        !!matches?.has(id) ||
+        this.multiSelection.has(id);
+      this.syncLabel(entry, labelled);
+      if (entry.label) entry.label.material.opacity = opacity;
       const matched = !!matches?.has(id) || this.multiSelection.has(id);
       const emphasized = id === focus || id === this.linkTargetId || matched;
       entry.mesh.material.emissive.copy(emphasized ? accent : black);
@@ -882,7 +911,9 @@ export class GraphScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     const targets: THREE.Object3D[] = [];
     for (const [id, entry] of this.nodes) {
-      if (id !== exclude) targets.push(entry.mesh, entry.label);
+      if (id === exclude) continue;
+      targets.push(entry.mesh);
+      if (entry.label) targets.push(entry.label);
     }
     const [first] = this.raycaster.intersectObjects(targets, false);
     return (first?.object.userData.id as string | undefined) ?? null;
@@ -1182,7 +1213,7 @@ export class GraphScene {
     Object.assign(this.scene.fog as THREE.Fog, { near, far });
     for (const entry of this.nodes.values()) {
       entry.mesh.material.color.set(this.nodeColor(entry.data));
-      this.replaceNodeLabel(entry, entry.data.title);
+      if (entry.label) this.replaceNodeLabel(entry, entry.data.title);
     }
     // Les relations sont recréées au prochain setData ; forcer leur rafraîchissement.
     for (const entry of this.links.values()) entry.labelKey = '';

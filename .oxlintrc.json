@@ -18,5 +18,13 @@
       }
     ]
   },
-  "ignorePatterns": [".vite/**", "out/**", "node_modules/**"]
+  "ignorePatterns": [".vite/**", "out/**", "node_modules/**"],
+  "overrides": [
+    {
+      "files": ["tests/e2e/**"],
+      "rules": {
+        "vitest/expect-expect": "off"
+      }
+    }
+  ]
 }

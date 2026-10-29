@@ -39,7 +39,7 @@ const create = (title: string, parentId: string | null = null) =>
 const strip = (text: string) => text.replace(/[\u0002\u0003]/g, '');
 
 describe('searchTerms', () => {
-  it('neutralise la syntaxe FTS (préfixes entre guillemets)', () => {
+  it('neutralise la syntaxe FTS (préfixes entre guillemets)', async () => {
     expect(searchTerms('kafka topic kafka')).toEqual(['"kafka"*', '"topic"*']);
     expect(searchTerms('a" OR NEAR(x')).toEqual([
       '"a"*',
@@ -52,7 +52,7 @@ describe('searchTerms', () => {
 });
 
 describe('SearchService', () => {
-  it('trouve un mot présent uniquement dans un bloc de code (§10.2)', () => {
+  it('trouve un mot présent uniquement dans un bloc de code (§10.2)', async () => {
     const id = create('Service commandes');
     const doc = documents.create({
       nodeId: id,
@@ -75,14 +75,14 @@ describe('SearchService', () => {
     expect(hit!.matches[0]!.snippet).toContain('\u0002orders\u0003');
   });
 
-  it('cherche dans les titres et résumés, sans tenir compte des accents ni de la casse', () => {
+  it('cherche dans les titres et résumés, sans tenir compte des accents ni de la casse', async () => {
     const id = create('Runbook de déploiement');
     nodes.update({ id, summary: 'Procédure de mise en production' });
     expect(search.search('DEPLOIEMENT').map((hit) => hit.nodeId)).toEqual([id]);
     expect(search.search('product').map((hit) => hit.nodeId)).toEqual([id]);
   });
 
-  it('exige tous les mots, répartis entre le nœud et ses documents', () => {
+  it('exige tous les mots, répartis entre le nœud et ses documents', async () => {
     const id = create('Kafka');
     const other = create('Kafka Connect');
     documents.update({
@@ -103,7 +103,7 @@ describe('SearchService', () => {
     ).toEqual([id, other].toSorted());
   });
 
-  it('suit les modifications et suppressions (index tenu par triggers)', () => {
+  it('suit les modifications et suppressions (index tenu par triggers)', async () => {
     const id = create('Ancien titre');
     const doc = documents.create({
       nodeId: id,
@@ -128,7 +128,7 @@ describe('SearchService', () => {
     expect(search.search('remplace')).toEqual([]);
   });
 
-  it('indexe les copies créées par duplication', () => {
+  it('indexe les copies créées par duplication', async () => {
     const id = create('Original');
     const doc = documents.create({
       nodeId: id,
@@ -140,7 +140,7 @@ describe('SearchService', () => {
     expect(search.search('zanzibar')).toHaveLength(2);
   });
 
-  it('retourne une liste vide pour une saisie sans mot', () => {
+  it('retourne une liste vide pour une saisie sans mot', async () => {
     create('Quelque chose');
     expect(search.search('   ')).toEqual([]);
     expect(search.search('"*()')).toEqual([]);
@@ -148,7 +148,7 @@ describe('SearchService', () => {
 });
 
 describe('exportWorkspace', () => {
-  it('écrit un manifest versionné, les documents sources et les pièces jointes', () => {
+  it('écrit un manifest versionné, les documents sources et les pièces jointes', async () => {
     const { context, service, dir } = workspace();
     const ctx = context();
     const parent = create('API');
@@ -184,7 +184,7 @@ describe('exportWorkspace', () => {
 
     const target = path.join(dir, 'exports');
     fs.mkdirSync(target);
-    const result = exportWorkspace(ctx, service.getCurrent()!, target, {
+    const result = await exportWorkspace(ctx, service.getCurrent()!, target, {
       name: 'Nodal',
       version: '0.1.0',
     });
@@ -239,31 +239,36 @@ describe('exportWorkspace', () => {
     );
   });
 
-  it('n’écrase jamais un export existant', () => {
+  it('n’écrase jamais un export existant', async () => {
     const { context, service, dir } = workspace();
     create('A');
-    const first = exportWorkspace(context(), service.getCurrent()!, dir, {
+    const first = await exportWorkspace(context(), service.getCurrent()!, dir, {
       name: 'Nodal',
       version: '0',
     });
-    const second = exportWorkspace(context(), service.getCurrent()!, dir, {
-      name: 'Nodal',
-      version: '0',
-    });
+    const second = await exportWorkspace(
+      context(),
+      service.getCurrent()!,
+      dir,
+      {
+        name: 'Nodal',
+        version: '0',
+      },
+    );
     expect(second.folderPath).not.toBe(first.folderPath);
     expect(fs.existsSync(first.folderPath)).toBe(true);
   });
 });
 
 describe('utilitaires d’export', () => {
-  it('choisit l’extension selon le type et le langage', () => {
+  it('choisit l’extension selon le type et le langage', async () => {
     expect(documentExtension('markdown', null)).toBe('md');
     expect(documentExtension('mermaid', null)).toBe('mmd');
     expect(documentExtension('code', 'typescript')).toBe('ts');
     expect(documentExtension('code', null)).toBe('txt');
   });
 
-  it('produit des noms de fichiers sûrs sous Windows', () => {
+  it('produit des noms de fichiers sûrs sous Windows', async () => {
     expect(safeFileName('a<b>:c"d/e\\f|g?h*', 'x')).toBe('a_b__c_d_e_f_g_h_');
     expect(safeFileName('CON', 'x')).toBe('_CON');
     expect(safeFileName('nom. ', 'x')).toBe('nom');

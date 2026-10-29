@@ -9,6 +9,8 @@ const config: ForgeConfig = {
   packagerConfig: {
     name: 'Nodal',
     executableName: 'nodal',
+    // Icône de l'exécutable (extension ajoutée selon la plateforme).
+    icon: 'assets/icon',
     asar: true,
     appCopyright: 'Aladin',
     win32metadata: {
@@ -20,7 +22,11 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     // Installateur Windows (§3.2).
-    new MakerSquirrel({ name: 'Nodal', setupExe: 'NodalSetup.exe' }),
+    new MakerSquirrel({
+      name: 'Nodal',
+      setupExe: 'NodalSetup.exe',
+      setupIcon: 'assets/icon.ico',
+    }),
     // Archive portable exécutable sans installation.
     new MakerZIP({}, ['win32', 'darwin', 'linux']),
   ],

@@ -8,7 +8,7 @@
  */
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { NodalError } from '../../shared/errors';
+import { fromSystemError, NodalError } from '../../shared/errors';
 import {
   assertSchemaSupported,
   getSchemaVersion,
@@ -87,6 +87,8 @@ export function openNodalDatabase(filePath: string): DatabaseSync {
     try {
       applicationId = getApplicationId(db);
     } catch (cause) {
+      const known = fromSystemError(cause);
+      if (known) throw known;
       throw new NodalError(
         'NOT_A_NODAL_FILE',
         "Ce fichier n'est pas un espace Nodal (base de données illisible).",

@@ -27,8 +27,10 @@ import {
 import type { ServiceContext } from './context';
 import {
   documentExtension,
+  forEachLimited,
   safeFileName,
   timestampForPath,
+  writeFileDeep,
 } from './export-service';
 import { asRows } from './rows';
 
@@ -283,6 +285,13 @@ export function buildLlmExport(
 
   const documentEntries: Record<string, unknown>[] = [];
   const documentFiles: LlmExportData['documents'] = [];
+  // Index par nœud : évite de parcourir tous les documents pour chaque nœud.
+  const documentsByNode = new Map<string, DocumentRow[]>();
+  for (const doc of documents) {
+    const list = documentsByNode.get(doc.node_id);
+    if (list) list.push(doc);
+    else documentsByNode.set(doc.node_id, [doc]);
+  }
   for (const node of nodes) {
     const hierarchyPath = pathOf(node.id);
     const relatedNodeIds = [...(related.get(node.id) ?? [])];
@@ -305,9 +314,7 @@ export function buildLlmExport(
       },
       0,
     );
-    for (const doc of documents.filter(
-      (candidate) => candidate.node_id === node.id,
-    )) {
+    for (const doc of documentsByNode.get(node.id) ?? []) {
       const pieces = chunkDocument(
         doc.body,
         doc.content_type,
@@ -392,14 +399,14 @@ Les fragments sont régénérables : ils ne remplacent jamais les documents.
 `;
 
 /** Écrit l'export dans un nouveau sous-dossier de \`parentDir\` (écriture atomique). */
-export function writeLlmExport(
+export async function writeLlmExport(
   ctx: ServiceContext,
   workspace: WorkspaceInfo,
   parentDir: string,
   options: LlmExportOptions,
   tokenizer: Tokenizer,
   generator: { name: string; version: string },
-): LlmExportResult {
+): Promise<LlmExportResult> {
   const exportedAt = ctx.now();
   const data = buildLlmExport(ctx, workspace, options, tokenizer);
   const baseName = `${safeFileName(workspace.name, 'espace')}-llm-${timestampForPath(exportedAt)}`;
@@ -408,26 +415,25 @@ export function writeLlmExport(
     folderPath = path.join(parentDir, `${baseName}-${i}`);
   }
   const partial = `${folderPath}.partial`;
-  fs.rmSync(partial, { recursive: true, force: true });
-  const write = (relative: string, content: string) => {
-    const target = path.join(partial, relative);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, content);
-  };
+  await fs.promises.rm(partial, { recursive: true, force: true });
+  const write = (relative: string, content: string) =>
+    writeFileDeep(path.join(partial, relative), content);
   try {
-    write('graph.toon', `${encodeToon(data.graph)}\n`);
-    write('graph.json', `${JSON.stringify(data.graph, null, 2)}\n`);
-    write(
+    await write('graph.toon', `${encodeToon(data.graph)}\n`);
+    await write('graph.json', `${JSON.stringify(data.graph, null, 2)}\n`);
+    await write(
       'chunks.jsonl',
       data.chunks.map((chunk) => JSON.stringify(chunk)).join('\n') +
         (data.chunks.length ? '\n' : ''),
     );
-    for (const doc of data.documents) write(doc.file, doc.body);
+    await forEachLimited(data.documents, 16, (doc) =>
+      write(doc.file, doc.body),
+    );
     const totalTokens = data.chunks.reduce(
       (sum, chunk) => sum + chunk.tokenCount,
       0,
     );
-    write(
+    await write(
       'manifest.json',
       `${JSON.stringify(
         {
@@ -461,10 +467,10 @@ export function writeLlmExport(
         2,
       )}\n`,
     );
-    write('LISEZMOI.txt', README);
-    fs.renameSync(partial, folderPath);
+    await write('LISEZMOI.txt', README);
+    await fs.promises.rename(partial, folderPath);
   } catch (error) {
-    fs.rmSync(partial, { recursive: true, force: true });
+    await fs.promises.rm(partial, { recursive: true, force: true });
     throw error;
   }
   return {

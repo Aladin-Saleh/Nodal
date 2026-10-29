@@ -76,13 +76,26 @@ pièces jointes en BLOB).
     structure, identifiants reproductibles, tokens comptés avec
     js-tiktoken / o200k_base), portée espace, sous-arbre ou voisinage.
 
-Reste le lot 6 (stabilisation : performances, tests de bout en bout,
-installateur et documentation utilisateur).
+- **Lot 6 — Stabilisation** :
+  - performances mesurées sur 3 000 nœuds, 6 000 documents et 4 000
+    relations (`npm run test:perf`) : recherche ≈ 20-30 ms, graphe ≈ 13 ms,
+    enregistrement automatique ≈ 2 ms ; exports asynchrones (l'application
+    reste réactive) ; étiquettes 3D créées à la demande au-delà de 250 nœuds ;
+  - robustesse : erreurs de rendu isolées par zone, messages dédiés pour un
+    fichier verrouillé ou un disque plein, test statique garantissant
+    qu'aucun chemin du code ne peut exécuter de contenu ;
+  - tests de bout en bout dans Electron (`npm run test:e2e`, Playwright) :
+    création d'un espace et d'une hiérarchie, relation, documents Markdown /
+    code / Mermaid, recherche dans le code, fermeture et réouverture,
+    export puis réimport ;
+  - installateur Windows (`npm run make`) avec icône de l'application ;
+  - [guide d'utilisation](docs/guide-utilisateur.md) et aide intégrée (F1).
 
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
-`F2` renommer, `Suppr` supprimer, flèches pour parcourir l'arborescence.
+`F2` renommer, `Suppr` supprimer, `F1` aide, flèches pour parcourir
+l'arborescence. Le détail est dans le [guide d'utilisation](docs/guide-utilisateur.md).
 
 ## Stack
 
@@ -119,8 +132,10 @@ src/
   renderer/
     app/       racine, contexte (client, suivi d'enregistrement), barre d'état
     features/  workspace, nodes, documents, tags, attachments, graph, relations
-    components/ modale, confirmation
-tests/         tests Vitest (base, services, IPC, renderer)
+    components/ modale, confirmation, isolation des erreurs
+tests/         tests Vitest (base, services, IPC, renderer), e2e/ (Electron), perf/
+docs/          cahier des charges, guide d'utilisation
+scripts/       génération de l'icône
 ```
 
 ## Scripts
@@ -129,10 +144,18 @@ tests/         tests Vitest (base, services, IPC, renderer)
 | ------------------- | ---------------------------------------------- |
 | `npm start`         | lance l'application en développement           |
 | `npm test`          | tests unitaires (Vitest)                       |
+| `npm run test:e2e`  | tests de bout en bout dans Electron            |
+| `npm run test:perf` | mesures de performance (3 000 nœuds)           |
 | `npm run typecheck` | vérification TypeScript                        |
 | `npm run lint`      | oxlint + vérification du format (oxfmt)        |
 | `npm run lint:fix`  | corrige le lint et formate                     |
 | `npm run package`   | application packagée dans `out/`               |
 | `npm run make`      | installateur Windows (Squirrel) et archive ZIP |
+
+Les artefacts sont produits dans `out/make/` : `squirrel.windows/x64/NodalSetup.exe`
+(installation pour l'utilisateur courant, sans droits administrateur) et
+`zip/win32/x64/Nodal-win32-x64-<version>.zip` (version portable). L'icône est
+générée par `node scripts/generate-icon.mjs` (`assets/`). L'exécutable n'est
+pas signé : Windows SmartScreen affiche un avertissement au premier lancement.
 
 Prérequis : Node ≥ 22.13 (pour `node:sqlite` dans les tests).

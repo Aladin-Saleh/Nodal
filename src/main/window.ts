@@ -41,7 +41,8 @@ export function createMainWindow(): BrowserWindow {
     void window.loadFile(getRendererIndexPath());
   }
 
-  if (isDev) {
+  // DevTools en développement, sauf pendant les tests de bout en bout.
+  if (isDev && !process.env.NODAL_E2E_USER_DATA) {
     window.webContents.openDevTools({ mode: 'detach' });
   }
 

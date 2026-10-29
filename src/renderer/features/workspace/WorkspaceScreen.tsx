@@ -40,7 +40,9 @@ import { NodeTree } from '../nodes/NodeTree';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { SearchBox } from '../search/SearchBox';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { NodeLinkContext } from '../editor/previews';
+import { HelpDialog } from './HelpDialog';
 import { LlmExportDialog } from './PortabilityDialogs';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
@@ -103,6 +105,19 @@ export function WorkspaceScreen({
   );
   const [exporting, setExporting] = useState(false);
   const [llmExportOpen, setLlmExportOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  // F1 : aide, depuis n'importe où dans l'espace.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F1') {
+        event.preventDefault();
+        setHelpOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   const [multiSelection, setMultiSelection] = useState<ReadonlySet<string>>(
     new Set(),
   );
@@ -578,6 +593,15 @@ export function WorkspaceScreen({
             >
               Paramètres
             </button>
+            <button
+              type="button"
+              className="secondary"
+              aria-label="Aide (F1)"
+              title="Aide (F1)"
+              onClick={() => setHelpOpen(true)}
+            >
+              ?
+            </button>
             <button type="button" className="secondary" onClick={onClose}>
               Fermer l’espace
             </button>
@@ -648,40 +672,42 @@ export function WorkspaceScreen({
           >
             {view === 'graph' && nodes.length > 0 ? (
               graph && (
-                <GraphPanel
-                  graph={graph}
-                  nodes={nodes}
-                  tags={tags}
-                  selectedId={selectedId}
-                  onSelect={select}
-                  onOpen={(id) => {
-                    select(id);
-                    setView('documents');
-                  }}
-                  onPositionsSaved={positionsSaved}
-                  onRelationsChanged={relationsChanged}
-                  selectedDocuments={shownDetail?.documents ?? null}
-                  searchMatches={searchMatches}
-                  onOpenDocument={(id) => openDocument(id)}
-                  onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
-                  multiSelection={multiSelection}
-                  onToggleSelect={toggleMulti}
-                  onSetMultiSelection={setMultiSelection}
-                  onBulkMove={() =>
-                    setDialog({
-                      kind: 'move',
-                      nodes: nodes.filter((node) =>
-                        multiSelection.has(node.id),
-                      ),
-                      bulk: true,
-                    })
-                  }
-                  onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
-                  onBulkDelete={() => void askBulkDelete()}
-                  onCreateAt={(position) =>
-                    setDialog({ kind: 'new', parentId: null, position })
-                  }
-                />
+                <ErrorBoundary area="le graphe">
+                  <GraphPanel
+                    graph={graph}
+                    nodes={nodes}
+                    tags={tags}
+                    selectedId={selectedId}
+                    onSelect={select}
+                    onOpen={(id) => {
+                      select(id);
+                      setView('documents');
+                    }}
+                    onPositionsSaved={positionsSaved}
+                    onRelationsChanged={relationsChanged}
+                    selectedDocuments={shownDetail?.documents ?? null}
+                    searchMatches={searchMatches}
+                    onOpenDocument={(id) => openDocument(id)}
+                    onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
+                    multiSelection={multiSelection}
+                    onToggleSelect={toggleMulti}
+                    onSetMultiSelection={setMultiSelection}
+                    onBulkMove={() =>
+                      setDialog({
+                        kind: 'move',
+                        nodes: nodes.filter((node) =>
+                          multiSelection.has(node.id),
+                        ),
+                        bulk: true,
+                      })
+                    }
+                    onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
+                    onBulkDelete={() => void askBulkDelete()}
+                    onCreateAt={(position) =>
+                      setDialog({ kind: 'new', parentId: null, position })
+                    }
+                  />
+                </ErrorBoundary>
               )
             ) : shownDetail && selected ? (
               <>
@@ -699,12 +725,14 @@ export function WorkspaceScreen({
                   }
                   onDelete={() => void askDelete(selected.id)}
                 />
-                <DocumentsPanel
-                  key={shownDetail.id}
-                  nodeId={shownDetail.id}
-                  documents={shownDetail.documents}
-                  onChanged={refreshDetail}
-                />
+                <ErrorBoundary area="les documents">
+                  <DocumentsPanel
+                    key={shownDetail.id}
+                    nodeId={shownDetail.id}
+                    documents={shownDetail.documents}
+                    onChanged={refreshDetail}
+                  />
+                </ErrorBoundary>
               </>
             ) : (
               <div className="empty-state">
@@ -726,23 +754,26 @@ export function WorkspaceScreen({
           </main>
 
           {shownDetail && (
-            <NodeProperties
-              key={shownDetail.id}
-              node={shownDetail}
-              allTags={tags}
-              nodes={nodes}
-              relationTypes={graph?.relationTypes ?? []}
-              relationsRevision={relationsRevision}
-              onNavigate={select}
-              onNodeChanged={nodeChanged}
-              onTagsChanged={() => void refreshTags()}
-              onRelationsChanged={relationsChanged}
-              onOpenDocument={(id) => openDocument(id)}
-              onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
-            />
+            <ErrorBoundary area="les propriétés du nœud">
+              <NodeProperties
+                key={shownDetail.id}
+                node={shownDetail}
+                allTags={tags}
+                nodes={nodes}
+                relationTypes={graph?.relationTypes ?? []}
+                relationsRevision={relationsRevision}
+                onNavigate={select}
+                onNodeChanged={nodeChanged}
+                onTagsChanged={() => void refreshTags()}
+                onRelationsChanged={relationsChanged}
+                onOpenDocument={(id) => openDocument(id)}
+                onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
+              />
+            </ErrorBoundary>
           )}
         </div>
 
+        {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
         {llmExportOpen && (
           <LlmExportDialog
             selected={selected}
@@ -751,14 +782,16 @@ export function WorkspaceScreen({
           />
         )}
         {editingDocumentId && (
-          <DocumentEditorDialog
-            documentId={editingDocumentId}
-            onChanged={refreshDetail}
-            onClose={() => {
-              setEditingDocumentId(null);
-              refreshDetail();
-            }}
-          />
+          <ErrorBoundary area="l’éditeur de document">
+            <DocumentEditorDialog
+              documentId={editingDocumentId}
+              onChanged={refreshDetail}
+              onClose={() => {
+                setEditingDocumentId(null);
+                refreshDetail();
+              }}
+            />
+          </ErrorBoundary>
         )}
         {addingDocumentFor && (
           <NewDocumentDialog

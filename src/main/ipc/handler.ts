@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent } from 'electron';
-import { NodalError } from '../../shared/errors';
+import { fromSystemError, NodalError } from '../../shared/errors';
 import type {
   IpcArgs,
   IpcChannel,
@@ -57,6 +57,12 @@ export function createIpcHandler<C extends IpcChannel>(
       if (error instanceof NodalError) {
         if (error.cause) console.warn(`[ipc] ${channel}`, error.cause);
         return { ok: false, error: error.toJSON() };
+      }
+      const known =
+        fromSystemError(error) ?? fromSystemError((error as Error)?.cause);
+      if (known) {
+        console.warn(`[ipc] ${channel}`, error);
+        return { ok: false, error: known.toJSON() };
       }
       console.error(`[ipc] ${channel} : erreur inattendue`, error);
       return {

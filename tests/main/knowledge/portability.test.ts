@@ -110,11 +110,11 @@ function seed() {
   return { api, cache, other, md, sql, tag };
 }
 
-function exportTo(name: string) {
+async function exportTo(name: string) {
   const { context, service, dir } = workspace();
   const target = path.join(dir, name);
   fs.mkdirSync(target);
-  return exportWorkspace(context(), service.getCurrent()!, target, {
+  return await exportWorkspace(context(), service.getCurrent()!, target, {
     name: 'Nodal',
     version: 'test',
   });
@@ -139,7 +139,7 @@ function snapshot(db: DatabaseSync) {
 }
 
 describe('sauvegarde et intégrité', () => {
-  it('crée une sauvegarde cohérente et réouvrable, sans écraser un fichier', () => {
+  it('crée une sauvegarde cohérente et réouvrable, sans écraser un fichier', async () => {
     seed();
     const { context, dir } = workspace();
     const maintenance = new MaintenanceService(context);
@@ -157,7 +157,7 @@ describe('sauvegarde et intégrité', () => {
     );
   });
 
-  it('valide un espace sain et reconstruit un index de recherche incohérent', () => {
+  it('valide un espace sain et reconstruit un index de recherche incohérent', async () => {
     seed();
     const { context } = workspace();
     const maintenance = new MaintenanceService(context);
@@ -175,10 +175,10 @@ describe('sauvegarde et intégrité', () => {
 });
 
 describe('import d’un export natif', () => {
-  it('reconstruit un espace identique (aller-retour complet)', () => {
+  it('reconstruit un espace identique (aller-retour complet)', async () => {
     seed();
     const { context, dir } = workspace();
-    const exported = exportTo('exports');
+    const exported = await exportTo('exports');
     const validation = validateExportFolder(exported.folderPath);
     expect(validation).toMatchObject({ ok: true });
     if (!validation.ok) return;
@@ -212,9 +212,9 @@ describe('import d’un export natif', () => {
     }
   });
 
-  it('signale un document modifié, un fichier manquant et un chemin hors du dossier', () => {
+  it('signale un document modifié, un fichier manquant et un chemin hors du dossier', async () => {
     const { md } = seed();
-    const exported = exportTo('exports');
+    const exported = await exportTo('exports');
     const root = exported.folderPath;
     fs.appendFileSync(path.join(root, `documents/${md.id}.md`), 'altéré');
     const manifestPath = path.join(root, 'manifest.json');
@@ -239,12 +239,12 @@ describe('import d’un export natif', () => {
     expect(result.errors.join('\n')).toMatch(/schema\.bin.*fichier manquant/);
   });
 
-  it('refuse un dossier qui n’est pas un export, un format plus récent ou un manifest invalide', () => {
+  it('refuse un dossier qui n’est pas un export, un format plus récent ou un manifest invalide', async () => {
     seed();
     const { dir } = workspace();
     expect(validateExportFolder(dir)).toMatchObject({ ok: false });
 
-    const root = exportTo('exports').folderPath;
+    const root = (await exportTo('exports')).folderPath;
     const manifestPath = path.join(root, 'manifest.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     fs.writeFileSync(
@@ -262,7 +262,7 @@ describe('import d’un export natif', () => {
     expect(validateExportFolder(root)).toMatchObject({ ok: false });
   });
 
-  it('confine les chemins au dossier d’export', () => {
+  it('confine les chemins au dossier d’export', async () => {
     const root = path.resolve('/tmp/export');
     expect(resolveInside(root, 'documents/a.md')).toBe(
       path.join(root, 'documents', 'a.md'),
@@ -275,7 +275,7 @@ describe('import d’un export natif', () => {
 describe('découpage en fragments', () => {
   const count = words.count;
 
-  it('découpe le Markdown par sections en gardant le chemin des titres', () => {
+  it('découpe le Markdown par sections en gardant le chemin des titres', async () => {
     const body =
       '# Archi\n\nIntro.\n\n## Base\n\nTables et index.\n\n## Cache\n\nRedis.';
     const pieces = chunkDocument(body, 'markdown', null, 50, count);
@@ -287,7 +287,7 @@ describe('découpage en fragments', () => {
     expect(pieces[1]!.content).toContain('Tables et index.');
   });
 
-  it('garde un bloc de code Markdown entier et répète l’en-tête d’un long tableau', () => {
+  it('garde un bloc de code Markdown entier et répète l’en-tête d’un long tableau', async () => {
     const fence = '```sql\nSELECT a\nFROM b\n```';
     expect(
       chunkDocument(`Texte\n\n${fence}`, 'markdown', null, 50, count).some(
@@ -305,7 +305,7 @@ describe('découpage en fragments', () => {
       expect(piece.content.startsWith('| a | b |\n|---|---|')).toBe(true);
   });
 
-  it('découpe le SQL par instruction et le JSON par clé', () => {
+  it('découpe le SQL par instruction et le JSON par clé', async () => {
     const sql = chunkDocument(
       'SELECT 1;\nSELECT 2;\nSELECT 3;',
       'code',
@@ -328,7 +328,7 @@ describe('découpage en fragments', () => {
     expect(json.map((piece) => piece.section)).toEqual(['$.a', '$.b']);
   });
 
-  it('garde un diagramme Mermaid entier et respecte la taille maximale ailleurs', () => {
+  it('garde un diagramme Mermaid entier et respecte la taille maximale ailleurs', async () => {
     const diagram =
       'graph TD\n' +
       Array.from({ length: 30 }, (_, i) => `A${i} --> B${i}`).join('\n');
@@ -344,7 +344,7 @@ describe('découpage en fragments', () => {
 });
 
 describe('export LLM', () => {
-  it('produit un TOON équivalent au JSON (aller-retour) et des fragments reproductibles', () => {
+  it('produit un TOON équivalent au JSON (aller-retour) et des fragments reproductibles', async () => {
     seed();
     const { context, service } = workspace();
     const options = { scope: { kind: 'workspace' as const }, maxTokens: 200 };
@@ -365,7 +365,7 @@ describe('export LLM', () => {
     );
 
     const { dir } = workspace();
-    const result = writeLlmExport(
+    const result = await writeLlmExport(
       context(),
       service.getCurrent()!,
       dir,
@@ -408,7 +408,7 @@ describe('export LLM', () => {
     expect(sqlChunk.relatedNodeIds).toHaveLength(1);
   });
 
-  it('limite l’export à un sous-arbre ou à un voisinage', () => {
+  it('limite l’export à un sous-arbre ou à un voisinage', async () => {
     const { api, cache, other } = seed();
     const { context, service } = workspace();
     const ids = (scope: Parameters<typeof buildLlmExport>[2]['scope']) =>

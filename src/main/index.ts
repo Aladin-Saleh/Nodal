@@ -18,6 +18,13 @@ import { WorkspaceService } from './workspace/workspace-service';
 /** Délai laissé au renderer pour enregistrer avant de demander confirmation. */
 const FLUSH_TIMEOUT_MS = 3000;
 
+// Tests de bout en bout (version non packagée uniquement) : profil isolé,
+// pour ne toucher ni aux espaces récents ni au verrou de l'utilisateur.
+const e2eUserData = process.env.NODAL_E2E_USER_DATA;
+if (!app.isPackaged && e2eUserData) {
+  app.setPath('userData', e2eUserData);
+}
+
 // Installation / désinstallation Squirrel : créer les raccourcis puis quitter.
 if (started) {
   app.quit();
