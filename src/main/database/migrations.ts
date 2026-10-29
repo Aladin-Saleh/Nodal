@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { NodalError } from '../../shared/errors';
 import { migration001 } from './migrations/001-initial-schema';
+import { migration002 } from './migrations/002-node-position-z';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -11,7 +12,7 @@ export interface Migration {
 }
 
 /** Liste ordonnée, versions contiguës à partir de 1. */
-export const MIGRATIONS: readonly Migration[] = [migration001];
+export const MIGRATIONS: readonly Migration[] = [migration001, migration002];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;
 

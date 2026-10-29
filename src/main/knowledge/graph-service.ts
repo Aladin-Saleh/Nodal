@@ -14,6 +14,7 @@ interface GraphNodeRow {
   color: string | null;
   position_x: number | null;
   position_y: number | null;
+  position_z: number | null;
 }
 
 /**
@@ -46,7 +47,7 @@ export class GraphService {
     const nodes: GraphNode[] = asRows<GraphNodeRow>(
       ctx.db
         .prepare(
-          `SELECT id, parent_id, title, node_type, color, position_x, position_y
+          `SELECT id, parent_id, title, node_type, color, position_x, position_y, position_z
            FROM node WHERE workspace_id = ? ORDER BY sort_order, rowid`,
         )
         .all(ctx.workspaceId),
@@ -58,6 +59,7 @@ export class GraphService {
       color: row.color,
       x: row.position_x,
       y: row.position_y,
+      z: row.position_z,
       tagIds: tagsByNode.get(row.id) ?? [],
     }));
 
@@ -72,11 +74,11 @@ export class GraphService {
   savePositions(positions: NodePosition[]): void {
     const ctx = this.context();
     const update = ctx.db.prepare(
-      'UPDATE node SET position_x = ?, position_y = ? WHERE id = ? AND workspace_id = ?',
+      'UPDATE node SET position_x = ?, position_y = ?, position_z = ? WHERE id = ? AND workspace_id = ?',
     );
     inTransaction(ctx.db, () => {
-      for (const { id, x, y } of positions) {
-        update.run(x, y, id, ctx.workspaceId);
+      for (const { id, x, y, z } of positions) {
+        update.run(x, y, z, id, ctx.workspaceId);
       }
     });
   }

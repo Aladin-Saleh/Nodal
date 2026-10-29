@@ -208,7 +208,14 @@ export const updateEdgeInputSchema = z.strictObject({
 const coordinate = z.number().finite().min(-1e7).max(1e7);
 export const savePositionsInputSchema = z.strictObject({
   positions: z
-    .array(z.strictObject({ id: idSchema, x: coordinate, y: coordinate }))
+    .array(
+      z.strictObject({
+        id: idSchema,
+        x: coordinate,
+        y: coordinate,
+        z: coordinate,
+      }),
+    )
     .max(100_000),
 });
 

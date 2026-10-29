@@ -27,16 +27,22 @@ pièces jointes en BLOB).
     fermeture de la fenêtre.
 
 - **Lot 3 — Graphe** :
-  - vue Graphe (Cytoscape.js) à côté de la vue Documents : forme et couleur
-    par type de nœud, relations fléchées et libellées, hiérarchie en
-    pointillés, zoom, recentrage, déplacement des nœuds (positions
-    enregistrées), disposition automatique ;
-  - portée « tout l'espace » ou « voisinage » du nœud sélectionné sur 1 à 5
-    niveaux, filtres par type de nœud, tag et type de relation ;
-  - relations : création depuis le graphe (« Relier… » puis clic sur la
-    cible) ou depuis le panneau de droite, modification, suppression ;
-  - types de relations par espace : ajout, renommage, couleur, suppression
-    (refusée tant qu'ils sont utilisés).
+  - vue Graphe **en 3D** (three.js + d3-force-3d), vue par défaut à
+    l'ouverture d'un espace ; la vue Documents reste accessible ;
+  - une forme et une couleur par type de nœud (sphère, cube, cylindre,
+    octaèdre, cône, dodécaèdre), étiquettes lisibles quel que soit le zoom,
+    relations fléchées et libellées, hiérarchie en pointillés, brouillard
+    de profondeur ;
+  - souris : glisser le fond pour pivoter, clic droit pour déplacer la vue,
+    molette pour zoomer, **glisser d'un nœud vers un autre pour les
+    relier**, Maj + glisser pour déplacer un nœud, double-clic pour ouvrir ;
+  - positions 3D enregistrées (migration 002 : `position_z`), disposition
+    automatique par simulation de forces ;
+  - portée « tout l'espace » ou « voisinage » sur 1 à 5 niveaux, filtres par
+    type de nœud, tag et type de relation ;
+  - relations modifiables et supprimables depuis le panneau de droite ;
+    types de relations par espace (ajout, renommage, couleur, suppression
+    refusée tant qu'ils sont utilisés).
 
 Éditeurs riches et rendu Markdown / Mermaid (lot 4), recherche et export
 (lot 5) restent à faire.
@@ -48,7 +54,9 @@ pour parcourir l'arborescence.
 ## Stack
 
 - Electron 45 + Electron Forge 8 (Vite 8), makers Squirrel (installateur) et ZIP
-- React 19 + TypeScript 6 (strict), Cytoscape.js pour le graphe
+- React 19 + TypeScript 6 (strict)
+- three.js + d3-force-3d pour le graphe 3D (choix utilisateur, à la place
+  de Cytoscape.js recommandé au §4 du cahier des charges, limité à la 2D)
 - SQLite via le module intégré **`node:sqlite`** (`DatabaseSync`)
 - zod pour la validation des messages IPC
 - Vitest + Testing Library, oxlint + oxfmt

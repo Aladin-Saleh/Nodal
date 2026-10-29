@@ -76,4 +76,16 @@ describe('runMigrations', () => {
     runMigrations(db, migrations.slice(0, 1));
     expect(runMigrations(db, migrations)).toBe(2);
   });
+
+  it('migre un fichier v1 existant en conservant ses données (ajout de position_z)', () => {
+    runMigrations(db, MIGRATIONS.slice(0, 1));
+    db.exec(
+      "INSERT INTO workspace VALUES ('w', 'W', NULL, 't', 't');" +
+        "INSERT INTO node (id, workspace_id, title, node_type, position_x, position_y, created_at, updated_at) VALUES ('n', 'w', 'N', 'concept', 1, 2, 't', 't');",
+    );
+    expect(runMigrations(db)).toBe(LATEST_SCHEMA_VERSION);
+    expect(
+      db.prepare('SELECT position_x, position_y, position_z FROM node').get(),
+    ).toEqual({ position_x: 1, position_y: 2, position_z: null });
+  });
 });

@@ -228,3 +228,16 @@
 .panes.no-properties {
   grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
 }
+
+.graph-webgl {
+  display: block;
+}
+
+.graph-help {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

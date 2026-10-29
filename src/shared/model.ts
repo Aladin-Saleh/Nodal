@@ -139,6 +139,7 @@ export interface GraphNode {
   color: string | null;
   x: number | null;
   y: number | null;
+  z: number | null;
   tagIds: string[];
 }
 
@@ -153,4 +154,5 @@ export interface NodePosition {
   id: string;
   x: number;
   y: number;
+  z: number;
 }

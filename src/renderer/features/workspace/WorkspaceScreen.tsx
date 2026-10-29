@@ -42,27 +42,6 @@ type DialogState =
   | { kind: 'settings' };
 
 type ViewMode = 'documents' | 'graph';
-const VIEW_STORAGE_KEY = 'nodal.view';
-
-/** Vue mémorisée par poste : simple confort, absente en navigation privée. */
-function readStoredView(): ViewMode {
-  try {
-    return localStorage.getItem(VIEW_STORAGE_KEY) === 'graph'
-      ? 'graph'
-      : 'documents';
-  } catch {
-    return 'documents';
-  }
-}
-
-function storeView(view: ViewMode): void {
-  try {
-    localStorage.setItem(VIEW_STORAGE_KEY, view);
-  } catch {
-    // Stockage indisponible : la vue par défaut sera utilisée.
-  }
-}
-
 export interface WorkspaceScreenProps {
   workspace: WorkspaceInfo;
   onWorkspaceChanged(workspace: WorkspaceInfo): void;
@@ -92,13 +71,10 @@ export function WorkspaceScreen({
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [graph, setGraph] = useState<GraphData | null>(null);
-  const [view, setViewState] = useState<ViewMode>(readStoredView);
+  // La vue Graphe est la vue par défaut à l'ouverture d'un espace.
+  const [view, setView] = useState<ViewMode>('graph');
   const [relationsRevision, setRelationsRevision] = useState(0);
 
-  const setView = (next: ViewMode) => {
-    setViewState(next);
-    storeView(next);
-  };
   const titleInput = useRef<HTMLInputElement>(null);
 
   const index = useMemo(() => buildTreeIndex(nodes), [nodes]);
@@ -430,7 +406,7 @@ export function WorkspaceScreen({
             view === 'graph' ? 'content-pane graph-mode' : 'content-pane'
           }
         >
-          {view === 'graph' ? (
+          {view === 'graph' && nodes.length > 0 ? (
             graph && (
               <GraphPanel
                 graph={graph}

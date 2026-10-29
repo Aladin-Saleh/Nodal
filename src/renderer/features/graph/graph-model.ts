@@ -1,6 +1,6 @@
 /**
  * Logique pure de la vue graphe : portée (espace entier ou voisinage),
- * filtres, placement des nœuds sans position et éléments Cytoscape.
+ * filtres et positions de départ des nœuds sans position 3D.
  */
 import type { NodeType } from '../../../shared/domain';
 import type {
@@ -8,7 +8,6 @@ import type {
   GraphData,
   GraphNode,
   NodePosition,
-  RelationTypeInfo,
 } from '../../../shared/model';
 
 export type GraphScope =
@@ -148,20 +147,36 @@ export function visibleGraph(
   return { nodes, edges, hierarchy };
 }
 
-const PLACEMENT_GAP = 160;
+/** Distance entre un nouveau nœud et le voisin près duquel il apparaît. */
+export const SEED_DISTANCE = 45;
+
+export function hasPosition(
+  node: GraphNode,
+): node is GraphNode & { x: number; y: number; z: number } {
+  return node.x !== null && node.y !== null && node.z !== null;
+}
+
+/** Point n° `rank` réparti sur une sphère (spirale de Fibonacci). */
+function spherePoint(rank: number, count: number) {
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const y = 1 - ((rank + 0.5) / count) * 2;
+  const radius = Math.sqrt(1 - y * y);
+  const theta = golden * rank;
+  return { x: Math.cos(theta) * radius, y, z: Math.sin(theta) * radius };
+}
 
 /**
- * Donne une position aux nœuds qui n'en ont pas, à côté d'un voisin déjà
- * placé (parent, puis extrémité d'une relation), sinon à droite de
- * l'ensemble. Retourne uniquement les positions nouvellement calculées.
- * Si aucun nœud visible n'a de position, retourne une liste vide : il faut
- * alors une disposition automatique complète.
+ * Position de départ des nœuds sans position 3D : à côté d'un voisin déjà
+ * placé (parent, puis extrémité d'une relation), sinon à côté de
+ * l'ensemble. La simulation de forces affine ensuite ces positions.
+ * Retourne une liste vide si aucun nœud visible n'est placé : il faut alors
+ * une disposition complète.
  */
-export function placeMissing(visible: VisibleGraph): NodePosition[] {
-  const known = new Map<string, { x: number; y: number }>();
+export function seedPositions(visible: VisibleGraph): NodePosition[] {
+  const known = new Map<string, { x: number; y: number; z: number }>();
   for (const node of visible.nodes) {
-    if (node.x !== null && node.y !== null)
-      known.set(node.id, { x: node.x, y: node.y });
+    if (hasPosition(node))
+      known.set(node.id, { x: node.x, y: node.y, z: node.z });
   }
   if (known.size === 0) return [];
 
@@ -179,9 +194,9 @@ export function placeMissing(visible: VisibleGraph): NodePosition[] {
     link(edge.targetId, edge.sourceId);
   }
 
-  const maxX = Math.max(...[...known.values()].map((point) => point.x));
-  const minY = Math.min(...[...known.values()].map((point) => point.y));
-  const childrenPlaced = new Map<string, number>();
+  const points = [...known.values()];
+  const maxX = Math.max(...points.map((point) => point.x));
+  const placedAround = new Map<string, number>();
   let freeSlot = 0;
   const placed: NodePosition[] = [];
 
@@ -198,13 +213,14 @@ export function placeMissing(visible: VisibleGraph): NodePosition[] {
         continue;
       }
       const anchor = known.get(anchorId)!;
-      const rank = childrenPlaced.get(anchorId) ?? 0;
-      childrenPlaced.set(anchorId, rank + 1);
-      const angle = (rank * 2 * Math.PI) / 6 + Math.PI / 2;
-      const ring = 1 + Math.floor(rank / 6);
+      const rank = placedAround.get(anchorId) ?? 0;
+      placedAround.set(anchorId, rank + 1);
+      const direction = spherePoint(rank % 12, 12);
+      const ring = 1 + Math.floor(rank / 12);
       const point = {
-        x: Math.round(anchor.x + Math.cos(angle) * PLACEMENT_GAP * ring),
-        y: Math.round(anchor.y + Math.sin(angle) * PLACEMENT_GAP * ring),
+        x: Math.round(anchor.x + direction.x * SEED_DISTANCE * ring),
+        y: Math.round(anchor.y + direction.y * SEED_DISTANCE * ring),
+        z: Math.round(anchor.z + direction.z * SEED_DISTANCE * ring),
       };
       known.set(node.id, point);
       placed.push({ id: node.id, ...point });
@@ -212,81 +228,15 @@ export function placeMissing(visible: VisibleGraph): NodePosition[] {
     pending = remaining;
   }
   for (const node of pending) {
+    const direction = spherePoint(freeSlot % 12, 12);
     const point = {
-      x: Math.round(maxX + PLACEMENT_GAP * (1 + Math.floor(freeSlot / 5))),
-      y: Math.round(minY + (freeSlot % 5) * (PLACEMENT_GAP / 2)),
+      x: Math.round(maxX + SEED_DISTANCE * 2 + direction.x * SEED_DISTANCE),
+      y: Math.round(direction.y * SEED_DISTANCE * 2),
+      z: Math.round(direction.z * SEED_DISTANCE * 2),
     };
     freeSlot++;
     known.set(node.id, point);
     placed.push({ id: node.id, ...point });
   }
   return placed;
-}
-
-/** Largeur et hauteur approximatives d'un nœud selon son titre. */
-export function nodeSize(title: string): { width: number; height: number } {
-  const charWidth = 7.8;
-  const maxTextWidth = 190;
-  const textWidth = Math.min(title.length * charWidth, maxTextWidth);
-  const lines = Math.min(
-    3,
-    Math.max(1, Math.ceil((title.length * charWidth) / maxTextWidth)),
-  );
-  return {
-    width: Math.max(90, Math.round(textWidth + 32)),
-    height: 26 + lines * 17,
-  };
-}
-
-export interface ElementDefinition {
-  group: 'nodes' | 'edges';
-  data: Record<string, unknown> & { id: string };
-  position?: { x: number; y: number };
-  classes?: string;
-}
-
-/** Éléments Cytoscape. Les nœuds sans position n'en reçoivent pas. */
-export function toElements(
-  visible: VisibleGraph,
-  relationTypes: readonly RelationTypeInfo[],
-): ElementDefinition[] {
-  const typeById = new Map(relationTypes.map((type) => [type.id, type]));
-  const nodes: ElementDefinition[] = visible.nodes.map((node) => {
-    const size = nodeSize(node.title);
-    return {
-      group: 'nodes',
-      data: {
-        id: node.id,
-        label: node.title,
-        nodeType: node.nodeType,
-        ...(node.color ? { color: node.color } : {}),
-        width: size.width,
-        height: size.height,
-      },
-      ...(node.x !== null && node.y !== null
-        ? { position: { x: node.x, y: node.y } }
-        : {}),
-      classes: `type-${node.nodeType}${node.color ? ' custom-color' : ''}`,
-    };
-  });
-  const edges: ElementDefinition[] = visible.edges.map((edge) => {
-    const type = typeById.get(edge.relationTypeId);
-    return {
-      group: 'edges',
-      data: {
-        id: edge.id,
-        source: edge.sourceId,
-        target: edge.targetId,
-        label: edge.label ?? type?.name ?? '',
-        ...(type?.color ? { color: type.color } : {}),
-      },
-      classes: type?.color ? 'relation custom-color' : 'relation',
-    };
-  });
-  const hierarchy: ElementDefinition[] = visible.hierarchy.map((link) => ({
-    group: 'edges',
-    data: { id: link.id, source: link.parentId, target: link.childId },
-    classes: 'hierarchy',
-  }));
-  return [...nodes, ...edges, ...hierarchy];
 }

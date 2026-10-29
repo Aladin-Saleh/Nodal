@@ -20,6 +20,7 @@ export interface NodeRow {
   color: string | null;
   position_x: number | null;
   position_y: number | null;
+  position_z: number | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -56,7 +57,7 @@ export interface AttachmentRow {
 }
 
 export const NODE_COLUMNS =
-  'id, workspace_id, parent_id, title, node_type, summary, color, position_x, position_y, sort_order, created_at, updated_at';
+  'id, workspace_id, parent_id, title, node_type, summary, color, position_x, position_y, position_z, sort_order, created_at, updated_at';
 export const DOCUMENT_SUMMARY_COLUMNS =
   'id, node_id, title, content_type, language, sort_order, updated_at';
 export const DOCUMENT_COLUMNS = `${DOCUMENT_SUMMARY_COLUMNS}, body, created_at`;

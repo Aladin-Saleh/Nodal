@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FILTERS,
-  nodeSize,
-  placeMissing,
-  toElements,
+  hasPosition,
+  SEED_DISTANCE,
+  seedPositions,
   visibleGraph,
   type GraphFilters,
 } from '../../src/renderer/features/graph/graph-model';
@@ -21,6 +21,7 @@ const node = (
   color: null,
   x: null,
   y: null,
+  z: null,
   tagIds: [],
   ...options,
 });
@@ -164,67 +165,54 @@ describe('visibleGraph', () => {
   });
 });
 
-describe('placeMissing', () => {
-  it('ne place rien si aucun nœud n’a de position (disposition complète requise)', () => {
+describe('seedPositions', () => {
+  it('ne propose rien si aucun nœud n’est placé (disposition complète requise)', () => {
     expect(
-      placeMissing(visibleGraph(graph, { kind: 'all' }, DEFAULT_FILTERS)),
+      seedPositions(visibleGraph(graph, { kind: 'all' }, DEFAULT_FILTERS)),
     ).toEqual([]);
   });
 
-  it('place un nouveau nœud près de son parent ou d’un voisin', () => {
+  it('ignore une ancienne position 2D sans coordonnée z', () => {
+    expect(hasPosition(node('x', { x: 1, y: 2 }))).toBe(false);
+    expect(hasPosition(node('x', { x: 1, y: 2, z: 3 }))).toBe(true);
+  });
+
+  it('fait apparaître un nouveau nœud près de son parent ou d’un voisin', () => {
     const positioned: GraphData = {
       ...graph,
       nodes: graph.nodes.map((n) =>
         n.id === 'a'
-          ? { ...n, x: 0, y: 0 }
+          ? { ...n, x: 0, y: 0, z: 0 }
           : n.id === 'c'
-            ? { ...n, x: 1000, y: 1000 }
+            ? { ...n, x: 500, y: 500, z: 500 }
             : n,
       ),
     };
-    const placed = placeMissing(
+    const seeds = seedPositions(
       visibleGraph(positioned, { kind: 'all' }, DEFAULT_FILTERS),
     );
-    const byId = new Map(placed.map((p) => [p.id, p]));
+    const byId = new Map(seeds.map((seed) => [seed.id, seed]));
     expect([...byId.keys()].toSorted()).toEqual(['b', 'd', 'e', 'f']);
-    const distance = (id: string, x: number, y: number) =>
-      Math.hypot(byId.get(id)!.x - x, byId.get(id)!.y - y);
-    expect(distance('f', 0, 0)).toBeLessThan(200);
-    expect(distance('d', 1000, 1000)).toBeLessThan(200);
-    // Nœud isolé : placé à droite de l'ensemble.
-    expect(byId.get('e')!.x).toBeGreaterThan(1000);
-  });
-});
-
-describe('toElements', () => {
-  it('produit nœuds, relations libellées et liens hiérarchiques', () => {
-    const elements = toElements(
-      visibleGraph(graph, { kind: 'all' }, DEFAULT_FILTERS),
-      graph.relationTypes,
-    );
-    const byId = new Map(elements.map((element) => [element.data.id, element]));
-    expect(byId.get('b')).toMatchObject({
-      group: 'nodes',
-      classes: 'type-data',
-    });
-    expect(byId.get('b')?.position).toBeUndefined();
-    expect(byId.get('ab')?.data).toMatchObject({
-      source: 'a',
-      target: 'b',
-      label: 'utilise',
-    });
-    expect(byId.get('bc')).toMatchObject({
-      classes: 'relation custom-color',
-      data: { label: 'alimente', color: '#ff0000' },
-    });
-    expect(byId.get('hierarchy:f')).toMatchObject({ classes: 'hierarchy' });
+    const distance = (id: string, x: number, y: number, z: number) => {
+      const p = byId.get(id)!;
+      return Math.hypot(p.x - x, p.y - y, p.z - z);
+    };
+    expect(distance('f', 0, 0, 0)).toBeLessThanOrEqual(SEED_DISTANCE + 1);
+    expect(distance('d', 500, 500, 500)).toBeLessThanOrEqual(SEED_DISTANCE + 1);
+    // Nœud isolé : placé à côté de l'ensemble.
+    expect(byId.get('e')!.x).toBeGreaterThan(500);
   });
 
-  it('dimensionne les nœuds selon le titre, avec une largeur bornée', () => {
-    expect(nodeSize('API').width).toBeLessThan(
-      nodeSize('Service de facturation').width,
+  it('répartit plusieurs enfants d’un même parent sans les superposer', () => {
+    const children = Array.from({ length: 8 }, (_, i) =>
+      node(`k${i}`, { parentId: 'p' }),
     );
-    expect(nodeSize('x'.repeat(500)).width).toBeLessThanOrEqual(222);
-    expect(nodeSize('x'.repeat(500)).height).toBe(77);
+    const seeds = seedPositions({
+      nodes: [node('p', { x: 0, y: 0, z: 0 }), ...children],
+      edges: [],
+      hierarchy: [],
+    });
+    const keys = new Set(seeds.map((seed) => `${seed.x},${seed.y},${seed.z}`));
+    expect(keys.size).toBe(8);
   });
 });

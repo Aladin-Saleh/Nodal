@@ -192,12 +192,13 @@ describe('GraphService', () => {
 
   it('enregistre les positions et ignore les nœuds inconnus', () => {
     graph.savePositions([
-      { id: a, x: 10, y: -20.5 },
-      { id: 'inconnu', x: 1, y: 1 },
+      { id: a, x: 10, y: -20.5, z: 3 },
+      { id: 'inconnu', x: 1, y: 1, z: 1 },
     ]);
     expect(graph.get().nodes.find((node) => node.id === a)).toMatchObject({
       x: 10,
       y: -20.5,
+      z: 3,
     });
   });
 

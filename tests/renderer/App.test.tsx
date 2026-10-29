@@ -63,6 +63,7 @@ function fakeClient(overrides: Handlers = {}) {
         color: node.color,
         x: null,
         y: null,
+        z: null,
         tagIds: [],
       })),
       edges: [],
@@ -183,6 +184,9 @@ describe('App', () => {
       title: 'Kafka',
       nodeType: 'component',
     });
+    // Vue Graphe par défaut (WebGL absent sous jsdom : message de repli).
+    expect(screen.getByText(/rendu 3D n’est pas disponible/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Documents' }));
     // La fiche du nœud créé est ouverte.
     expect(await screen.findByDisplayValue('Kafka')).toBeTruthy();
     expect(

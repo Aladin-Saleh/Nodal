@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState } from 'react';
 import {
   NODE_TYPES,
   NODE_TYPE_LABELS,
@@ -18,13 +18,11 @@ import {
 import {
   DEFAULT_FILTERS,
   LARGE_GRAPH_THRESHOLD,
-  placeMissing,
-  toElements,
   visibleGraph,
   type GraphFilters,
   type GraphScope,
 } from './graph-model';
-import { GraphView, type GraphViewHandle } from './GraphView';
+import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
 
 export interface GraphPanelProps {
   graph: GraphData;
@@ -39,6 +37,9 @@ export interface GraphPanelProps {
   onRelationsChanged(): void;
 }
 
+const GRAPH_HELP =
+  'Glisser d’un nœud à un autre : relier · Maj + glisser : déplacer · Double-clic : ouvrir · Glisser le fond : pivoter · Clic droit : déplacer la vue · Molette : zoom';
+
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   const next = new Set(set);
   if (next.has(value)) next.delete(value);
@@ -46,7 +47,10 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   return next;
 }
 
-/** Vue graphe (§6.8) : portée, filtres, disposition, création de relations. */
+/**
+ * Vue graphe 3D (§6.8) : portée, filtres, disposition, création de relations
+ * en tirant un lien d'un nœud vers un autre.
+ */
 export function GraphPanel({
   graph,
   nodes,
@@ -59,14 +63,13 @@ export function GraphPanel({
 }: GraphPanelProps) {
   const client = useClient();
   const run = useRunner();
-  const view = useRef<GraphViewHandle>(null);
+  const view = useRef<Graph3DViewHandle>(null);
   const depthId = useId();
   const [scopeKind, setScopeKind] = useState<'all' | 'neighborhood'>(
     graph.nodes.length > LARGE_GRAPH_THRESHOLD ? 'neighborhood' : 'all',
   );
   const [depth, setDepth] = useState(2);
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
-  const [linkSourceId, setLinkSourceId] = useState<string | null>(null);
   const [pendingLink, setPendingLink] = useState<{
     sourceId: string;
     targetId: string;
@@ -83,54 +86,11 @@ export function GraphPanel({
     // oxlint-disable-next-line react/exhaustive-deps
     [graph, filters, scope.kind, selectedId, depth],
   );
-  const missing = useMemo(() => placeMissing(visible), [visible]);
-  const elements = useMemo(() => {
-    const placed = new Map(missing.map((position) => [position.id, position]));
-    const withPositions = {
-      ...visible,
-      nodes: visible.nodes.map((node) => {
-        const position = placed.get(node.id);
-        return position ? { ...node, x: position.x, y: position.y } : node;
-      }),
-    };
-    return toElements(withPositions, graph.relationTypes);
-  }, [visible, missing, graph.relationTypes]);
-
   const savePositions = async (positions: NodePosition[]) => {
     if (positions.length === 0) return;
     onPositionsSaved(positions);
     await run(() => client.call('graph:savePositions', { positions }));
   };
-
-  const autoLayout = async () => {
-    const positions = (await view.current?.runLayout()) ?? [];
-    await savePositions(positions);
-  };
-
-  // Nouveaux nœuds placés près de leurs voisins : persister ces positions.
-  useEffect(() => {
-    if (missing.length > 0) void savePositions(missing);
-    // oxlint-disable-next-line react/exhaustive-deps
-  }, [missing]);
-
-  // Aucun nœud affiché n'a encore de position : disposition automatique.
-  const needsLayout =
-    visible.nodes.length > 0 &&
-    visible.nodes.every((node) => node.x === null || node.y === null);
-  useEffect(() => {
-    if (needsLayout) void autoLayout();
-    // oxlint-disable-next-line react/exhaustive-deps
-  }, [needsLayout]);
-
-  // Échap annule le mode « relier ».
-  useEffect(() => {
-    if (!linkSourceId) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setLinkSourceId(null);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [linkSourceId]);
 
   const createRelation = async (value: RelationFormValue) => {
     setPendingLink(null);
@@ -283,23 +243,15 @@ export function GraphPanel({
           </div>
         </details>
 
-        <span className="toolbar-spacer" />
+        <span className="graph-help muted" title={GRAPH_HELP}>
+          {GRAPH_HELP}
+        </span>
 
-        <button
-          type="button"
-          className={linkSourceId ? undefined : 'secondary'}
-          disabled={!selectedId && !linkSourceId}
-          aria-pressed={linkSourceId !== null}
-          title="Sélectionnez un nœud, puis cliquez sur la cible"
-          onClick={() => setLinkSourceId(linkSourceId ? null : selectedId)}
-        >
-          {linkSourceId ? 'Annuler la liaison' : 'Relier…'}
-        </button>
         <button
           type="button"
           className="secondary"
           title="Disposition automatique des nœuds affichés"
-          onClick={() => void autoLayout()}
+          onClick={() => view.current?.relayout()}
         >
           Disposer
         </button>
@@ -330,13 +282,6 @@ export function GraphPanel({
         </button>
       </div>
 
-      {linkSourceId && (
-        <p className="graph-hint" role="status">
-          Cliquez sur le nœud cible de la relation depuis «{' '}
-          {graph.nodes.find((node) => node.id === linkSourceId)?.title} ». Échap
-          pour annuler.
-        </p>
-      )}
       {scopeKind === 'neighborhood' && !selectedId && (
         <p className="graph-hint">
           Sélectionnez un nœud pour afficher son voisinage.
@@ -347,18 +292,16 @@ export function GraphPanel({
         {graph.nodes.length === 0 ? (
           <p className="muted empty-state">Aucun nœud à afficher.</p>
         ) : (
-          <GraphView
+          <Graph3DView
             ref={view}
-            elements={elements}
+            visible={visible}
+            relationTypes={graph.relationTypes}
             selectedId={selectedId}
-            linkSourceId={linkSourceId}
             onSelect={onSelect}
             onOpen={onOpen}
-            onLinkTarget={(targetId) => {
-              if (!linkSourceId) return;
-              setPendingLink({ sourceId: linkSourceId, targetId });
-              setLinkSourceId(null);
-            }}
+            onLink={(sourceId, targetId) =>
+              setPendingLink({ sourceId, targetId })
+            }
             onPositionsChanged={(positions) => void savePositions(positions)}
           />
         )}
@@ -372,9 +315,7 @@ export function GraphPanel({
         </ul>
         <p className="graph-count muted">
           {visible.nodes.length} nœud(s) · {visible.edges.length} relation(s)
-          {selectedTitle
-            ? ` · double-clic pour ouvrir « ${selectedTitle} »`
-            : ''}
+          {selectedTitle ? ` · « ${selectedTitle} »` : ''}
         </p>
       </div>
 

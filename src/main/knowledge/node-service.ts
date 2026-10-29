@@ -377,8 +377,8 @@ export class NodeService {
     const timestamp = ctx.now();
     ctx.db
       .prepare(
-        `INSERT INTO node (id, workspace_id, parent_id, title, node_type, summary, color, position_x, position_y, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO node (id, workspace_id, parent_id, title, node_type, summary, color, position_x, position_y, position_z, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -390,6 +390,7 @@ export class NodeService {
         source.color,
         offset(source.position_x),
         offset(source.position_y),
+        source.position_z,
         source.sort_order,
         timestamp,
         timestamp,
