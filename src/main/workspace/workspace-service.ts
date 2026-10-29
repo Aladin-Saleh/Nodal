@@ -4,7 +4,10 @@ import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { NODAL_FILE_EXTENSION } from '../../shared/domain';
 import { NodalError } from '../../shared/errors';
-import type { WorkspaceInfo } from '../../shared/ipc-contract';
+import type {
+  UpdateWorkspaceInput,
+  WorkspaceInfo,
+} from '../../shared/ipc-contract';
 import { workspaceNameSchema } from '../../shared/ipc-schemas';
 import {
   closeNodalDatabase,
@@ -13,10 +16,12 @@ import {
 } from '../database/connection';
 import { getSchemaVersion } from '../database/migrations';
 import { inTransaction } from '../database/transaction';
+import type { ServiceContext } from '../knowledge/context';
 import {
   insertDefaultRelationTypes,
   insertWorkspace,
   listWorkspaces,
+  updateWorkspace,
   type WorkspaceRow,
 } from './workspace-repository';
 
@@ -153,12 +158,49 @@ export class WorkspaceService {
     return this.current?.info ?? null;
   }
 
-  /** Accès à la base de l'espace courant, pour les services des lots suivants. */
+  /** Accès à la base de l'espace courant. */
   getDatabase(): DatabaseSync {
+    return this.requireCurrent().db;
+  }
+
+  /** Contexte transmis aux services métier (nœuds, documents, tags…). */
+  getContext(): ServiceContext {
+    const { db, info } = this.requireCurrent();
+    return {
+      db,
+      workspaceId: info.id,
+      now: () => this.now().toISOString(),
+      newId: this.generateId,
+    };
+  }
+
+  /** Renomme l'espace courant et/ou modifie sa description. */
+  update(input: UpdateWorkspaceInput): WorkspaceInfo {
+    const current = this.requireCurrent();
+    const next: WorkspaceInfo = {
+      ...current.info,
+      name: input.name ?? current.info.name,
+      description:
+        input.description === undefined
+          ? current.info.description
+          : input.description,
+      updatedAt: this.now().toISOString(),
+    };
+    updateWorkspace(current.db, {
+      id: next.id,
+      name: next.name,
+      description: next.description,
+      updated_at: next.updatedAt,
+    });
+    current.info = next;
+    return next;
+  }
+
+  private requireCurrent(): OpenWorkspace {
     if (!this.current) {
       throw new NodalError('NO_WORKSPACE_OPEN', "Aucun espace n'est ouvert.");
     }
-    return this.current.db;
+    return this.current;
   }
 
   private replaceCurrent(next: OpenWorkspace): void {

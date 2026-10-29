@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { createNodalClient } from './services/nodal-client';
 import './index.css';
+import './workspace.css';
 
 const container = document.getElementById('root');
 if (!container) {

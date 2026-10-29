@@ -12,6 +12,10 @@ export const ERROR_CODES = [
   'INVALID_WORKSPACE_FILE',
   'MIGRATION_FAILED',
   'NO_WORKSPACE_OPEN',
+  'NOT_FOUND',
+  'CONFLICT',
+  'LIMIT_EXCEEDED',
+  'IO_ERROR',
   'INTERNAL',
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

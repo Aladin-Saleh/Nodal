@@ -38,6 +38,16 @@ export function insertDefaultRelationTypes(
   }
 }
 
+export function updateWorkspace(
+  db: DatabaseSync,
+  row: Pick<WorkspaceRow, 'id' | 'name' | 'description' | 'updated_at'>,
+): void {
+  db.prepare(
+    `UPDATE workspace SET name = :name, description = :description, updated_at = :updated_at
+     WHERE id = :id`,
+  ).run({ ...row });
+}
+
 export function listWorkspaces(db: DatabaseSync): WorkspaceRow[] {
   return db
     .prepare(

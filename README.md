@@ -12,9 +12,26 @@ pièces jointes en BLOB).
 
 ## État
 
-Lot 1 — Fondation : application Electron sécurisée, persistance SQLite,
-migrations, création / ouverture / fermeture d'un espace. Les nœuds, documents,
-graphe, recherche et export arrivent dans les lots suivants.
+- **Lot 1 — Fondation** : application Electron sécurisée, persistance SQLite,
+  migrations, création / ouverture / fermeture d'un espace.
+- **Lot 2 — Modèle documentaire** :
+  - espaces récents, renommage, description, suppression (vers la corbeille),
+    taille maximale des pièces jointes ;
+  - nœuds : arborescence navigable au clavier, création, renommage, type,
+    résumé, couleur, déplacement (cycles refusés), réordonnancement,
+    duplication, suppression avec stratégie explicite pour les enfants ;
+  - documents typés (Markdown, texte, JSON, code, Mermaid) ordonnés, édités
+    en texte brut avec enregistrement automatique ;
+  - tags réutilisables, pièces jointes en BLOB (jamais ouvertes ni exécutées) ;
+  - état d'enregistrement dans la barre d'état, enregistrement forcé à la
+    fermeture de la fenêtre.
+
+Graphe (lot 3), éditeurs riches et rendu Markdown / Mermaid (lot 4), recherche
+et export (lot 5) restent à faire.
+
+Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
+`Ctrl+S` enregistrer immédiatement, `F2` renommer, `Suppr` supprimer, flèches
+pour parcourir l'arborescence.
 
 ## Stack
 
@@ -40,11 +57,15 @@ src/
   main/        processus principal : fenêtre, sécurité, IPC, base, espaces
     database/  connexion, migrations versionnées (PRAGMA user_version)
     ipc/       handlers validés (émetteur + zod), enveloppe { ok, data | error }
-    workspace/ service et boîtes de dialogue .nodal
-  preload/     API minimale exposée via contextBridge (window.nodal)
-  shared/      contrat IPC typé, schémas zod, constantes du domaine
-  renderer/    interface React
-tests/         tests Vitest (base, service, IPC, renderer)
+    knowledge/ services métier : nœuds, documents, tags, pièces jointes, réglages
+    workspace/ espace ouvert et espaces récents
+  preload/     window.nodal : invoke() limité à la liste blanche des canaux
+  shared/      contrat IPC typé, schémas zod, modèle et constantes du domaine
+  renderer/
+    app/       racine, contexte (client, suivi d'enregistrement), barre d'état
+    features/  workspace, nodes, documents, tags, attachments
+    components/ modale, confirmation
+tests/         tests Vitest (base, services, IPC, renderer)
 ```
 
 ## Scripts

@@ -2,7 +2,8 @@ import type { IpcMainInvokeEvent } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 import { createIpcHandler } from '../../../src/main/ipc/handler';
 import { createImplementations } from '../../../src/main/ipc/register';
-import type { WorkspaceDialogs } from '../../../src/main/workspace/workspace-dialogs';
+import type { FileDialogs } from '../../../src/main/file-dialogs';
+import type { RecentWorkspacesStore } from '../../../src/main/workspace/recent-workspaces';
 import type { WorkspaceService } from '../../../src/main/workspace/workspace-service';
 import { NodalError } from '../../../src/shared/errors';
 import type { WorkspaceInfo } from '../../../src/shared/ipc-contract';
@@ -102,36 +103,50 @@ describe('createIpcHandler', () => {
   });
 });
 
-function setup(pickedPath: string | null) {
+function setup(pickedPath: string | null, confirmed = true) {
   const workspaces = {
     create: vi.fn(() => workspace),
     open: vi.fn(() => workspace),
     close: vi.fn(),
-    getCurrent: vi.fn(() => null),
+    getCurrent: vi.fn(() => workspace),
   } as unknown as WorkspaceService;
-  const dialogs: WorkspaceDialogs = {
+  const dialogs: FileDialogs = {
     pickNewWorkspacePath: vi.fn(async () => pickedPath),
     pickExistingWorkspacePath: vi.fn(async () => pickedPath),
+    pickAttachmentPaths: vi.fn(async () => []),
+    pickAttachmentSavePath: vi.fn(async () => null),
+    confirm: vi.fn(async () => confirmed),
   };
+  const recent = {
+    touch: vi.fn(),
+    remove: vi.fn(),
+    resolve: vi.fn(() => null),
+    list: vi.fn(() => []),
+  } as unknown as RecentWorkspacesStore;
+  const trash = vi.fn(async () => undefined);
   const impl = createImplementations({
     workspaces,
+    recent,
     dialogs,
+    trash,
     getAppInfo: () => {
       throw new Error('non utilisé');
     },
+    setUnsavedChanges: vi.fn(),
     isTrustedSender: trusted,
   });
-  return { impl, workspaces, dialogs };
+  return { impl, workspaces, dialogs, recent, trash };
 }
 
 describe('createImplementations', () => {
-  it('crée l’espace au chemin choisi dans la boîte de dialogue', async () => {
-    const { impl, workspaces, dialogs } = setup('C:/kb.nodal');
+  it('crée l’espace au chemin choisi et le mémorise dans les récents', async () => {
+    const { impl, workspaces, dialogs, recent } = setup('C:/kb.nodal');
     await expect(impl['workspace:create']({ name: 'KB' })).resolves.toBe(
       workspace,
     );
     expect(dialogs.pickNewWorkspacePath).toHaveBeenCalledWith('KB');
     expect(workspaces.create).toHaveBeenCalledWith('C:/kb.nodal', 'KB');
+    expect(recent.touch).toHaveBeenCalledWith('C:/kb.nodal', 'KB');
   });
 
   it('renvoie null si la boîte de dialogue est annulée', async () => {
@@ -140,5 +155,27 @@ describe('createImplementations', () => {
     await expect(impl['workspace:open']()).resolves.toBeNull();
     expect(workspaces.create).not.toHaveBeenCalled();
     expect(workspaces.open).not.toHaveBeenCalled();
+  });
+
+  it('refuse un espace récent inconnu', async () => {
+    const { impl } = setup(null);
+    expect(() => impl['workspace:openRecent']({ id: 'inconnu' })).toThrowError(
+      expect.objectContaining({ code: 'NOT_FOUND' }),
+    );
+  });
+
+  it('ne supprime rien si la suppression de l’espace n’est pas confirmée', async () => {
+    const { impl, workspaces, trash } = setup(null, false);
+    await expect(impl['workspace:delete']()).resolves.toBe(false);
+    expect(workspaces.close).not.toHaveBeenCalled();
+    expect(trash).not.toHaveBeenCalled();
+  });
+
+  it('ferme l’espace puis place son fichier dans la corbeille', async () => {
+    const { impl, workspaces, trash, recent } = setup(null, true);
+    await expect(impl['workspace:delete']()).resolves.toBe(true);
+    expect(workspaces.close).toHaveBeenCalled();
+    expect(trash).toHaveBeenCalledWith('C:/kb.nodal');
+    expect(recent.remove).toHaveBeenCalled();
   });
 });

@@ -41,3 +41,48 @@ export const DEFAULT_RELATION_TYPES = [
 export const NODAL_FILE_EXTENSION = 'nodal';
 
 export const WORKSPACE_NAME_MAX_LENGTH = 200;
+
+/** Libellés affichés des types de nœuds (§5.2). */
+export const NODE_TYPE_LABELS: Record<NodeType, string> = {
+  concept: 'Concept',
+  component: 'Composant',
+  data: 'Donnée',
+  procedure: 'Procédure',
+  resource: 'Ressource',
+  generic: 'Générique',
+};
+
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
+  markdown: 'Markdown',
+  text: 'Texte brut',
+  json: 'JSON',
+  code: 'Code',
+  mermaid: 'Diagramme Mermaid',
+};
+
+/** Langages proposés pour les documents de code (§6.4). */
+export const CODE_LANGUAGES = [
+  'java',
+  'javascript',
+  'typescript',
+  'python',
+  'sql',
+  'go',
+  'json',
+  'yaml',
+  'bash',
+  'c',
+  'cpp',
+  'other',
+] as const;
+
+export const TITLE_MAX_LENGTH = 300;
+export const SUMMARY_MAX_LENGTH = 2000;
+export const DESCRIPTION_MAX_LENGTH = 2000;
+export const TAG_NAME_MAX_LENGTH = 60;
+/** Taille maximale d'un corps de document (en caractères). */
+export const DOCUMENT_BODY_MAX_LENGTH = 5_000_000;
+
+/** Taille maximale par pièce jointe (§5.1, §8) : défaut et bornes réglables. */
+export const ATTACHMENT_MAX_SIZE_DEFAULT_BYTES = 25 * 1024 * 1024;
+export const ATTACHMENT_MAX_SIZE_LIMIT_BYTES = 200 * 1024 * 1024;

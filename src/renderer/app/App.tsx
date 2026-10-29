@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppInfo, WorkspaceInfo } from '../../shared/ipc-contract';
+import type { RecentWorkspace } from '../../shared/model';
+import { WelcomeScreen } from '../features/workspace/WelcomeScreen';
+import { WorkspaceScreen } from '../features/workspace/WorkspaceScreen';
 import { describeError, type NodalClient } from '../services/nodal-client';
+import { SaveTracker } from '../services/save-tracker';
+import { ServicesProvider } from './context';
 import { ErrorMessage } from './ErrorMessage';
 import { StatusBar } from './StatusBar';
-import { WelcomeScreen } from './WelcomeScreen';
-import { WorkspaceView } from './WorkspaceView';
 
 export interface AppProps {
   client: NodalClient;
@@ -13,12 +16,33 @@ export interface AppProps {
 export function App({ client }: AppProps) {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
+  const [recent, setRecent] = useState<RecentWorkspace[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const tracker = useMemo(
+    () =>
+      new SaveTracker((unsaved) => {
+        client.call('app:setUnsavedChanges', unsaved).catch(() => undefined);
+      }),
+    [client],
+  );
+  const reportError = useCallback(
+    (err: unknown) => setError(describeError(err)),
+    [],
+  );
+
+  const refreshRecent = useCallback(
+    () => client.call('workspace:listRecent').then(setRecent, reportError),
+    [client, reportError],
+  );
+
   useEffect(() => {
     let cancelled = false;
-    Promise.all([client.getAppInfo(), client.getCurrentWorkspace()])
+    Promise.all([
+      client.call('app:getInfo'),
+      client.call('workspace:getCurrent'),
+    ])
       .then(([info, current]) => {
         if (cancelled) return;
         setAppInfo(info);
@@ -26,65 +50,101 @@ export function App({ client }: AppProps) {
         setWorkspace((previous) => previous ?? current);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(describeError(err));
+        if (!cancelled) reportError(err);
       });
+    void refreshRecent();
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [client, reportError, refreshRecent]);
 
-  /** Exécute une action en affichant l'erreur éventuelle. */
-  const run = useCallback(async (action: () => Promise<void>) => {
+  // Fermeture de la fenêtre : écrire ce qui est en attente (§6.1).
+  useEffect(
+    () =>
+      client.onFlushRequest(() => {
+        void tracker.flushAll();
+      }),
+    [client, tracker],
+  );
+
+  /** Exécute une action d'espace en affichant l'erreur éventuelle. */
+  const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     try {
       await action();
     } catch (err) {
-      setError(describeError(err));
+      reportError(err);
     } finally {
       setBusy(false);
     }
-  }, []);
+  };
 
-  const handleCreate = (name: string) =>
-    run(async () => {
-      const created = await client.createWorkspace({ name });
-      if (created) setWorkspace(created);
-    });
+  /** Avant de quitter l'espace courant : tout enregistrer, sinon s'arrêter. */
+  const leaveWorkspace = async () => {
+    if (!(await tracker.flushAll())) {
+      throw new Error('Des modifications n’ont pas pu être enregistrées.');
+    }
+  };
 
-  const handleOpen = () =>
+  const openWith = (open: () => Promise<WorkspaceInfo | null>) =>
     run(async () => {
-      const opened = await client.openWorkspace();
+      const opened = await open();
       if (opened) setWorkspace(opened);
+      void refreshRecent();
     });
 
   const handleClose = () =>
     run(async () => {
-      await client.closeWorkspace();
+      await leaveWorkspace();
+      await client.call('workspace:close');
       setWorkspace(null);
+      void refreshRecent();
     });
 
   return (
-    <div className="app">
-      <main className="app-content">
+    <ServicesProvider
+      client={client}
+      tracker={tracker}
+      reportError={reportError}
+    >
+      <div className="app">
         {error && (
           <ErrorMessage message={error} onDismiss={() => setError(null)} />
         )}
         {workspace ? (
-          <WorkspaceView
+          <WorkspaceScreen
+            key={workspace.id}
             workspace={workspace}
-            busy={busy}
-            onClose={handleClose}
+            onWorkspaceChanged={setWorkspace}
+            onClose={() => void handleClose()}
+            onDeleted={() => {
+              setWorkspace(null);
+              void refreshRecent();
+            }}
           />
         ) : (
-          <WelcomeScreen
-            busy={busy}
-            onCreate={handleCreate}
-            onOpen={handleOpen}
-          />
+          <main className="app-content">
+            <WelcomeScreen
+              busy={busy}
+              recent={recent}
+              onCreate={(name) =>
+                void openWith(() => client.call('workspace:create', { name }))
+              }
+              onOpen={() => void openWith(() => client.call('workspace:open'))}
+              onOpenRecent={(id) =>
+                void openWith(() => client.call('workspace:openRecent', { id }))
+              }
+              onRemoveRecent={(id) =>
+                void client
+                  .call('workspace:removeRecent', { id })
+                  .then(refreshRecent, reportError)
+              }
+            />
+          </main>
         )}
-      </main>
-      <StatusBar appInfo={appInfo} workspace={workspace} />
-    </div>
+        <StatusBar appInfo={appInfo} workspace={workspace} />
+      </div>
+    </ServicesProvider>
   );
 }

@@ -1,13 +1,24 @@
 import { useId, useState, type FormEvent } from 'react';
-import { WORKSPACE_NAME_MAX_LENGTH } from '../../shared/domain';
+import { WORKSPACE_NAME_MAX_LENGTH } from '../../../shared/domain';
+import type { RecentWorkspace } from '../../../shared/model';
 
 export interface WelcomeScreenProps {
   busy: boolean;
+  recent: RecentWorkspace[];
   onCreate(name: string): void;
   onOpen(): void;
+  onOpenRecent(id: string): void;
+  onRemoveRecent(id: string): void;
 }
 
-export function WelcomeScreen({ busy, onCreate, onOpen }: WelcomeScreenProps) {
+export function WelcomeScreen({
+  busy,
+  recent,
+  onCreate,
+  onOpen,
+  onOpenRecent,
+  onRemoveRecent,
+}: WelcomeScreenProps) {
   const nameId = useId();
   const [name, setName] = useState('');
   const trimmed = name.trim();
@@ -50,6 +61,39 @@ export function WelcomeScreen({ busy, onCreate, onOpen }: WelcomeScreenProps) {
           </button>
         </div>
       </div>
+
+      {recent.length > 0 && (
+        <div className="recent">
+          <h2>Espaces récents</h2>
+          <ul>
+            {recent.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  className="recent-open"
+                  disabled={busy || !entry.exists}
+                  onClick={() => onOpenRecent(entry.id)}
+                >
+                  <span className="recent-name">{entry.name}</span>
+                  <span className="path muted">{entry.filePath}</span>
+                  {!entry.exists && (
+                    <span className="warning">Fichier introuvable</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  aria-label={`Retirer ${entry.name} de la liste des récents`}
+                  title="Retirer de la liste"
+                  onClick={() => onRemoveRecent(entry.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
