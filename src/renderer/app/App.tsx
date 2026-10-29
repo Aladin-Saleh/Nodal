@@ -8,6 +8,7 @@ import { SaveTracker } from '../services/save-tracker';
 import { ServicesProvider } from './context';
 import { ErrorMessage } from './ErrorMessage';
 import { StatusBar } from './StatusBar';
+import { ImportReportDialog } from '../features/workspace/PortabilityDialogs';
 
 export interface AppProps {
   client: NodalClient;
@@ -22,6 +23,7 @@ export function App({ client }: AppProps) {
     message: string;
   } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[] | null>(null);
 
   const tracker = useMemo(
     () =>
@@ -101,6 +103,21 @@ export function App({ client }: AppProps) {
       void refreshRecent();
     });
 
+  const handleImport = () =>
+    run(async () => {
+      const result = await client.call('workspace:import');
+      if (!result) return;
+      if (result.kind === 'invalid') {
+        setImportErrors(result.errors);
+        return;
+      }
+      setWorkspace(result.workspace);
+      reportInfo(
+        `Espace « ${result.workspace.name} » importé : ${result.nodeCount} nœuds, ${result.documentCount} documents, ${result.attachmentCount} pièces jointes.`,
+      );
+      void refreshRecent();
+    });
+
   const handleClose = () =>
     run(async () => {
       await leaveWorkspace();
@@ -144,6 +161,7 @@ export function App({ client }: AppProps) {
                 void openWith(() => client.call('workspace:create', { name }))
               }
               onOpen={() => void openWith(() => client.call('workspace:open'))}
+              onImport={() => void handleImport()}
               onOpenRecent={(id) =>
                 void openWith(() => client.call('workspace:openRecent', { id }))
               }
@@ -154,6 +172,12 @@ export function App({ client }: AppProps) {
               }
             />
           </main>
+        )}
+        {importErrors && (
+          <ImportReportDialog
+            errors={importErrors}
+            onClose={() => setImportErrors(null)}
+          />
         )}
         <StatusBar appInfo={appInfo} workspace={workspace} />
       </div>

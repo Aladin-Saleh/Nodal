@@ -11,6 +11,8 @@ import {
   useReportError,
   useRunner,
 } from '../../app/context';
+import { CodeEditor } from '../editor/CodeEditor';
+import { MarkdownPreview, MermaidPreview } from '../editor/previews';
 
 /** Erreur de syntaxe JSON affichée sans bloquer l'édition (§6.6). */
 export function jsonError(body: string): string | null {
@@ -29,9 +31,9 @@ export interface DocumentEditorProps {
 }
 
 /**
- * Éditeur texte d'un document, avec enregistrement automatique. Le contenu
- * est du texte inerte : rien n'est interprété ni exécuté. Les éditeurs riches
- * (coloration, prévisualisation Markdown, rendu Mermaid) arrivent au lot 4.
+ * Éditeur d'un document (§6.3 à §6.6) : CodeMirror avec coloration, aperçu
+ * Markdown ou rendu Mermaid, mise en forme JSON explicite, copie. Le contenu
+ * reste du texte inerte : rien n'est exécuté. Enregistrement automatique.
  * À remonter (prop `key`) quand le document change.
  */
 export function DocumentEditor({
@@ -77,8 +79,9 @@ function LoadedDocumentEditor({
   const run = useRunner();
   const titleId = useId();
   const languageId = useId();
-  const bodyId = useId();
   const [body, setBody] = useState(document.body);
+  const [copied, setCopied] = useState(false);
+  const [mode, setMode] = useState<'edit' | 'split' | 'preview'>('split');
   const [title, setTitle] = useState(document.title);
   const [language, setLanguage] = useState(document.language);
 
@@ -116,9 +119,44 @@ function LoadedDocumentEditor({
   };
 
   const isCode = document.contentType === 'code';
-  const monospace =
-    document.contentType !== 'markdown' && document.contentType !== 'text';
+  const hasPreview =
+    document.contentType === 'markdown' || document.contentType === 'mermaid';
   const syntaxError = document.contentType === 'json' ? jsonError(body) : null;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  /** Mise en forme JSON : action explicite, jamais automatique (§6.6). */
+  const formatJson = () => {
+    try {
+      setBody(`${JSON.stringify(JSON.parse(body), null, 2)}\n`);
+    } catch {
+      // Bouton désactivé tant que le JSON est invalide.
+    }
+  };
+
+  const editor = (
+    <CodeEditor
+      value={body}
+      onChange={setBody}
+      contentType={document.contentType}
+      language={language}
+      label={`Contenu du document ${document.title}`}
+    />
+  );
+  const preview =
+    document.contentType === 'markdown' ? (
+      <MarkdownPreview source={body} />
+    ) : (
+      <MermaidPreview source={body} />
+    );
 
   return (
     <div className="document-editor">
@@ -161,16 +199,56 @@ function LoadedDocumentEditor({
           </>
         )}
       </div>
-      <label htmlFor={bodyId} className="visually-hidden">
-        Contenu du document
-      </label>
-      <textarea
-        id={bodyId}
-        className={monospace ? 'document-body monospace' : 'document-body'}
-        value={body}
-        spellCheck={!monospace}
-        onChange={(event) => setBody(event.target.value)}
-      />
+
+      <div
+        className="editor-toolbar"
+        role="toolbar"
+        aria-label="Actions du document"
+      >
+        {hasPreview && (
+          <div className="segmented" role="group" aria-label="Affichage">
+            {(
+              [
+                ['edit', 'Édition'],
+                ['split', 'Côte à côte'],
+                ['preview', 'Aperçu'],
+              ] as const
+            ).map(([value, text]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={mode === value}
+                onClick={() => setMode(value)}
+              >
+                {text}
+              </button>
+            ))}
+          </div>
+        )}
+        {document.contentType === 'json' && (
+          <button
+            type="button"
+            className="secondary"
+            disabled={syntaxError !== null || body.trim() === ''}
+            onClick={formatJson}
+          >
+            Mettre en forme
+          </button>
+        )}
+        <span className="toolbar-spacer" />
+        <button type="button" className="secondary" onClick={() => void copy()}>
+          {copied ? 'Copié ✓' : 'Copier'}
+        </button>
+      </div>
+
+      {hasPreview ? (
+        <div className={`editor-panes mode-${mode}`}>
+          {mode !== 'preview' && editor}
+          {mode !== 'edit' && preview}
+        </div>
+      ) : (
+        editor
+      )}
       {syntaxError && (
         <p className="warning" role="status">
           JSON invalide : {syntaxError}

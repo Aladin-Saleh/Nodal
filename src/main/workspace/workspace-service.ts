@@ -18,6 +18,11 @@ import { getSchemaVersion } from '../database/migrations';
 import { inTransaction } from '../database/transaction';
 import type { ServiceContext } from '../knowledge/context';
 import {
+  importFailure,
+  writeImport,
+  type ExportManifest,
+} from '../knowledge/import-service';
+import {
   insertDefaultRelationTypes,
   insertWorkspace,
   listWorkspaces,
@@ -120,6 +125,41 @@ export class WorkspaceService {
     }
     this.replaceCurrent({ db, info });
     return info;
+  }
+
+  /**
+   * Crée un nouvel espace à partir d'un export validé et l'ouvre. Le fichier
+   * est supprimé si l'écriture échoue.
+   */
+  importFrom(
+    filePath: string,
+    manifest: ExportManifest,
+    root: string,
+  ): {
+    info: WorkspaceInfo;
+    nodeCount: number;
+    documentCount: number;
+    attachmentCount: number;
+  } {
+    const target = path.resolve(ensureNodalExtension(filePath));
+    const db = createNodalDatabase(target);
+    let counts: {
+      nodeCount: number;
+      documentCount: number;
+      attachmentCount: number;
+    };
+    let info: WorkspaceInfo;
+    try {
+      counts = writeImport(db, manifest, root);
+      const [row] = listWorkspaces(db);
+      info = toInfo(db, row!, target);
+    } catch (error) {
+      closeNodalDatabase(db);
+      fs.rmSync(target, { force: true });
+      throw importFailure(error);
+    }
+    this.replaceCurrent({ db, info });
+    return { info, ...counts };
   }
 
   /** Ouvre un fichier .nodal existant et le définit comme espace courant. */

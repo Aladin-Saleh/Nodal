@@ -13,6 +13,13 @@ import type { ContextProvider } from '../knowledge/context';
 import { DocumentService } from '../knowledge/document-service';
 import { EdgeService } from '../knowledge/edge-service';
 import { exportWorkspace } from '../knowledge/export-service';
+import { validateExportFolder } from '../knowledge/import-service';
+import {
+  createDefaultTokenizer,
+  writeLlmExport,
+  type Tokenizer,
+} from '../knowledge/llm-export-service';
+import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
@@ -55,6 +62,20 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const edges = new EdgeService(context);
   const graph = new GraphService(context);
   const search = new SearchService(context);
+  const maintenance = new MaintenanceService(context);
+  // Le dictionnaire du tokenizer est chargé une seule fois, à la demande.
+  let tokenizer: Promise<Tokenizer> | null = null;
+  const requireCurrent = () => {
+    const current = workspaces.getCurrent();
+    if (!current) {
+      throw new NodalError('NO_WORKSPACE_OPEN', "Aucun espace n'est ouvert.");
+    }
+    return current;
+  };
+  const generator = () => {
+    const info = deps.getAppInfo();
+    return { name: info.appName, version: info.appVersion };
+  };
 
   const remember = (info: WorkspaceInfo) => {
     recent.touch(info.filePath, info.name);
@@ -221,6 +242,69 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
 
     'search:query': ({ query }) => search.search(query),
+    'workspace:exportLlm': async (options) => {
+      const current = requireCurrent();
+      const parentDir = await dialogs.pickExportParentDirectory();
+      if (!parentDir) return null;
+      tokenizer ??= createDefaultTokenizer();
+      try {
+        return writeLlmExport(
+          workspaces.getContext(),
+          current,
+          parentDir,
+          options,
+          await tokenizer,
+          generator(),
+        );
+      } catch (cause) {
+        if (cause instanceof NodalError) throw cause;
+        throw new NodalError(
+          'IO_ERROR',
+          'L’export LLM a échoué : vérifiez l’accès au dossier et l’espace disque.',
+          { cause },
+        );
+      }
+    },
+    'workspace:import': async () => {
+      const folder = await dialogs.pickImportFolder();
+      if (!folder) return null;
+      const validation = validateExportFolder(folder);
+      if (!validation.ok) return { kind: 'invalid', errors: validation.errors };
+      const target = await dialogs.pickNodalSavePath(
+        'Enregistrer l’espace importé',
+        validation.manifest.workspace.name,
+      );
+      if (!target) return null;
+      const imported = workspaces.importFrom(
+        target,
+        validation.manifest,
+        validation.root,
+      );
+      remember(imported.info);
+      return {
+        kind: 'imported',
+        workspace: imported.info,
+        nodeCount: imported.nodeCount,
+        documentCount: imported.documentCount,
+        attachmentCount: imported.attachmentCount,
+      };
+    },
+    'workspace:backup': async () => {
+      const current = requireCurrent();
+      const stamp = new Date()
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\..*$/, '')
+        .replace('T', '-');
+      const target = await dialogs.pickNodalSavePath(
+        'Enregistrer une sauvegarde de l’espace',
+        `${current.name}-sauvegarde-${stamp}`,
+      );
+      if (!target) return null;
+      maintenance.backupTo(target);
+      return target;
+    },
+    'workspace:checkIntegrity': () => maintenance.checkIntegrity(),
     'workspace:export': async () => {
       const current = workspaces.getCurrent();
       if (!current) {

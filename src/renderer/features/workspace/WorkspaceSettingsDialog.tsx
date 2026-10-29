@@ -5,7 +5,14 @@ import {
   WORKSPACE_NAME_MAX_LENGTH,
 } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
-import { useClient, useReportError, useRunner } from '../../app/context';
+import {
+  useClient,
+  useReportError,
+  useReportInfo,
+  useRunner,
+} from '../../app/context';
+import type { IntegrityReport } from '../../../shared/model';
+import { IntegrityReportDialog } from './PortabilityDialogs';
 import { Modal } from '../../components/Modal';
 
 const MB = 1024 * 1024;
@@ -28,6 +35,18 @@ export function WorkspaceSettingsDialog({
   const client = useClient();
   const run = useRunner();
   const reportError = useReportError();
+  const reportInfo = useReportInfo();
+  const [report, setReport] = useState<IntegrityReport | null>(null);
+
+  const backup = async () => {
+    const target = await run(() => client.call('workspace:backup'));
+    if (target) reportInfo(`Sauvegarde créée : ${target}`);
+  };
+
+  const checkIntegrity = async () => {
+    const result = await run(() => client.call('workspace:checkIntegrity'));
+    if (result) setReport(result);
+  };
   const nameId = useId();
   const descriptionId = useId();
   const sizeId = useId();
@@ -70,6 +89,12 @@ export function WorkspaceSettingsDialog({
     if (deleted) onDeleted();
   };
 
+  if (report) {
+    return (
+      <IntegrityReportDialog report={report} onClose={() => setReport(null)} />
+    );
+  }
+
   return (
     <Modal title="Paramètres de l’espace" onClose={onClose}>
       <form className="form" onSubmit={save}>
@@ -102,6 +127,26 @@ export function WorkspaceSettingsDialog({
           }
         />
         <p className="muted path">{workspace.filePath}</p>
+
+        <fieldset className="choices">
+          <legend>Maintenance</legend>
+          <div className="inline-form">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void backup()}
+            >
+              Créer une sauvegarde…
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void checkIntegrity()}
+            >
+              Vérifier l’intégrité
+            </button>
+          </div>
+        </fieldset>
 
         <div className="modal-footer">
           <button

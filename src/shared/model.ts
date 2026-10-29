@@ -179,6 +179,33 @@ export interface ExportResult {
   attachmentCount: number;
 }
 
+/** Résultat d'une vérification d'intégrité (§6.10). */
+export interface IntegrityReport {
+  ok: boolean;
+  checks: { name: string; ok: boolean; details: string[] }[];
+}
+
+/** Portée d'un export LLM (§6.7). */
+export type LlmExportScope =
+  | { kind: 'workspace' }
+  | { kind: 'subtree'; nodeId: string }
+  | { kind: 'neighborhood'; nodeId: string; depth: number };
+
+export interface LlmExportOptions {
+  scope: LlmExportScope;
+  /** Taille maximale d'un fragment, en tokens du tokenizer indiqué. */
+  maxTokens: number;
+}
+
+export interface LlmExportResult {
+  folderPath: string;
+  nodeCount: number;
+  documentCount: number;
+  chunkCount: number;
+  /** Tokenizer utilisé pour les comptages (nom, version, encodage). */
+  tokenizer: string;
+}
+
 export interface NodePosition {
   id: string;
   x: number;

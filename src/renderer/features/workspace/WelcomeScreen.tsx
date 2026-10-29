@@ -7,6 +7,7 @@ export interface WelcomeScreenProps {
   recent: RecentWorkspace[];
   onCreate(name: string): void;
   onOpen(): void;
+  onImport(): void;
   onOpenRecent(id: string): void;
   onRemoveRecent(id: string): void;
 }
@@ -16,6 +17,7 @@ export function WelcomeScreen({
   recent,
   onCreate,
   onOpen,
+  onImport,
   onOpenRecent,
   onRemoveRecent,
 }: WelcomeScreenProps) {
@@ -56,9 +58,20 @@ export function WelcomeScreen({
         <div className="card">
           <h2>Ouvrir un espace</h2>
           <p className="muted">Ouvrir un fichier .nodal existant.</p>
-          <button type="button" disabled={busy} onClick={onOpen}>
-            Ouvrir…
-          </button>
+          <div className="inline-form">
+            <button type="button" disabled={busy} onClick={onOpen}>
+              Ouvrir…
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              title="Créer un nouvel espace à partir d’un dossier d’export Nodal"
+              onClick={onImport}
+            >
+              Importer un export…
+            </button>
+          </div>
         </div>
       </div>
 

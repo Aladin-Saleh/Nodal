@@ -11,12 +11,22 @@ import {
 } from 'electron';
 import { isExternalWebUrl, type AppUrlMatcher } from './app-url';
 
-/** Refuse toute demande de permission (caméra, notifications, etc.). */
+/**
+ * Seule permission accordée : écrire du texte dans le presse-papiers (bouton
+ * « Copier » des documents, §6.4). La lecture du presse-papiers reste refusée.
+ */
+const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
+  'clipboard-sanitized-write',
+]);
+
+/** Refuse toute autre demande de permission (caméra, notifications, etc.). */
 export function applySessionSecurity(session: Session): void {
-  session.setPermissionRequestHandler((_contents, _permission, callback) =>
-    callback(false),
+  session.setPermissionRequestHandler((_contents, permission, callback) =>
+    callback(ALLOWED_PERMISSIONS.has(permission)),
   );
-  session.setPermissionCheckHandler(() => false);
+  session.setPermissionCheckHandler((_contents, permission) =>
+    ALLOWED_PERMISSIONS.has(permission),
+  );
   session.setDevicePermissionHandler(() => false);
 }
 

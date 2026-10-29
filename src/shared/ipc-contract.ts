@@ -14,6 +14,9 @@ import type {
   DocumentInfo,
   EdgeInfo,
   ExportResult,
+  IntegrityReport,
+  LlmExportOptions,
+  LlmExportResult,
   GraphData,
   NodeDeletionImpact,
   NodeDetail,
@@ -151,6 +154,17 @@ export interface UpdateEdgeInput {
   label?: string | null;
   description?: string | null;
 }
+/** Résultat d'un import : nouvel espace ouvert, ou rapport de validation. */
+export type ImportResult =
+  | {
+      kind: 'imported';
+      workspace: WorkspaceInfo;
+      nodeCount: number;
+      documentCount: number;
+      attachmentCount: number;
+    }
+  | { kind: 'invalid'; errors: string[] };
+
 export interface SearchInput {
   query: string;
 }
@@ -245,6 +259,16 @@ export interface IpcContract {
   'search:query': { args: [SearchInput]; result: SearchHit[] };
   /** Choix du dossier par le main ; `null` si annulé. */
   'workspace:export': { args: []; result: ExportResult | null };
+  /** Export LLM (TOON, JSON, fragments) ; `null` si annulé. */
+  'workspace:exportLlm': {
+    args: [LlmExportOptions];
+    result: LlmExportResult | null;
+  };
+  /** Valide un dossier d'export puis crée un nouvel espace ; `null` si annulé. */
+  'workspace:import': { args: []; result: ImportResult | null };
+  /** Copie de sauvegarde du fichier courant ; chemin créé, ou `null` si annulé. */
+  'workspace:backup': { args: []; result: string | null };
+  'workspace:checkIntegrity': { args: []; result: IntegrityReport };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -303,6 +327,10 @@ export const IPC_CHANNELS = [
   'graph:savePositions',
   'search:query',
   'workspace:export',
+  'workspace:exportLlm',
+  'workspace:import',
+  'workspace:backup',
+  'workspace:checkIntegrity',
 ] as const satisfies readonly IpcChannel[];
 
 /** Événements main → renderer. */

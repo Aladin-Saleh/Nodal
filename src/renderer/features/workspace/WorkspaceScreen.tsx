@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { NodalError } from '../../../shared/errors';
 import type { ContentType, NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
   BulkDeletionImpact,
   ChildrenStrategy,
+  LlmExportOptions,
   GraphData,
   NodeDeletionImpact,
   NodeDetail,
@@ -38,6 +40,8 @@ import { NodeTree } from '../nodes/NodeTree';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { SearchBox } from '../search/SearchBox';
+import { NodeLinkContext } from '../editor/previews';
+import { LlmExportDialog } from './PortabilityDialogs';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
 
@@ -98,6 +102,7 @@ export function WorkspaceScreen({
     null,
   );
   const [exporting, setExporting] = useState(false);
+  const [llmExportOpen, setLlmExportOpen] = useState(false);
   const [multiSelection, setMultiSelection] = useState<ReadonlySet<string>>(
     new Set(),
   );
@@ -409,6 +414,40 @@ export function WorkspaceScreen({
     }
   };
 
+  const exportForLlm = async (options: LlmExportOptions) => {
+    setLlmExportOpen(false);
+    setExporting(true);
+    try {
+      await tracker.flushAll();
+      const result = await run(() =>
+        client.call('workspace:exportLlm', options),
+      );
+      if (result) {
+        reportInfo(
+          `Export LLM créé dans ${result.folderPath} : ${result.nodeCount} nœuds, ${result.documentCount} documents, ${result.chunkCount} fragments (tokens comptés avec ${result.tokenizer}).`,
+        );
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /** Lien interne [[Titre]] : ouvre le nœud correspondant (§6.3). */
+  const openNodeByTitle = (title: string) => {
+    const wanted = title.trim().toLocaleLowerCase();
+    const target = nodes.find(
+      (node) => node.title.toLocaleLowerCase() === wanted,
+    );
+    if (!target) {
+      reportError(
+        new NodalError('NOT_FOUND', `Aucun nœud intitulé « ${title} ».`),
+      );
+      return;
+    }
+    setEditingDocumentId(null);
+    select(target.id);
+  };
+
   const showSearchResults = (hits: SearchHit[] | null) => {
     setSearchHits(hits);
     if (!hits || hits.length === 0) return;
@@ -451,326 +490,371 @@ export function WorkspaceScreen({
     : -1;
 
   return (
-    <div className="workspace-screen">
-      <header className="top-bar">
-        <h1 className="workspace-name" title={workspace.filePath}>
-          {workspace.name}
-        </h1>
-        <SearchBox
-          inputRef={searchInput}
-          onResults={showSearchResults}
-          onSelectNode={(id) => select(id)}
-          onOpenDocument={openDocument}
-        />
-        <div className="segmented" role="group" aria-label="Vue centrale">
-          <button
-            type="button"
-            aria-pressed={view === 'documents'}
-            onClick={() => setView('documents')}
-          >
-            Documents
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === 'graph'}
-            onClick={() => setView('graph')}
-          >
-            Graphe
-          </button>
-        </div>
-        <div className="top-actions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setDialog({ kind: 'tags' })}
-          >
-            Tags
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setDialog({ kind: 'relationTypes' })}
-          >
-            Types de relations
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            disabled={exporting}
-            title="Exporter l’espace dans un dossier portable (manifest.json, documents, pièces jointes)"
-            onClick={() => void exportWorkspace()}
-          >
-            {exporting ? 'Export…' : 'Exporter'}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setDialog({ kind: 'settings' })}
-          >
-            Paramètres
-          </button>
-          <button type="button" className="secondary" onClick={onClose}>
-            Fermer l’espace
-          </button>
-        </div>
-      </header>
-
-      <div className={shownDetail ? 'panes' : 'panes no-properties'}>
-        <nav className="tree-pane" aria-label="Navigation">
-          <div className="toolbar" aria-label="Actions sur les nœuds">
+    <NodeLinkContext.Provider value={openNodeByTitle}>
+      <div className="workspace-screen">
+        <header className="top-bar">
+          <h1 className="workspace-name" title={workspace.filePath}>
+            {workspace.name}
+          </h1>
+          <SearchBox
+            inputRef={searchInput}
+            onResults={showSearchResults}
+            onSelectNode={(id) => select(id)}
+            onOpenDocument={openDocument}
+          />
+          <div className="segmented" role="group" aria-label="Vue centrale">
             <button
               type="button"
-              title="Nouveau nœud racine (Ctrl+Maj+N)"
-              onClick={() => setDialog({ kind: 'new', parentId: null })}
+              aria-pressed={view === 'documents'}
+              onClick={() => setView('documents')}
             >
-              + Racine
+              Documents
             </button>
             <button
               type="button"
-              className="secondary"
-              disabled={!selected}
-              title="Nouveau sous-nœud (Ctrl+N)"
-              onClick={() => setDialog({ kind: 'new', parentId: selectedId })}
+              aria-pressed={view === 'graph'}
+              onClick={() => setView('graph')}
             >
-              + Enfant
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={siblingPosition <= 0}
-              aria-label="Monter le nœud"
-              title="Monter"
-              onClick={() => shift(-1)}
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={
-                siblingPosition === -1 ||
-                siblingPosition === siblings.length - 1
-              }
-              aria-label="Descendre le nœud"
-              title="Descendre"
-              onClick={() => shift(1)}
-            >
-              ↓
+              Graphe
             </button>
           </div>
-          <NodeTree
-            index={index}
-            expanded={expanded}
-            selectedId={selectedId}
-            onSelect={select}
-            onToggle={toggle}
-            onDelete={(id) => void askDelete(id)}
-            onRename={() => titleInput.current?.focus()}
-            highlighted={searchMatches}
-            multiSelection={multiSelection}
-            onToggleMulti={toggleMulti}
-          />
-        </nav>
-
-        <main
-          className={
-            view === 'graph' ? 'content-pane graph-mode' : 'content-pane'
-          }
-        >
-          {view === 'graph' && nodes.length > 0 ? (
-            graph && (
-              <GraphPanel
-                graph={graph}
-                nodes={nodes}
-                tags={tags}
-                selectedId={selectedId}
-                onSelect={select}
-                onOpen={(id) => {
-                  select(id);
-                  setView('documents');
-                }}
-                onPositionsSaved={positionsSaved}
-                onRelationsChanged={relationsChanged}
-                selectedDocuments={shownDetail?.documents ?? null}
-                searchMatches={searchMatches}
-                onOpenDocument={(id) => openDocument(id)}
-                onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
-                multiSelection={multiSelection}
-                onToggleSelect={toggleMulti}
-                onSetMultiSelection={setMultiSelection}
-                onBulkMove={() =>
-                  setDialog({
-                    kind: 'move',
-                    nodes: nodes.filter((node) => multiSelection.has(node.id)),
-                    bulk: true,
-                  })
-                }
-                onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
-                onBulkDelete={() => void askBulkDelete()}
-                onCreateAt={(position) =>
-                  setDialog({ kind: 'new', parentId: null, position })
-                }
-              />
-            )
-          ) : shownDetail && selected ? (
-            <>
-              <NodeHeader
-                key={`${shownDetail.id}:${shownDetail.title}`}
-                node={shownDetail}
-                titleInput={titleInput}
-                onNavigate={select}
-                onRename={renameNode}
-                onMove={() =>
-                  setDialog({ kind: 'move', nodes: [selected], bulk: false })
-                }
-                onDuplicate={() =>
-                  setDialog({ kind: 'duplicate', node: selected })
-                }
-                onDelete={() => void askDelete(selected.id)}
-              />
-              <DocumentsPanel
-                key={shownDetail.id}
-                nodeId={shownDetail.id}
-                documents={shownDetail.documents}
-                onChanged={refreshDetail}
-              />
-            </>
-          ) : (
-            <div className="empty-state">
-              <p className="muted">
-                {nodes.length === 0
-                  ? 'Cet espace est vide.'
-                  : 'Sélectionnez un nœud dans l’arborescence.'}
-              </p>
-              {nodes.length === 0 && (
+          <div className="top-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setDialog({ kind: 'tags' })}
+            >
+              Tags
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setDialog({ kind: 'relationTypes' })}
+            >
+              Types de relations
+            </button>
+            <details className="export-menu">
+              <summary
+                className={exporting ? 'disabled' : undefined}
+                aria-disabled={exporting}
+              >
+                {exporting ? 'Export…' : 'Exporter ▾'}
+              </summary>
+              <div className="export-menu-panel" role="menu">
                 <button
                   type="button"
-                  onClick={() => setDialog({ kind: 'new', parentId: null })}
+                  role="menuitem"
+                  className="secondary"
+                  disabled={exporting}
+                  onClick={(event) => {
+                    event.currentTarget
+                      .closest('details')
+                      ?.removeAttribute('open');
+                    void exportWorkspace();
+                  }}
                 >
-                  Créer un premier nœud
+                  Export portable (dossier + manifest)
                 </button>
-              )}
-            </div>
-          )}
-        </main>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="secondary"
+                  disabled={exporting}
+                  onClick={(event) => {
+                    event.currentTarget
+                      .closest('details')
+                      ?.removeAttribute('open');
+                    setLlmExportOpen(true);
+                  }}
+                >
+                  Export pour LLM (TOON, fragments)…
+                </button>
+              </div>
+            </details>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setDialog({ kind: 'settings' })}
+            >
+              Paramètres
+            </button>
+            <button type="button" className="secondary" onClick={onClose}>
+              Fermer l’espace
+            </button>
+          </div>
+        </header>
 
-        {shownDetail && (
-          <NodeProperties
-            key={shownDetail.id}
-            node={shownDetail}
-            allTags={tags}
-            nodes={nodes}
+        <div className={shownDetail ? 'panes' : 'panes no-properties'}>
+          <nav className="tree-pane" aria-label="Navigation">
+            <div className="toolbar" aria-label="Actions sur les nœuds">
+              <button
+                type="button"
+                title="Nouveau nœud racine (Ctrl+Maj+N)"
+                onClick={() => setDialog({ kind: 'new', parentId: null })}
+              >
+                + Racine
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!selected}
+                title="Nouveau sous-nœud (Ctrl+N)"
+                onClick={() => setDialog({ kind: 'new', parentId: selectedId })}
+              >
+                + Enfant
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={siblingPosition <= 0}
+                aria-label="Monter le nœud"
+                title="Monter"
+                onClick={() => shift(-1)}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={
+                  siblingPosition === -1 ||
+                  siblingPosition === siblings.length - 1
+                }
+                aria-label="Descendre le nœud"
+                title="Descendre"
+                onClick={() => shift(1)}
+              >
+                ↓
+              </button>
+            </div>
+            <NodeTree
+              index={index}
+              expanded={expanded}
+              selectedId={selectedId}
+              onSelect={select}
+              onToggle={toggle}
+              onDelete={(id) => void askDelete(id)}
+              onRename={() => titleInput.current?.focus()}
+              highlighted={searchMatches}
+              multiSelection={multiSelection}
+              onToggleMulti={toggleMulti}
+            />
+          </nav>
+
+          <main
+            className={
+              view === 'graph' ? 'content-pane graph-mode' : 'content-pane'
+            }
+          >
+            {view === 'graph' && nodes.length > 0 ? (
+              graph && (
+                <GraphPanel
+                  graph={graph}
+                  nodes={nodes}
+                  tags={tags}
+                  selectedId={selectedId}
+                  onSelect={select}
+                  onOpen={(id) => {
+                    select(id);
+                    setView('documents');
+                  }}
+                  onPositionsSaved={positionsSaved}
+                  onRelationsChanged={relationsChanged}
+                  selectedDocuments={shownDetail?.documents ?? null}
+                  searchMatches={searchMatches}
+                  onOpenDocument={(id) => openDocument(id)}
+                  onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
+                  multiSelection={multiSelection}
+                  onToggleSelect={toggleMulti}
+                  onSetMultiSelection={setMultiSelection}
+                  onBulkMove={() =>
+                    setDialog({
+                      kind: 'move',
+                      nodes: nodes.filter((node) =>
+                        multiSelection.has(node.id),
+                      ),
+                      bulk: true,
+                    })
+                  }
+                  onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
+                  onBulkDelete={() => void askBulkDelete()}
+                  onCreateAt={(position) =>
+                    setDialog({ kind: 'new', parentId: null, position })
+                  }
+                />
+              )
+            ) : shownDetail && selected ? (
+              <>
+                <NodeHeader
+                  key={`${shownDetail.id}:${shownDetail.title}`}
+                  node={shownDetail}
+                  titleInput={titleInput}
+                  onNavigate={select}
+                  onRename={renameNode}
+                  onMove={() =>
+                    setDialog({ kind: 'move', nodes: [selected], bulk: false })
+                  }
+                  onDuplicate={() =>
+                    setDialog({ kind: 'duplicate', node: selected })
+                  }
+                  onDelete={() => void askDelete(selected.id)}
+                />
+                <DocumentsPanel
+                  key={shownDetail.id}
+                  nodeId={shownDetail.id}
+                  documents={shownDetail.documents}
+                  onChanged={refreshDetail}
+                />
+              </>
+            ) : (
+              <div className="empty-state">
+                <p className="muted">
+                  {nodes.length === 0
+                    ? 'Cet espace est vide.'
+                    : 'Sélectionnez un nœud dans l’arborescence.'}
+                </p>
+                {nodes.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ kind: 'new', parentId: null })}
+                  >
+                    Créer un premier nœud
+                  </button>
+                )}
+              </div>
+            )}
+          </main>
+
+          {shownDetail && (
+            <NodeProperties
+              key={shownDetail.id}
+              node={shownDetail}
+              allTags={tags}
+              nodes={nodes}
+              relationTypes={graph?.relationTypes ?? []}
+              relationsRevision={relationsRevision}
+              onNavigate={select}
+              onNodeChanged={nodeChanged}
+              onTagsChanged={() => void refreshTags()}
+              onRelationsChanged={relationsChanged}
+              onOpenDocument={(id) => openDocument(id)}
+              onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
+            />
+          )}
+        </div>
+
+        {llmExportOpen && (
+          <LlmExportDialog
+            selected={selected}
+            onSubmit={(options) => void exportForLlm(options)}
+            onCancel={() => setLlmExportOpen(false)}
+          />
+        )}
+        {editingDocumentId && (
+          <DocumentEditorDialog
+            documentId={editingDocumentId}
+            onChanged={refreshDetail}
+            onClose={() => {
+              setEditingDocumentId(null);
+              refreshDetail();
+            }}
+          />
+        )}
+        {addingDocumentFor && (
+          <NewDocumentDialog
+            onSubmit={(title, contentType, language) =>
+              void createDocument(
+                addingDocumentFor,
+                title,
+                contentType,
+                language,
+              )
+            }
+            onCancel={() => setAddingDocumentFor(null)}
+          />
+        )}
+        {dialog?.kind === 'relationTypes' && (
+          <RelationTypeManagerDialog
             relationTypes={graph?.relationTypes ?? []}
-            relationsRevision={relationsRevision}
-            onNavigate={select}
-            onNodeChanged={nodeChanged}
-            onTagsChanged={() => void refreshTags()}
-            onRelationsChanged={relationsChanged}
-            onOpenDocument={(id) => openDocument(id)}
-            onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
+            onChanged={() => void refreshNodes()}
+            onClose={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'new' && (
+          <NewNodeDialog
+            parentTitle={
+              dialog.parentId
+                ? (index.byId.get(dialog.parentId)?.title ?? null)
+                : null
+            }
+            parentChoice={
+              dialog.position ? { index, parentId: dialog.parentId } : undefined
+            }
+            onSubmit={(title, nodeType, parentId) =>
+              void createNode(title, nodeType, parentId)
+            }
+            onCancel={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'move' && (
+          <MoveNodeDialog
+            index={index}
+            nodes={dialog.nodes}
+            onSubmit={(parentId) =>
+              dialog.bulk
+                ? void bulkMove(parentId)
+                : void moveTo(dialog.nodes[0]!, parentId)
+            }
+            onCancel={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'duplicate' && (
+          <DuplicateNodeDialog
+            node={dialog.node}
+            hasChildren={(index.children.get(dialog.node.id)?.length ?? 0) > 0}
+            onSubmit={(includeChildren) =>
+              void duplicate(dialog.node, includeChildren)
+            }
+            onCancel={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'delete' && (
+          <DeleteNodeDialog
+            title={`Supprimer « ${dialog.node.title} » ?`}
+            impact={dialog.impact}
+            busy={false}
+            onSubmit={(strategy) => void deleteNode(dialog.node, strategy)}
+            onCancel={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'bulkDelete' && (
+          <DeleteNodeDialog
+            title={`Supprimer ${dialog.impact.nodeCount} nœuds ?`}
+            impact={dialog.impact}
+            busy={false}
+            onSubmit={(strategy) => void bulkDelete(dialog.ids, strategy)}
+            onCancel={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'tags' && (
+          <TagManagerDialog
+            tags={tags}
+            onChanged={() => {
+              void refreshTags();
+              refreshDetail();
+            }}
+            onClose={() => setDialog(null)}
+          />
+        )}
+        {dialog?.kind === 'settings' && (
+          <WorkspaceSettingsDialog
+            workspace={workspace}
+            onUpdated={onWorkspaceChanged}
+            onDeleted={onDeleted}
+            onClose={() => setDialog(null)}
           />
         )}
       </div>
-
-      {editingDocumentId && (
-        <DocumentEditorDialog
-          documentId={editingDocumentId}
-          onChanged={refreshDetail}
-          onClose={() => {
-            setEditingDocumentId(null);
-            refreshDetail();
-          }}
-        />
-      )}
-      {addingDocumentFor && (
-        <NewDocumentDialog
-          onSubmit={(title, contentType, language) =>
-            void createDocument(addingDocumentFor, title, contentType, language)
-          }
-          onCancel={() => setAddingDocumentFor(null)}
-        />
-      )}
-      {dialog?.kind === 'relationTypes' && (
-        <RelationTypeManagerDialog
-          relationTypes={graph?.relationTypes ?? []}
-          onChanged={() => void refreshNodes()}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'new' && (
-        <NewNodeDialog
-          parentTitle={
-            dialog.parentId
-              ? (index.byId.get(dialog.parentId)?.title ?? null)
-              : null
-          }
-          parentChoice={
-            dialog.position ? { index, parentId: dialog.parentId } : undefined
-          }
-          onSubmit={(title, nodeType, parentId) =>
-            void createNode(title, nodeType, parentId)
-          }
-          onCancel={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'move' && (
-        <MoveNodeDialog
-          index={index}
-          nodes={dialog.nodes}
-          onSubmit={(parentId) =>
-            dialog.bulk
-              ? void bulkMove(parentId)
-              : void moveTo(dialog.nodes[0]!, parentId)
-          }
-          onCancel={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'duplicate' && (
-        <DuplicateNodeDialog
-          node={dialog.node}
-          hasChildren={(index.children.get(dialog.node.id)?.length ?? 0) > 0}
-          onSubmit={(includeChildren) =>
-            void duplicate(dialog.node, includeChildren)
-          }
-          onCancel={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'delete' && (
-        <DeleteNodeDialog
-          title={`Supprimer « ${dialog.node.title} » ?`}
-          impact={dialog.impact}
-          busy={false}
-          onSubmit={(strategy) => void deleteNode(dialog.node, strategy)}
-          onCancel={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'bulkDelete' && (
-        <DeleteNodeDialog
-          title={`Supprimer ${dialog.impact.nodeCount} nœuds ?`}
-          impact={dialog.impact}
-          busy={false}
-          onSubmit={(strategy) => void bulkDelete(dialog.ids, strategy)}
-          onCancel={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'tags' && (
-        <TagManagerDialog
-          tags={tags}
-          onChanged={() => {
-            void refreshTags();
-            refreshDetail();
-          }}
-          onClose={() => setDialog(null)}
-        />
-      )}
-      {dialog?.kind === 'settings' && (
-        <WorkspaceSettingsDialog
-          workspace={workspace}
-          onUpdated={onWorkspaceChanged}
-          onDeleted={onDeleted}
-          onClose={() => setDialog(null)}
-        />
-      )}
-    </div>
+    </NodeLinkContext.Provider>
   );
 }

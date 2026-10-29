@@ -296,4 +296,21 @@ export const ipcArgsSchemas = {
     z.strictObject({ query: z.string().max(SEARCH_QUERY_MAX_LENGTH) }),
   ),
   'workspace:export': noArgs,
+  'workspace:exportLlm': one(
+    z.strictObject({
+      scope: z.discriminatedUnion('kind', [
+        z.strictObject({ kind: z.literal('workspace') }),
+        z.strictObject({ kind: z.literal('subtree'), nodeId: idSchema }),
+        z.strictObject({
+          kind: z.literal('neighborhood'),
+          nodeId: idSchema,
+          depth: z.number().int().min(1).max(10),
+        }),
+      ]),
+      maxTokens: z.number().int().min(64).max(32_000),
+    }),
+  ),
+  'workspace:import': noArgs,
+  'workspace:backup': noArgs,
+  'workspace:checkIntegrity': noArgs,
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

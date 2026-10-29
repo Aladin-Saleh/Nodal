@@ -26,6 +26,13 @@ export interface FileDialogs {
   pickAttachmentSavePath(fileName: string): Promise<string | null>;
   /** Dossier dans lequel créer un export ; `null` si annulé. */
   pickExportParentDirectory(): Promise<string | null>;
+  /** Dossier d'export à importer ; `null` si annulé. */
+  pickImportFolder(): Promise<string | null>;
+  /** Emplacement d'un fichier .nodal (nouvel espace importé, sauvegarde). */
+  pickNodalSavePath(
+    title: string,
+    suggestedName: string,
+  ): Promise<string | null>;
   /** Demande de confirmation native ; `true` si l'utilisateur confirme. */
   confirm(options: {
     message: string;
@@ -93,6 +100,24 @@ export function createFileDialogs(
         properties: ['openDirectory', 'createDirectory'],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickImportFolder() {
+      const result = await open({
+        title: 'Choisir le dossier d’export Nodal à importer',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickNodalSavePath(title, suggestedName) {
+      const result = await save({
+        title,
+        defaultPath: `${toFileName(suggestedName, 'Espace')}.${NODAL_FILE_EXTENSION}`,
+        filters: NODAL_FILTERS,
+        properties: ['createDirectory'],
+      });
+      return result.canceled || !result.filePath ? null : result.filePath;
     },
 
     async confirm({ message, detail, confirmLabel }) {

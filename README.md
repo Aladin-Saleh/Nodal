@@ -52,15 +52,32 @@ pièces jointes en BLOB).
   - sélection multiple (Ctrl+clic, Ctrl+A) et actions groupées : déplacer
     sous un parent ou à la racine, changer le type, supprimer ;
   - champ « Parent » pour passer un nœud en racine ou le rattacher à un autre.
-- **Recherche (lot 5, en partie)** : index plein texte SQLite FTS5
-  (migration 003, tenu à jour par triggers) sur les titres, résumés et
-  contenus des documents, code compris, sans tenir compte des accents ;
-  les nœuds trouvés sont mis en évidence dans le graphe et l'arborescence.
-- **Export (lot 5, en partie)** : dossier portable avec `manifest.json`
-  versionné, documents au format source, pièces jointes et `LISEZMOI.txt`.
+- **Lot 4 — Contenus riches** :
+  - éditeur CodeMirror 6 pour tous les documents : coloration (Markdown,
+    JSON, Java, JS/TS, Python, SQL, Go, YAML, Bash, C/C++), numéros de
+    ligne, repliage, bouton Copier ;
+  - aperçu Markdown sécurisé (HTML brut échappé, seuls les liens web, mail
+    et internes sont conservés) ; `[[Titre du nœud]]` ouvre le nœud ;
+  - rendu Mermaid local (`securityLevel: strict`), affiché comme image
+    isolée ; erreurs de syntaxe affichées sans interrompre l'édition ;
+  - JSON : validation non bloquante, mise en forme sur action explicite.
+- **Lot 5 — Recherche et portabilité** :
+  - recherche plein texte SQLite FTS5 (migration 003, tenue à jour par
+    triggers) sur titres, résumés et documents, code compris, sans accents ;
+  - export portable : dossier avec `manifest.json` versionné, documents au
+    format source, pièces jointes, `LISEZMOI.txt` ;
+  - import d'un export : validation préalable (schéma, références, cycles,
+    chemins confinés au dossier, empreintes SHA-256) avec rapport
+    d'erreurs, puis création d'un nouvel espace (identifiants conservés) ;
+  - sauvegarde de secours (`VACUUM INTO`) et vérification d'intégrité
+    (structure, clés étrangères, index de recherche reconstruit si besoin) ;
+  - export pour LLM : `graph.toon` (TOON) + `graph.json` équivalent,
+    documents sources, `chunks.jsonl` (fragments découpés selon la
+    structure, identifiants reproductibles, tokens comptés avec
+    js-tiktoken / o200k_base), portée espace, sous-arbre ou voisinage.
 
-Éditeurs riches et rendu Markdown / Mermaid (lot 4), import d'un export et
-export TOON pour les LLM restent à faire.
+Reste le lot 6 (stabilisation : performances, tests de bout en bout,
+installateur et documentation utilisateur).
 
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
@@ -73,8 +90,10 @@ sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
 - React 19 + TypeScript 6 (strict)
 - three.js + d3-force-3d pour le graphe 3D (choix utilisateur, à la place
   de Cytoscape.js recommandé au §4 du cahier des charges, limité à la 2D)
-- SQLite via le module intégré **`node:sqlite`** (`DatabaseSync`)
-- zod pour la validation des messages IPC
+- CodeMirror 6 (édition), markdown-it (aperçu), Mermaid (diagrammes)
+- SQLite via le module intégré **`node:sqlite`** (`DatabaseSync`), FTS5
+- @toon-format/toon et js-tiktoken pour l'export LLM
+- zod pour la validation des messages IPC et des manifests d'import
 - Vitest + Testing Library, oxlint + oxfmt
 
 ### Pourquoi `node:sqlite` plutôt que better-sqlite3
