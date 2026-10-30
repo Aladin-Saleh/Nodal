@@ -174,6 +174,76 @@ Résultat : deux recherches parallèles puis la réponse, soit −58 % en entré
 −36 % en sortie et −69 % de coût par rapport à la 1.1.0, et −66 % de coût par
 rapport à la lecture des fichiers, pour une réponse aussi complète.
 
+## Réponses ciblées : sections, détail d'un nœud, consignes
+
+Mesures du 30 octobre 2026, même méthode (réponses réellement servies par
+`tools/call`, tokenizer `o200k_base`), sur deux espaces :
+
+- **réel** : copie de la base Nodal de ce projet (une vingtaine de nœuds,
+  documents de quelques centaines à 5 000 caractères) ;
+- **synthétique** : 12 nœuds, chacun avec une « Fiche technique » Markdown
+  d'environ 13 000 caractères en 8 sections et une courte note.
+
+Changements mesurés :
+
+- `nodal_search` renvoie un document court (moins de 2 000 caractères) en
+  entier, et d'un long document **seulement les sections qui contiennent le
+  plus de mots cherchés** (découpage de `chunking.ts` : titres Markdown,
+  blocs de code, clés JSON), chacune avec son `offset` pour lire la suite ;
+- `nodal_get_node` inclut le contenu des documents courts (6 000 caractères
+  au plus) et la taille (`chars`) de chaque document ;
+- consignes : le mode d'emploi des outils est dans les consignes du serveur,
+  raccourcies ; le bloc CLAUDE.md ne fait plus que déclencher la
+  consultation. Les consignes du serveur parviennent à tout client MCP sans
+  rien configurer ; le bloc CLAUDE.md sert seulement à faire consulter Nodal
+  avant les fichiers. Les deux sont envoyés à chaque tour : le détail en
+  double coûtait deux fois.
+
+| Mesure (tokens)                               | Avant | Après |           Écart |
+| --------------------------------------------- | ----: | ----: | --------------: |
+| Consignes du serveur (envoyées à chaque tour) |   472 |   283 |           −40 % |
+| Bloc CLAUDE.md (envoyé à chaque tour)         |   254 |   114 |           −55 % |
+| Réel : 4 recherches                           | 7 332 | 4 318 |           −41 % |
+| Réel : `nodal_get_node` ×3                    |   894 | 1 593 |           +78 % |
+| Synthétique : « rollout canari »              | 3 039 | 3 050 |             0 % |
+| Synthétique : « Facturation déploiement »     |   152 |   502 | voir ci-dessous |
+| Synthétique : « Kafka PostgreSQL »            | 2 998 | 3 123 |            +4 % |
+
+Lecture :
+
+- **Consignes** : environ 330 tokens de moins **à chaque tour**, le gain le
+  plus sûr.
+- **Recherche sur la base réelle** : −41 %, pour des réponses qui contiennent
+  toujours les passages utiles.
+- **Documents longs** : à budget égal, le contenu change de nature. Avant,
+  « rollout canari » renvoyait le début d'une seule fiche, tronquée à
+  12 000 caractères ; maintenant, la section « Déploiement » de chacune des
+  fiches qui en parlent.
+- **Correctif** : avant, « Facturation déploiement » ne renvoyait **pas** la
+  section pertinente. La courte note, mieux classée, passait d'abord, et la
+  longue fiche ne tenait plus dans le budget restant : elle était réduite à
+  un extrait. Les 502 tokens d'après contiennent la note et la section
+  « Déploiement » de la fiche.
+- **`nodal_get_node`** coûte plus cher, mais il inclut le contenu des
+  documents courts : un appel `nodal_read_document` de moins, donc un tour
+  (environ 23 000 tokens de contexte) de moins quand il fallait lire.
+- « Kafka PostgreSQL » : les deux mots sont dans tous les paragraphes de
+  l'espace synthétique, toutes les sections sont à égalité ; le budget borne
+  la réponse comme avant.
+
+De bout en bout (`claude -p`, `--strict-mcp-config`, copie de la base réelle,
+CLAUDE.md de chaque version, deux runs par question, tokens d'entrée) :
+
+| Question                           |  Avant |  Après |  Écart | Appels (avant et après) |
+| ---------------------------------- | -----: | -----: | -----: | ----------------------- |
+| Migrations SQLite + pourquoi Node  | 71 058 | 65 954 | −7,2 % | 2 × `nodal_search`      |
+| Persistance des réglages du graphe | 64 534 | 63 486 | −1,6 % | 1 × `nodal_search`      |
+
+Le nombre de tours ne change pas (2 et 3, déjà au minimum depuis la 1.2) :
+le gain vient des consignes et de réponses plus courtes. Les réponses sont
+aussi complètes qu'avant. Le coût en dollars n'est pas comparé : il dépend
+surtout de l'écriture ou de la relecture du cache entre les runs.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

@@ -255,14 +255,14 @@ describe('serveur MCP', () => {
 
   it('borne le contenu renvoyé par la recherche', async () => {
     const client = await connect(file);
-    // Le document SQL (500 caractères) est tronqué au budget.
-    const truncated = await client.call('nodal_search', {
-      query: 'select',
-      maxChars: 100,
-    });
-    expect(truncated.content[1]!.text).toContain(
-      `[… tronqué : suite avec nodal_read_document id=${short(ids.query)} offset=100]`,
+    // Document court (SQL, 500 caractères) hors budget : cité par un extrait,
+    // jamais tronqué.
+    const over = toon(
+      await client.call('nodal_search', { query: 'select', maxChars: 100 }),
     );
+    expect(over.otherMatches[0]).toMatchObject({
+      documentId: short(ids.query),
+    });
     // Budget nul : extraits seuls, termes marqués.
     const result = await client.call('nodal_search', {
       query: 'deploiement',
@@ -276,6 +276,75 @@ describe('serveur MCP', () => {
       document: 'Notes',
     });
     expect(data.otherMatches[0].snippet).toContain('**Déploiement**');
+    await client.close();
+  });
+
+  it('renvoie seulement les sections d’un long document qui contiennent les mots', async () => {
+    const documents = new DocumentService(workspace().context);
+    const filler =
+      'Texte de remplissage sans rapport avec la question. '.repeat(30);
+    const body = [
+      '# Guide',
+      `## Contexte\n\n${filler}`,
+      `## Déploiement\n\nLe rollout canari se fait sur Kubernetes.\n\n${filler}`,
+      `## Supervision\n\n${filler}`,
+    ].join('\n\n');
+    const guide = documents.create({
+      nodeId: ids.cache,
+      title: 'Guide',
+      contentType: 'markdown',
+    }).id;
+    documents.update({ id: guide, body });
+    const client = await connect(file);
+    const result = await client.call('nodal_search', {
+      query: 'rollout canari',
+    });
+    const text = result.content[1]!.text;
+    expect(text).toContain(`--- document ${short(guide)} « Guide » (markdown)`);
+    expect(text).toContain(`${body.length} car., sections trouvées`);
+    const offset = body.indexOf('## Déploiement');
+    expect(text).toContain(`§ Guide > Déploiement (offset ${offset})`);
+    expect(text).toContain('Le rollout canari se fait sur Kubernetes.');
+    // Les autres sections ne sont pas envoyées.
+    expect(text).not.toContain('Supervision');
+    expect(text.length).toBeLessThan(body.length / 2);
+    // L'offset permet de lire la suite à partir de la section.
+    const next = await client.call('nodal_read_document', {
+      id: short(guide),
+      offset,
+      maxChars: 100,
+    });
+    expect(next.content[1]!.text).toMatch(
+      /^## Déploiement\n\nLe rollout canari/,
+    );
+    await client.close();
+  });
+
+  it('ne laisse pas un document court évincer un long document plus pertinent', async () => {
+    const documents = new DocumentService(workspace().context);
+    // Court et bien classé, mais ne contient qu'un des deux mots.
+    const note = documents.create({
+      nodeId: ids.redis,
+      title: 'Note',
+      contentType: 'markdown',
+    }).id;
+    documents.update({ id: note, body: `Équipe Redis.\n${'x'.repeat(1900)}` });
+    const sheet = documents.create({
+      nodeId: ids.redis,
+      title: 'Fiche',
+      contentType: 'markdown',
+    }).id;
+    documents.update({
+      id: sheet,
+      body: `# Fiche\n\n## Bascule\n\nLa bascule Redis passe par Sentinel.\n\n${'Remplissage. '.repeat(1000)}`,
+    });
+    const client = await connect(file);
+    const result = await client.call('nodal_search', {
+      query: 'redis sentinel',
+      maxChars: 2000,
+    });
+    const texts = result.content.slice(1).map((part) => part.text);
+    expect(texts.join('\n')).toContain('La bascule Redis passe par Sentinel.');
     await client.close();
   });
 
@@ -325,12 +394,25 @@ describe('serveur MCP', () => {
     ]);
     const api = toon(await client.call('nodal_get_node', { id: ids.api }));
     expect(api.node.tags).toBe('critique');
-    expect(api.documents.map((doc: { id: string }) => doc.id)).toEqual([
-      short(ids.notes),
+    expect(api.documents).toEqual([
+      expect.objectContaining({ id: short(ids.notes), chars: 47 }),
     ]);
     expect(api.children.map((child: { title: string }) => child.title)).toEqual(
       ['Cache'],
     );
+    await client.close();
+  });
+
+  it('inclut le contenu des documents courts dans le détail d’un nœud', async () => {
+    const client = await connect(file);
+    const api = await client.call('nodal_get_node', { id: ids.api });
+    expect(api.content[1]!.text).toBe(
+      `--- document ${short(ids.notes)} « Notes » (markdown) · API\n` +
+        '# Déploiement\n\nLe déploiement passe par la CI.\n',
+    );
+    // Le document SQL (500 caractères) est court : inclus lui aussi.
+    const cache = await client.call('nodal_get_node', { id: ids.cache });
+    expect(cache.content).toHaveLength(2);
     await client.close();
   });
 

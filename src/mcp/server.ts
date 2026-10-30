@@ -44,40 +44,29 @@ import {
   type WriteContext,
 } from './write-tools';
 
-const READ_INSTRUCTIONS = `Base de connaissances Nodal : une hiérarchie de nœuds typés,
-des documents attachés aux nœuds (markdown, texte, json, code, mermaid) et des
-relations transversales nommées entre nœuds.
+// Consignes envoyées à chaque tour de conversation : l'essentiel seulement.
+// Le bloc CLAUDE.md / AGENTS.md (McpDialog) ne fait que déclencher la
+// consultation ; le mode d'emploi des outils est ici, une seule fois.
+const READ_INSTRUCTIONS = `Nodal : base de connaissances en nœuds hiérarchiques typés, avec documents
+(markdown, texte, json, code, mermaid) et relations nommées entre nœuds.
 
-Les réponses sont au format TOON : \`clé: valeur\` pour un objet, et pour une
-liste homogène \`nom[N]{champ1,champ2}:\` suivi d'une ligne par élément.
+Réponses en TOON : \`clé: valeur\`, et pour une liste \`nom[N]{champ1,champ2}:\`
+puis une ligne par élément. Identifiants abrégés : réutilisez-les tels quels.
+createdBy / by = "assistant" : ajouté par une IA, moins sûr tant que
+l'utilisateur ne l'a pas validé.
 
-Les identifiants sont abrégés (préfixe d'UUID) : réutilisez-les tels quels
-comme arguments des autres outils.
-
-Provenance : createdBy (nœud) et by (relation) valent "user" pour ce que
-l'utilisateur a saisi, "assistant" pour ce qu'un assistant IA a ajouté — à
-considérer comme moins sûr tant que l'utilisateur ne l'a pas validé.
-
-Consultez cette base avant de parcourir des fichiers ou de répondre de
-mémoire. Commencez par nodal_search : il renvoie le résumé des nœuds trouvés
-et le contenu des documents trouvés, ce qui suffit souvent pour répondre.
-Pour une question à plusieurs volets, lancez plusieurs nodal_search en
-parallèle, dans le même message. Pour approfondir : nodal_get_node (documents,
-enfants, relations d'un nœud), nodal_read_document, nodal_tree et
-nodal_neighborhood. nodal_overview sert à s'orienter quand la question est
-vague.`;
+Commencez par nodal_search : résumés des nœuds et contenu (ou sections) des
+documents trouvés, souvent suffisants. Question à plusieurs volets : plusieurs
+recherches en parallèle. Pour approfondir : nodal_get_node, nodal_read_document,
+nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.`;
 
 const WRITE_INSTRUCTIONS = `
 
-Cette base est partagée avec son utilisateur : enrichissez-la pour mémoriser
-ce que vous apprenez. Avant de créer un nœud, cherchez s'il existe déjà
-(nodal_search) et complétez-le plutôt que de le dupliquer. Rangez chaque nœud
-sous le bon parent, résumez-le en une ou deux phrases, mettez le détail dans
-des documents et reliez les notions entre elles avec les types de relations
-existants. Pour enregistrer plusieurs choses (nœud, documents, relations,
-tags), préférez nodal_apply : un seul appel, une seule transaction. Rien
-n'est supprimé : chaque modification est journalisée et l'utilisateur peut
-l'annuler depuis Nodal.`;
+Enrichissez la base avec ce qui est durable : complétez le nœud existant
+(cherchez d'abord) plutôt que d'en créer un ; résumé d'une ou deux phrases,
+détail dans des documents, relations avec les types existants. Plusieurs
+écritures : nodal_apply (un appel, une transaction). Rien n'est supprimé ;
+tout est journalisé et annulable par l'utilisateur.`;
 
 const READ_ONLY_INSTRUCTIONS = `
 
@@ -112,19 +101,41 @@ export interface NodalMcpServerOptions {
 }
 
 /**
- * Document trouvé par la recherche : une ligne d'en-tête, puis le contenu
- * brut (hors TOON, pour ne pas l'échapper).
+ * Document renvoyé avec une réponse : une ligne d'en-tête, puis le contenu
+ * brut (hors TOON, pour ne pas l'échapper) — entier, ou les sections
+ * trouvées, chacune avec sa position pour lire la suite.
  */
 function formatFoundDocument(doc: FoundDocument): string {
   const kind = doc.language
     ? `${doc.contentType}, ${doc.language}`
     : doc.contentType;
   const header = `--- document ${doc.id} « ${doc.title} » (${kind}) · ${doc.path}`;
-  const rest =
-    doc.nextOffset === null
-      ? ''
-      : `\n[… tronqué : suite avec nodal_read_document id=${doc.id} offset=${doc.nextOffset}]`;
-  return `${header}\n${doc.body}${rest}`;
+  if (doc.body !== null) return `${header}\n${doc.body}`;
+  const sections = doc.sections.map((part) => {
+    const where = part.offset === null ? '' : ` (offset ${part.offset})`;
+    return `§ ${part.section ?? 'extrait'}${where}\n${part.content}`;
+  });
+  return [
+    `${header} · ${doc.totalChars} car., sections trouvées :`,
+    ...sections,
+    `[suite : nodal_read_document id=${doc.id} offset=…]`,
+  ].join('\n\n');
+}
+
+/** Réponse TOON suivie des documents qu'elle inclut. */
+function withDocuments(data: {
+  result: unknown;
+  documents: FoundDocument[];
+}): CallToolResult {
+  return {
+    content: [
+      { type: 'text', text: encodeToon(data.result) },
+      ...data.documents.map((doc) => ({
+        type: 'text' as const,
+        text: formatFoundDocument(doc),
+      })),
+    ],
+  };
 }
 
 function failure(error: unknown): CallToolResult {
@@ -196,8 +207,9 @@ export function createNodalMcpServer(
       title: 'Recherche plein texte',
       description:
         'Recherche par mots-clés (préfixes, sans accents) dans les titres, résumés et documents, ' +
-        'à utiliser en premier. Renvoie les nœuds trouvés (chemin, résumé) puis le contenu des ' +
-        'documents trouvés, du plus pertinent au moins pertinent, dans la limite de maxChars ; ' +
+        'à utiliser en premier. Renvoie les nœuds trouvés (chemin, résumé) puis, du plus pertinent au ' +
+        'moins pertinent, chaque document trouvé : entier s’il est court, sinon ses sections qui ' +
+        'contiennent les mots (avec leur offset), dans la limite de maxChars ; ' +
         'les autres documents trouvés sont cités par un extrait (otherMatches). Un nœud est retenu ' +
         's’il contient tous les mots, sinon (allTerms: false) au moins l’un d’eux. ' +
         'Question à plusieurs volets : plusieurs recherches en parallèle.',
@@ -227,16 +239,7 @@ export function createNodalMcpServer(
     },
     async (args): Promise<CallToolResult> => {
       try {
-        const { result, documents } = call(args, 'read', search);
-        return {
-          content: [
-            { type: 'text', text: encodeToon(result) },
-            ...documents.map((doc) => ({
-              type: 'text' as const,
-              text: formatFoundDocument(doc),
-            })),
-          ],
-        };
+        return withDocuments(call(args, 'read', search));
       } catch (error) {
         return failure(error);
       }
@@ -248,12 +251,22 @@ export function createNodalMcpServer(
     {
       title: 'Détail d’un nœud',
       description:
-        'Un nœud avec son chemin, son résumé et ses tags, la liste de ses documents (sans leur contenu), ' +
-        'ses enfants directs, ses relations entrantes et sortantes et ses pièces jointes.',
+        'Un nœud avec son chemin, son résumé, ses tags, ses documents (taille en caractères ; ' +
+        'contenu des documents courts inclus), ses enfants directs, ses relations et ses pièces jointes.',
       inputSchema: z.object({ id: id.describe('Identifiant du nœud') }),
       annotations: READ_ONLY,
     },
-    run((ctx, args: { id: string }) => getNode(ctx, args.id)),
+    async (args): Promise<CallToolResult> => {
+      try {
+        return withDocuments(
+          call(args, 'read', (ctx, input: { id: string }) =>
+            getNode(ctx, input.id),
+          ),
+        );
+      } catch (error) {
+        return failure(error);
+      }
+    },
   );
 
   server.registerTool(

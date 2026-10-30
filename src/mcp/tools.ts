@@ -4,7 +4,8 @@
  * plats aux mêmes clés, que TOON écrit sous forme de table (une ligne
  * d'en-tête, puis une ligne par élément) au lieu de répéter chaque clé.
  */
-import type { NodeType } from '../shared/domain';
+import type { ContentType, NodeType } from '../shared/domain';
+import { chunkDocument } from '../main/knowledge/chunking';
 import { NodalError } from '../shared/errors';
 import { notFound } from '../main/knowledge/context';
 import { DocumentService } from '../main/knowledge/document-service';
@@ -244,25 +245,140 @@ export function tree(
   };
 }
 
-/** Document renvoyé en entier (ou en début, s'il dépasse le budget) par la recherche. */
+/** En dessous, un document trouvé (ou court, pour nodal_get_node) est renvoyé en entier. */
+export const SHORT_DOCUMENT_CHARS = 2_000;
+/** Contenu des documents courts inclus au plus par nodal_get_node. */
+export const GET_NODE_INLINE_CHARS = 6_000;
+/** Taille visée des sections d'un long document (tokens estimés). */
+const SECTION_TOKENS = 400;
+/** Estimation grossière (≈ 4 caractères par token) : suffit pour découper. */
+const estimateTokens = (text: string) => Math.ceil(text.length / 4);
+/** Une section trop longue pour le budget restant n'est tronquée qu'au-delà. */
+const MIN_TRUNCATED_CHARS = 300;
+
+/** Section d'un long document qui contient des mots cherchés. */
+export interface FoundSection {
+  /** Chemin de titres (Markdown), chemin JSON, ou `null`. */
+  section: string | null;
+  /** Position dans le document, pour lire la suite avec nodal_read_document. */
+  offset: number | null;
+  content: string;
+}
+
+/** Document trouvé : entier s'il est court, sinon ses sections pertinentes. */
 export interface FoundDocument {
   id: string;
   title: string;
   path: string;
   contentType: string;
   language: string | null;
+  totalChars: number;
+  /** Document court : contenu entier. */
+  body: string | null;
+  sections: FoundSection[];
+}
+
+const normalize = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+const escapeRegExp = (text: string) =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Mots cherchés, en préfixes sans accents (comme la recherche plein texte). */
+function termPatterns(query: string): RegExp[] {
+  const words = normalize(query).match(/[\p{L}\p{N}_]+/gu) ?? [];
+  return [...new Set(words)].map(
+    (word) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(word)}`, 'u'),
+  );
+}
+
+/** Sections d'un document, avec leur position quand elle se retrouve. */
+function sectionsOf(doc: {
   body: string;
-  /** Position où reprendre la lecture si le document est tronqué. */
-  nextOffset: number | null;
+  contentType: ContentType;
+  language: string | null;
+}): FoundSection[] {
+  let cursor = 0;
+  return chunkDocument(
+    doc.body,
+    doc.contentType,
+    doc.language,
+    SECTION_TOKENS,
+    estimateTokens,
+  ).map((piece) => {
+    // Les fragments reprennent le texte d'origine (paragraphes rognés) : leur
+    // début se retrouve dans le document, dans l'ordre.
+    const head = piece.content.slice(0, 60);
+    const found = doc.body.indexOf(head, cursor);
+    if (found >= 0) cursor = found + head.length;
+    return {
+      section: piece.section,
+      offset: found >= 0 ? found : null,
+      content: piece.content,
+    };
+  });
+}
+
+/**
+ * Sections d'un long document qui contiennent le plus de mots cherchés
+ * (titres de section compris) — à égalité, toutes —, dans la limite de
+ * `budget` caractères, remises dans l'ordre du document.
+ */
+function matchingSections(
+  sections: FoundSection[],
+  patterns: RegExp[],
+  budget: number,
+): FoundSection[] {
+  const scored = sections
+    .map((section, index) => {
+      const haystack = normalize(
+        `${section.section ?? ''}\n${section.content}`,
+      );
+      return {
+        section,
+        index,
+        score: patterns.filter((pattern) => pattern.test(haystack)).length,
+      };
+    })
+    .filter((entry) => entry.score > 0);
+  // Seulement les meilleures sections : un mot présent partout (le titre du
+  // document répété dans chaque chemin de section, par exemple) ne suffit pas.
+  const best = Math.max(0, ...scored.map((entry) => entry.score));
+  const ranked = scored.filter((entry) => entry.score === best);
+  const chosen: { section: FoundSection; index: number }[] = [];
+  let used = 0;
+  for (const entry of ranked) {
+    const remaining = budget - used;
+    if (entry.section.content.length <= remaining) {
+      chosen.push(entry);
+      used += entry.section.content.length;
+    } else if (chosen.length === 0 && remaining >= MIN_TRUNCATED_CHARS) {
+      // La meilleure section ne tient pas : son début, plutôt que rien.
+      chosen.push({
+        ...entry,
+        section: {
+          ...entry.section,
+          content: `${entry.section.content.slice(0, remaining - 1)}…`,
+        },
+      });
+      break;
+    }
+  }
+  return chosen
+    .toSorted((a, b) => a.index - b.index)
+    .map((entry) => entry.section);
 }
 
 /**
  * Recherche qui suffit le plus souvent à répondre en un appel : résumé des
- * nœuds trouvés et contenu des documents trouvés, du plus pertinent au moins
- * pertinent, dans la limite de `maxChars`. Les documents hors budget restent
- * signalés par un extrait. Si aucun nœud ne contient tous les mots, ceux qui
- * en contiennent au moins un sont renvoyés (`allTerms: false`), plutôt
- * qu'une liste vide qui obligerait à relancer.
+ * nœuds trouvés et, pour chaque document trouvé, son contenu entier s'il est
+ * court, sinon les sections qui contiennent les mots cherchés (avec leur
+ * position, pour lire la suite). Le tout dans la limite de `maxChars` ; les
+ * documents hors budget restent signalés par un extrait. Si aucun nœud ne
+ * contient tous les mots, ceux qui en contiennent au moins un sont renvoyés
+ * (`allTerms: false`), plutôt qu'une liste vide qui obligerait à relancer.
  */
 export function search(
   ctx: ReadContext,
@@ -276,6 +392,7 @@ export function search(
   const outline = loadOutline(ctx);
   const summaryOf = ctx.db.prepare('SELECT summary FROM node WHERE id = ?');
   const documents = new DocumentService(() => ctx);
+  const patterns = termPatterns(input.query);
 
   const found: FoundDocument[] = [];
   const snippets: {
@@ -292,31 +409,34 @@ export function search(
       if (!match.documentId) continue;
       const doc = documents.get(match.documentId);
       const remaining = input.maxChars - used;
-      // Un document trop long n'est tronqué que s'il est le premier : sinon
-      // il cède la place aux suivants, plus courts.
-      if (
-        doc.body.length <= remaining ||
-        (found.length === 0 && remaining > 0)
-      ) {
-        const body = doc.body.slice(0, remaining);
-        used += body.length;
-        found.push({
-          id: doc.id,
-          title: doc.title,
-          path: pathOf(outline, doc.nodeId),
-          contentType: doc.contentType,
-          language: doc.language,
-          body,
-          nextOffset: body.length < doc.body.length ? body.length : null,
-        });
-      } else {
-        snippets.push({
-          nodeId: hit.nodeId,
-          documentId: match.documentId,
-          document: match.documentTitle,
-          snippet: markSnippet(match.snippet),
-        });
+      const base = {
+        id: doc.id,
+        title: doc.title,
+        path: pathOf(outline, doc.nodeId),
+        contentType: doc.contentType,
+        language: doc.language,
+        totalChars: doc.body.length,
+      };
+      if (doc.body.length <= SHORT_DOCUMENT_CHARS) {
+        if (doc.body.length <= remaining) {
+          used += doc.body.length;
+          found.push({ ...base, body: doc.body, sections: [] });
+          continue;
+        }
+      } else if (remaining > 0) {
+        const sections = matchingSections(sectionsOf(doc), patterns, remaining);
+        if (sections.length > 0) {
+          used += sections.reduce((sum, part) => sum + part.content.length, 0);
+          found.push({ ...base, body: null, sections });
+          continue;
+        }
       }
+      snippets.push({
+        nodeId: hit.nodeId,
+        documentId: match.documentId,
+        document: match.documentTitle,
+        snippet: markSnippet(match.snippet),
+      });
     }
   }
 
@@ -341,50 +461,85 @@ export function search(
   };
 }
 
+/**
+ * Détail d'un nœud, avec le contenu de ses documents courts (moins de
+ * SHORT_DOCUMENT_CHARS caractères, GET_NODE_INLINE_CHARS au total) : le plus
+ * souvent, plus besoin d'appeler nodal_read_document ensuite.
+ */
 export function getNode(ctx: ReadContext, id: string) {
   const detail = new NodeService(() => ctx).get(id);
   const outline = loadOutline(ctx);
+  const documents = new DocumentService(() => ctx);
+  const path = pathOf(outline, detail.id);
+  const bodies = detail.documents.map((doc) => documents.get(doc.id));
+  const inline: FoundDocument[] = [];
+  let used = 0;
+  for (const doc of bodies) {
+    if (
+      doc.body.length <= SHORT_DOCUMENT_CHARS &&
+      used + doc.body.length <= GET_NODE_INLINE_CHARS
+    ) {
+      used += doc.body.length;
+      inline.push({
+        id: doc.id,
+        title: doc.title,
+        path,
+        contentType: doc.contentType,
+        language: doc.language,
+        totalChars: doc.body.length,
+        body: doc.body,
+        sections: [],
+      });
+    }
+  }
   return {
-    node: {
-      id: detail.id,
-      title: detail.title,
-      type: detail.nodeType,
-      path: pathOf(outline, detail.id),
-      parentId: detail.parentId,
-      summary: detail.summary,
-      tags: detail.tags.map((tag) => tag.name).join(', '),
-      createdAt: detail.createdAt,
-      updatedAt: detail.updatedAt,
-      createdBy: origin(detail.createdByAssistant),
+    result: {
+      node: {
+        id: detail.id,
+        title: detail.title,
+        type: detail.nodeType,
+        path,
+        parentId: detail.parentId,
+        summary: detail.summary,
+        tags: detail.tags.map((tag) => tag.name).join(', '),
+        createdAt: detail.createdAt,
+        updatedAt: detail.updatedAt,
+        createdBy: origin(detail.createdByAssistant),
+      },
+      // chars : taille du document ; les documents courts suivent en entier.
+      documents: bodies.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        contentType: doc.contentType,
+        language: doc.language,
+        chars: doc.body.length,
+        updatedAt: doc.updatedAt,
+      })),
+      children: (outline.children.get(detail.id) ?? []).map((row) => ({
+        id: row.id,
+        title: row.title,
+        type: row.node_type,
+        children: childCount(outline, row.id),
+        documents: row.document_count,
+      })),
+      relations: new EdgeService(() => ctx)
+        .listForNode(detail.id)
+        .map((rel) => ({
+          direction: rel.direction === 'outgoing' ? 'out' : 'in',
+          relation: rel.relationTypeName,
+          otherId: rel.otherNodeId,
+          other: rel.otherNodeTitle,
+          label: rel.label,
+          by: origin(rel.createdByAssistant),
+        })),
+      attachments: detail.attachments.map((file) => ({
+        id: file.id,
+        fileName: file.fileName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+      })),
     },
-    documents: detail.documents.map((doc) => ({
-      id: doc.id,
-      title: doc.title,
-      contentType: doc.contentType,
-      language: doc.language,
-      updatedAt: doc.updatedAt,
-    })),
-    children: (outline.children.get(detail.id) ?? []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      type: row.node_type,
-      children: childCount(outline, row.id),
-      documents: row.document_count,
-    })),
-    relations: new EdgeService(() => ctx).listForNode(detail.id).map((rel) => ({
-      direction: rel.direction === 'outgoing' ? 'out' : 'in',
-      relation: rel.relationTypeName,
-      otherId: rel.otherNodeId,
-      other: rel.otherNodeTitle,
-      label: rel.label,
-      by: origin(rel.createdByAssistant),
-    })),
-    attachments: detail.attachments.map((file) => ({
-      id: file.id,
-      fileName: file.fileName,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-    })),
+    documents: inline,
   };
 }
 
