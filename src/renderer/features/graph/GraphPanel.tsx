@@ -25,6 +25,8 @@ import {
   type GraphScope,
 } from './graph-model';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import type { GraphScopeKind } from '../workspace/view-state';
+import { useViewDispatch, useViewState } from '../workspace/view-state-context';
 import { EdgeCard } from './EdgeCard';
 import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
 
@@ -32,7 +34,6 @@ export interface GraphPanelProps {
   graph: GraphData;
   nodes: readonly NodeSummary[];
   tags: readonly TagInfo[];
-  selectedId: string | null;
   onSelect(id: string | null): void;
   /** Ouvre la fiche documentaire du nœud. */
   onOpen(id: string): void;
@@ -45,10 +46,7 @@ export interface GraphPanelProps {
   searchMatches: ReadonlySet<string> | null;
   onOpenDocument(documentId: string): void;
   onAddDocument(nodeId: string): void;
-  /** Sélection multiple et actions groupées. */
-  multiSelection: ReadonlySet<string>;
-  onToggleSelect(id: string): void;
-  onSetMultiSelection(ids: ReadonlySet<string>): void;
+  /** Actions groupées sur la sélection multiple. */
   onBulkMove(): void;
   onBulkSetType(nodeType: NodeType): void;
   onBulkDelete(): void;
@@ -74,7 +72,6 @@ export function GraphPanel({
   graph,
   nodes,
   tags,
-  selectedId,
   onSelect,
   onOpen,
   onPositionsSaved,
@@ -83,9 +80,6 @@ export function GraphPanel({
   searchMatches,
   onOpenDocument,
   onAddDocument,
-  multiSelection,
-  onToggleSelect,
-  onSetMultiSelection,
   onBulkMove,
   onBulkSetType,
   onBulkDelete,
@@ -97,32 +91,42 @@ export function GraphPanel({
   const view = useRef<Graph3DViewHandle>(null);
   const depthId = useId();
   const bulkTypeId = useId();
-  const [scopeKind, setScopeKind] = useState<'all' | 'neighborhood'>(
-    graph.nodes.length > LARGE_GRAPH_THRESHOLD ? 'neighborhood' : 'all',
-  );
-  const [depth, setDepth] = useState(2);
-  const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
+  // Portée, filtres et replis : état de la vue de l'espace (voir view-state).
+  const {
+    selectedId,
+    multiSelection,
+    graph: { scope, depth, filters, collapsed },
+  } = useViewState();
+  const dispatch = useViewDispatch();
+  const scopeKind =
+    scope ??
+    (graph.nodes.length > LARGE_GRAPH_THRESHOLD ? 'neighborhood' : 'all');
+  const setScopeKind = (kind: GraphScopeKind) =>
+    dispatch({ type: 'setScope', scope: kind });
+  const setDepth = (value: number) =>
+    dispatch({ type: 'setDepth', depth: value });
+  const setFilters = (value: GraphFilters) =>
+    dispatch({ type: 'setFilters', filters: value });
+  const setCollapsed = (ids: ReadonlySet<string>) =>
+    dispatch({ type: 'setCollapsed', ids });
+  const onSetMultiSelection = (ids: ReadonlySet<string>) =>
+    dispatch({ type: 'setMultiSelection', ids });
+  const onToggleSelect = (id: string) => dispatch({ type: 'toggleMulti', id });
   /** Relation dont la fiche est affichée (clic sur un trait du graphe). */
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [edgeAction, setEdgeAction] = useState<'edit' | 'delete' | null>(null);
-  /** Nœuds repliés : leurs descendants sont masqués. */
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [pendingLink, setPendingLink] = useState<{
     sourceId: string;
     targetId: string;
   } | null>(null);
 
-  const scope: GraphScope =
-    scopeKind === 'neighborhood' && selectedId
-      ? { kind: 'neighborhood', centerId: selectedId, depth }
-      : { kind: 'all' };
-
-  const visible = useMemo(
-    () => visibleGraph(graph, scope, filters, collapsed),
-    // `scope` est recalculé à chaque rendu : dépendre de ses composantes.
-    // oxlint-disable-next-line react/exhaustive-deps
-    [graph, filters, collapsed, scope.kind, selectedId, depth],
-  );
+  const visible = useMemo(() => {
+    const graphScope: GraphScope =
+      scopeKind === 'neighborhood' && selectedId
+        ? { kind: 'neighborhood', centerId: selectedId, depth }
+        : { kind: 'all' };
+    return visibleGraph(graph, graphScope, filters, collapsed);
+  }, [graph, filters, collapsed, scopeKind, selectedId, depth]);
   const parents = useMemo(
     () =>
       new Set(

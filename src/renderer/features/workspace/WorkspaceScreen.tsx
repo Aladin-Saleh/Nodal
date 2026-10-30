@@ -1,25 +1,12 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NodalError } from '../../../shared/errors';
 import type { ContentType, NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
-  BulkDeletionImpact,
   ChildrenStrategy,
   LlmExportOptions,
-  GraphData,
-  NodeDeletionImpact,
-  NodeDetail,
-  NodePosition,
   NodeSummary,
   SearchHit,
-  TagInfo,
 } from '../../../shared/model';
 import {
   useClient,
@@ -28,51 +15,28 @@ import {
   useRunner,
   useSaveTracker,
 } from '../../app/context';
-import { DocumentEditorDialog } from '../documents/DocumentEditorDialog';
-import {
-  DocumentsPanel,
-  NewDocumentDialog,
-  type Language,
-} from '../documents/DocumentsPanel';
-import { GraphPanel } from '../graph/GraphPanel';
-import {
-  DeleteNodeDialog,
-  DuplicateNodeDialog,
-  MoveNodeDialog,
-  NewNodeDialog,
-} from '../nodes/NodeDialogs';
-import { NodeHeader } from '../nodes/NodeHeader';
-import { NodeProperties } from '../nodes/NodeProperties';
-import { NodeTree } from '../nodes/NodeTree';
-import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
-import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
-import { SearchBox } from '../search/SearchBox';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { NodeLinkContext } from '../editor/previews';
-import { HelpDialog } from './HelpDialog';
-import { AssistantActivityDialog } from './AssistantActivityDialog';
-import { McpDialog } from './McpDialog';
-import { LlmExportDialog } from './PortabilityDialogs';
-import { TagManagerDialog } from '../tags/TagManagerDialog';
-import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
 import { usePreferences } from '../../app/preferences';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
+import type { Language } from '../documents/DocumentsPanel';
+import { NodeLinkContext } from '../editor/previews';
+import { NodeProperties } from '../nodes/NodeProperties';
+import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
+import { CenterPane } from './CenterPane';
+import { TopBar, type ViewMode } from './TopBar';
+import { TreePane } from './TreePane';
+import { useWorkspaceData } from './useWorkspaceData';
+import {
+  ViewStateProvider,
+  useViewDispatch,
+  useViewState,
+} from './view-state-context';
+import {
+  NO_OVERLAYS,
+  WorkspaceDialogs,
+  type DialogState,
+  type Overlays,
+} from './WorkspaceDialogs';
 
-type DialogState =
-  | {
-      kind: 'new';
-      parentId: string | null;
-      /** Double-clic dans le graphe : position 3D et choix du parent. */
-      position?: { x: number; y: number; z: number };
-    }
-  | { kind: 'move'; nodes: NodeSummary[]; bulk: boolean }
-  | { kind: 'duplicate'; node: NodeSummary }
-  | { kind: 'delete'; node: NodeSummary; impact: NodeDeletionImpact }
-  | { kind: 'bulkDelete'; ids: string[]; impact: BulkDeletionImpact }
-  | { kind: 'tags' }
-  | { kind: 'relationTypes' }
-  | { kind: 'settings' };
-
-type ViewMode = 'documents' | 'graph';
 export interface WorkspaceScreenProps {
   workspace: WorkspaceInfo;
   onWorkspaceChanged(workspace: WorkspaceInfo): void;
@@ -82,9 +46,18 @@ export interface WorkspaceScreenProps {
 
 /**
  * Espace ouvert (§7) : arborescence à gauche, documents ou graphe au centre,
- * propriétés et relations à droite.
+ * propriétés et relations à droite. L'état de la vue (sélection, dépliage,
+ * réglages du graphe) est partagé par un contexte (voir view-state).
  */
-export function WorkspaceScreen({
+export function WorkspaceScreen(props: WorkspaceScreenProps) {
+  return (
+    <ViewStateProvider>
+      <WorkspaceView {...props} />
+    </ViewStateProvider>
+  );
+}
+
+function WorkspaceView({
   workspace,
   onWorkspaceChanged,
   onClose,
@@ -95,202 +68,69 @@ export function WorkspaceScreen({
   const reportError = useReportError();
   const reportInfo = useReportInfo();
   const tracker = useSaveTracker();
+  const { selectedId, multiSelection } = useViewState();
+  const dispatch = useViewDispatch();
+  const data = useWorkspaceData(selectedId);
+  const { nodes, detail } = data;
 
-  const [nodes, setNodes] = useState<NodeSummary[]>([]);
-  const [tags, setTags] = useState<TagInfo[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<NodeDetail | null>(null);
-  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const [dialog, setDialog] = useState<DialogState | null>(null);
-  const [graph, setGraph] = useState<GraphData | null>(null);
+  const [overlays, setOverlays] = useState<Overlays>(NO_OVERLAYS);
+  const openOverlay = <K extends keyof Overlays>(name: K, value: Overlays[K]) =>
+    setOverlays((current) => ({ ...current, [name]: value }));
+  const closeOverlay = (name: keyof Overlays) =>
+    setOverlays((current) => ({ ...current, [name]: NO_OVERLAYS[name] }));
+
   // La vue Graphe est la vue par défaut à l'ouverture d'un espace.
   const { preferences } = usePreferences();
   // Lue une seule fois : changer la préférence ne bascule pas la vue en cours.
   const [view, setView] = useState<ViewMode>(
     preferences.startView === 'documents' ? 'documents' : 'graph',
   );
-  const [relationsRevision, setRelationsRevision] = useState(0);
-  /** Incrémenté à chaque modification externe appliquée (assistant IA). */
-  const [externalRevision, setExternalRevision] = useState(0);
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
-  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
-    null,
-  );
-  const [addingDocumentFor, setAddingDocumentFor] = useState<string | null>(
-    null,
-  );
   const [exporting, setExporting] = useState(false);
-  const [llmExportOpen, setLlmExportOpen] = useState(false);
-  const [mcpOpen, setMcpOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
 
   // F1 : aide, depuis n'importe où dans l'espace.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'F1') {
         event.preventDefault();
-        setHelpOpen(true);
+        setOverlays((current) => ({ ...current, help: true }));
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-  const [multiSelection, setMultiSelection] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
-  const toggleMulti = (id: string) => {
-    const next = new Set(multiSelection);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setMultiSelection(next);
-  };
+
   const searchInput = useRef<HTMLInputElement>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
   const searchMatches = useMemo(
     () => (searchHits ? new Set(searchHits.map((hit) => hit.nodeId)) : null),
     [searchHits],
   );
 
-  const titleInput = useRef<HTMLInputElement>(null);
-
   const index = useMemo(() => buildTreeIndex(nodes), [nodes]);
   const selected = selectedId ? (index.byId.get(selectedId) ?? null) : null;
 
-  /** Recharge l'arborescence et le graphe (données légères). */
-  const refreshNodes = useCallback(
-    () =>
-      Promise.all([client.call('node:list'), client.call('graph:get')]).then(
-        ([list, graphData]) => {
-          setNodes(list);
-          setGraph(graphData);
-        },
-        reportError,
-      ),
-    [client, reportError],
-  );
-  const refreshTags = useCallback(
-    () => client.call('tag:list').then(setTags, reportError),
-    [client, reportError],
-  );
-
-  useEffect(() => {
-    void refreshNodes();
-    void refreshTags();
-  }, [refreshNodes, refreshTags]);
-
-  // Seule la réponse à la dernière demande est prise en compte.
-  const detailRequest = useRef(0);
-  const selectedRef = useRef<string | null>(null);
-
-  const loadDetail = useCallback(
-    (id: string | null) => {
-      const request = ++detailRequest.current;
-      if (!id) {
-        setDetail(null);
-        return;
-      }
-      client.call('node:get', { id }).then(
-        (loaded) => {
-          if (request === detailRequest.current) setDetail(loaded);
-        },
-        (error: unknown) => {
-          if (request !== detailRequest.current) return;
-          setDetail(null);
-          reportError(error);
-        },
-      );
-    },
-    [client, reportError],
-  );
-
-  const refreshDetail = useCallback(
-    () => loadDetail(selectedRef.current),
-    [loadDetail],
-  );
-
+  /** Sélectionne un nœud et déplie ses ancêtres dans l'arborescence. */
   const select = useCallback(
-    (id: string | null) => {
-      selectedRef.current = id;
-      setSelectedId(id);
-      loadDetail(id);
-      if (!id) return;
-      // Déplier les ancêtres pour que le nœud soit visible dans l'arbre.
-      const ancestors = ancestorIds(index, id);
-      if (ancestors.some((ancestor) => !expanded.has(ancestor))) {
-        setExpanded(new Set([...expanded, ...ancestors]));
-      }
-    },
-    [index, expanded, loadDetail],
+    (id: string | null) =>
+      dispatch({
+        type: 'select',
+        id,
+        reveal: id ? ancestorIds(index, id) : [],
+      }),
+    [dispatch, index],
   );
-
-  // La fiche affichée doit correspondre au nœud sélectionné.
-  const shownDetail = detail?.id === selectedId ? detail : null;
-
-  /** Recharge tout ce qui est affiché après une écriture externe. */
-  const applyExternalChange = useRef(() => {});
-  useLayoutEffect(() => {
-    applyExternalChange.current = () => {
-      setExternalRevision((revision) => revision + 1);
-      setRelationsRevision((revision) => revision + 1);
-      void refreshNodes();
-      void refreshTags();
-      refreshDetail();
-      reportInfo('Espace mis à jour par l’assistant IA.');
-    };
-  });
-
-  // Écritures d'un assistant IA (serveur MCP) : on recharge ce qui est
-  // affiché, mais jamais pendant une saisie non enregistrée — le rechargement
-  // attend qu'elle soit écrite, pour ne rien perdre.
-  useEffect(() => {
-    let waiting = false;
-    const apply = () => {
-      waiting = tracker.hasUnsavedChanges();
-      if (!waiting) applyExternalChange.current();
-    };
-    const offChange = client.onExternalChange(apply);
-    const offTracker = tracker.subscribe(() => {
-      if (waiting) apply();
-    });
-    return () => {
-      offChange();
-      offTracker();
-    };
-  }, [client, tracker]);
-
-  const toggle = (id: string, open: boolean) => {
-    const next = new Set(expanded);
-    if (open) next.add(id);
-    else next.delete(id);
-    setExpanded(next);
-  };
+  const expand = (ids: readonly string[]) => dispatch({ type: 'expand', ids });
 
   const nodeChanged = () => {
-    void refreshNodes();
-    refreshDetail();
+    void data.refreshNodes();
+    data.refreshDetail();
   };
 
   const relationsChanged = () => {
-    setRelationsRevision((revision) => revision + 1);
+    data.bumpRelations();
     nodeChanged();
-  };
-
-  /** Positions déjà enregistrées : mise à jour locale, sans recharger. */
-  const positionsSaved = (positions: NodePosition[]) => {
-    const byId = new Map(positions.map((position) => [position.id, position]));
-    setGraph(
-      (current) =>
-        current && {
-          ...current,
-          nodes: current.nodes.map((node) => {
-            const position = byId.get(node.id);
-            // Les trois coordonnées : un z manquant ferait replacer le nœud.
-            return position
-              ? { ...node, x: position.x, y: position.y, z: position.z }
-              : node;
-          }),
-        },
-    );
   };
 
   // --- Actions sur les nœuds -------------------------------------------------
@@ -316,8 +156,8 @@ export function WorkspaceScreen({
         }),
       );
     }
-    await refreshNodes();
-    if (parentId) setExpanded((current) => new Set([...current, parentId]));
+    await data.refreshNodes();
+    if (parentId) expand([parentId]);
     select(created.id);
   };
 
@@ -335,7 +175,7 @@ export function WorkspaceScreen({
       }),
     );
     if (done === undefined) return;
-    if (parentId) setExpanded((current) => new Set([...current, parentId]));
+    if (parentId) expand([parentId]);
     nodeChanged();
   };
 
@@ -346,7 +186,7 @@ export function WorkspaceScreen({
       client.call('node:moveMany', { ids, parentId }),
     );
     if (done === undefined) return;
-    if (parentId) setExpanded((current) => new Set([...current, parentId]));
+    if (parentId) expand([parentId]);
     nodeChanged();
   };
 
@@ -378,11 +218,11 @@ export function WorkspaceScreen({
       client.call('node:deleteMany', { ids, childrenStrategy }),
     );
     if (done === undefined) return;
-    setMultiSelection(new Set());
+    dispatch({ type: 'setMultiSelection', ids: new Set() });
     if (selectedId && ids.includes(selectedId)) select(null);
-    void refreshNodes();
-    void refreshTags();
-    refreshDetail();
+    void data.refreshNodes();
+    void data.refreshTags();
+    data.refreshDetail();
   };
 
   const shift = (offset: -1 | 1) => {
@@ -402,7 +242,7 @@ export function WorkspaceScreen({
       client.call('node:duplicate', { id: node.id, includeChildren }),
     );
     if (!copy) return;
-    await refreshNodes();
+    await data.refreshNodes();
     select(copy.id);
   };
 
@@ -429,14 +269,15 @@ export function WorkspaceScreen({
     );
     if (done === undefined) return;
     select(node.parentId);
-    void refreshNodes();
-    void refreshTags();
+    void data.refreshNodes();
+    void data.refreshTags();
   };
 
   const renameNode = async (title: string) => {
-    if (!shownDetail) return false;
-    const { id } = shownDetail;
-    const updated = await run(() => client.call('node:update', { id, title }));
+    if (!detail) return false;
+    const updated = await run(() =>
+      client.call('node:update', { id: detail.id, title }),
+    );
     if (updated) nodeChanged();
     return Boolean(updated);
   };
@@ -445,7 +286,7 @@ export function WorkspaceScreen({
 
   const openDocument = (documentId: string, nodeId?: string) => {
     if (nodeId && nodeId !== selectedId) select(nodeId);
-    setEditingDocumentId(documentId);
+    openOverlay('editingDocumentId', documentId);
   };
 
   const createDocument = async (
@@ -454,13 +295,13 @@ export function WorkspaceScreen({
     contentType: ContentType,
     language: Language | null,
   ) => {
-    setAddingDocumentFor(null);
+    closeOverlay('addingDocumentFor');
     const created = await run(() =>
       client.call('document:create', { nodeId, title, contentType, language }),
     );
     if (!created) return;
-    refreshDetail();
-    setEditingDocumentId(created.id);
+    data.refreshDetail();
+    openOverlay('editingDocumentId', created.id);
   };
 
   const exportWorkspace = async () => {
@@ -480,7 +321,7 @@ export function WorkspaceScreen({
   };
 
   const exportForLlm = async (options: LlmExportOptions) => {
-    setLlmExportOpen(false);
+    closeOverlay('llmExport');
     setExporting(true);
     try {
       await tracker.flushAll();
@@ -509,7 +350,7 @@ export function WorkspaceScreen({
       );
       return;
     }
-    setEditingDocumentId(null);
+    closeOverlay('editingDocumentId');
     select(target.id);
   };
 
@@ -517,17 +358,17 @@ export function WorkspaceScreen({
     setSearchHits(hits);
     if (!hits || hits.length === 0) return;
     // Déplier l'arborescence jusqu'aux nœuds trouvés.
-    const ancestors = hits.flatMap((hit) => ancestorIds(index, hit.nodeId));
-    if (ancestors.some((id) => !expanded.has(id))) {
-      setExpanded(new Set([...expanded, ...ancestors]));
-    }
+    expand(hits.flatMap((hit) => ancestorIds(index, hit.nodeId)));
   };
 
   // --- Raccourcis clavier (§7.1) -------------------------------------------
 
+  const modalOpen =
+    dialog !== null ||
+    overlays.editingDocumentId !== null ||
+    overlays.addingDocumentFor !== null;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      const modalOpen = dialog || editingDocumentId || addingDocumentFor;
       if (!(event.ctrlKey || event.metaKey) || modalOpen) return;
       const key = event.key.toLowerCase();
       if (key === 'n') {
@@ -547,440 +388,128 @@ export function WorkspaceScreen({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [dialog, editingDocumentId, addingDocumentFor, selectedId, tracker]);
-
-  const siblings = selected ? siblingsOf(index, selected) : [];
-  const siblingPosition = selected
-    ? siblings.findIndex((sibling) => sibling.id === selected.id)
-    : -1;
+  }, [modalOpen, selectedId, tracker]);
 
   return (
     <NodeLinkContext.Provider value={openNodeByTitle}>
       <div className="workspace-screen">
-        <header className="top-bar">
-          <h1 className="workspace-name" title={workspace.filePath}>
-            {workspace.name}
-          </h1>
-          <SearchBox
-            inputRef={searchInput}
-            onResults={showSearchResults}
-            onSelectNode={(id) => select(id)}
-            onOpenDocument={openDocument}
+        <TopBar
+          workspace={workspace}
+          searchInput={searchInput}
+          onSearchResults={showSearchResults}
+          onSelectNode={(id) => select(id)}
+          onOpenDocument={openDocument}
+          view={view}
+          onViewChange={setView}
+          exporting={exporting}
+          onTags={() => setDialog({ kind: 'tags' })}
+          onRelationTypes={() => setDialog({ kind: 'relationTypes' })}
+          onExport={() => void exportWorkspace()}
+          onLlmExport={() => openOverlay('llmExport', true)}
+          onConnectAssistant={() => openOverlay('mcp', true)}
+          onActivity={() => openOverlay('activity', true)}
+          onSettings={() => setDialog({ kind: 'settings' })}
+          onHelp={() => openOverlay('help', true)}
+          onClose={onClose}
+        />
+
+        <div className={detail ? 'panes' : 'panes no-properties'}>
+          <TreePane
+            index={index}
+            searchMatches={searchMatches}
+            onSelect={select}
+            onNew={(parentId) => setDialog({ kind: 'new', parentId })}
+            onShift={shift}
+            onDelete={(id) => void askDelete(id)}
+            onRename={() => titleInput.current?.focus()}
           />
-          <div className="segmented" role="group" aria-label="Vue centrale">
-            <button
-              type="button"
-              aria-pressed={view === 'documents'}
-              onClick={() => setView('documents')}
-            >
-              Documents
-            </button>
-            <button
-              type="button"
-              aria-pressed={view === 'graph'}
-              onClick={() => setView('graph')}
-            >
-              Graphe
-            </button>
-          </div>
-          <div className="top-actions">
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setDialog({ kind: 'tags' })}
-            >
-              Tags
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setDialog({ kind: 'relationTypes' })}
-            >
-              Types de relations
-            </button>
-            <details className="export-menu">
-              <summary
-                className={exporting ? 'disabled' : undefined}
-                aria-disabled={exporting}
-              >
-                {exporting ? 'Export…' : 'Exporter ▾'}
-              </summary>
-              <div className="export-menu-panel" role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="secondary"
-                  disabled={exporting}
-                  onClick={(event) => {
-                    event.currentTarget
-                      .closest('details')
-                      ?.removeAttribute('open');
-                    void exportWorkspace();
-                  }}
-                >
-                  Export portable (dossier + manifest)
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="secondary"
-                  disabled={exporting}
-                  onClick={(event) => {
-                    event.currentTarget
-                      .closest('details')
-                      ?.removeAttribute('open');
-                    setLlmExportOpen(true);
-                  }}
-                >
-                  Export pour LLM (TOON, fragments)…
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="secondary"
-                  onClick={(event) => {
-                    event.currentTarget
-                      .closest('details')
-                      ?.removeAttribute('open');
-                    setMcpOpen(true);
-                  }}
-                >
-                  Connecter un assistant IA (MCP)…
-                </button>
-              </div>
-            </details>
-            <button
-              type="button"
-              className="secondary"
-              title="Modifications faites par un assistant IA (MCP)"
-              onClick={() => setActivityOpen(true)}
-            >
-              Activité IA
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setDialog({ kind: 'settings' })}
-            >
-              Paramètres
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              aria-label="Aide (F1)"
-              title="Aide (F1)"
-              onClick={() => setHelpOpen(true)}
-            >
-              ?
-            </button>
-            <button type="button" className="secondary" onClick={onClose}>
-              Fermer l’espace
-            </button>
-          </div>
-        </header>
 
-        <div className={shownDetail ? 'panes' : 'panes no-properties'}>
-          <nav className="tree-pane" aria-label="Navigation">
-            <div className="toolbar" aria-label="Actions sur les nœuds">
-              <button
-                type="button"
-                title="Nouveau nœud racine (Ctrl+Maj+N)"
-                onClick={() => setDialog({ kind: 'new', parentId: null })}
-              >
-                + Racine
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={!selected}
-                title="Nouveau sous-nœud (Ctrl+N)"
-                onClick={() => setDialog({ kind: 'new', parentId: selectedId })}
-              >
-                + Enfant
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={siblingPosition <= 0}
-                aria-label="Monter le nœud"
-                title="Monter"
-                onClick={() => shift(-1)}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={
-                  siblingPosition === -1 ||
-                  siblingPosition === siblings.length - 1
-                }
-                aria-label="Descendre le nœud"
-                title="Descendre"
-                onClick={() => shift(1)}
-              >
-                ↓
-              </button>
-            </div>
-            <NodeTree
-              index={index}
-              expanded={expanded}
-              selectedId={selectedId}
-              onSelect={select}
-              onToggle={toggle}
-              onDelete={(id) => void askDelete(id)}
-              onRename={() => titleInput.current?.focus()}
-              highlighted={searchMatches}
-              multiSelection={multiSelection}
-              onToggleMulti={toggleMulti}
-            />
-          </nav>
-
-          <main
-            className={
-              view === 'graph' ? 'content-pane graph-mode' : 'content-pane'
+          <CenterPane
+            view={view}
+            data={data}
+            selected={selected}
+            searchMatches={searchMatches}
+            titleInput={titleInput}
+            onSelect={select}
+            onOpenNode={(id) => {
+              select(id);
+              setView('documents');
+            }}
+            onRelationsChanged={relationsChanged}
+            onOpenDocument={(id) => openDocument(id)}
+            onAddDocument={(nodeId) => openOverlay('addingDocumentFor', nodeId)}
+            onNew={(parentId) => setDialog({ kind: 'new', parentId })}
+            onCreateAt={(position) =>
+              setDialog({ kind: 'new', parentId: null, position })
             }
-          >
-            {view === 'graph' && nodes.length > 0 ? (
-              graph && (
-                <ErrorBoundary area="le graphe">
-                  <GraphPanel
-                    graph={graph}
-                    nodes={nodes}
-                    tags={tags}
-                    selectedId={selectedId}
-                    onSelect={select}
-                    onOpen={(id) => {
-                      select(id);
-                      setView('documents');
-                    }}
-                    onPositionsSaved={positionsSaved}
-                    onRelationsChanged={relationsChanged}
-                    selectedDocuments={shownDetail?.documents ?? null}
-                    searchMatches={searchMatches}
-                    onOpenDocument={(id) => openDocument(id)}
-                    onAddDocument={(nodeId) => setAddingDocumentFor(nodeId)}
-                    multiSelection={multiSelection}
-                    onToggleSelect={toggleMulti}
-                    onSetMultiSelection={setMultiSelection}
-                    onBulkMove={() =>
-                      setDialog({
-                        kind: 'move',
-                        nodes: nodes.filter((node) =>
-                          multiSelection.has(node.id),
-                        ),
-                        bulk: true,
-                      })
-                    }
-                    onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
-                    onBulkDelete={() => void askBulkDelete()}
-                    onCreateAt={(position) =>
-                      setDialog({ kind: 'new', parentId: null, position })
-                    }
-                  />
-                </ErrorBoundary>
-              )
-            ) : shownDetail && selected ? (
-              <>
-                <NodeHeader
-                  key={`${shownDetail.id}:${shownDetail.title}`}
-                  node={shownDetail}
-                  titleInput={titleInput}
-                  onNavigate={select}
-                  onRename={renameNode}
-                  onMove={() =>
-                    setDialog({ kind: 'move', nodes: [selected], bulk: false })
-                  }
-                  onDuplicate={() =>
-                    setDialog({ kind: 'duplicate', node: selected })
-                  }
-                  onDelete={() => void askDelete(selected.id)}
-                />
-                <ErrorBoundary area="les documents">
-                  <DocumentsPanel
-                    key={shownDetail.id}
-                    nodeId={shownDetail.id}
-                    documents={shownDetail.documents}
-                    revision={externalRevision}
-                    onChanged={refreshDetail}
-                  />
-                </ErrorBoundary>
-              </>
-            ) : (
-              <div className="empty-state">
-                <p className="muted">
-                  {nodes.length === 0
-                    ? 'Cet espace est vide.'
-                    : 'Sélectionnez un nœud dans l’arborescence.'}
-                </p>
-                {nodes.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setDialog({ kind: 'new', parentId: null })}
-                  >
-                    Créer un premier nœud
-                  </button>
-                )}
-              </div>
-            )}
-          </main>
+            onRename={renameNode}
+            onMove={(node) =>
+              setDialog({ kind: 'move', nodes: [node], bulk: false })
+            }
+            onDuplicate={(node) => setDialog({ kind: 'duplicate', node })}
+            onDelete={(id) => void askDelete(id)}
+            onBulkMove={() =>
+              setDialog({
+                kind: 'move',
+                nodes: nodes.filter((node) => multiSelection.has(node.id)),
+                bulk: true,
+              })
+            }
+            onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
+            onBulkDelete={() => void askBulkDelete()}
+          />
 
-          {shownDetail && (
+          {detail && (
             <ErrorBoundary area="les propriétés du nœud">
               <NodeProperties
-                key={`${shownDetail.id}:${externalRevision}`}
-                node={shownDetail}
-                allTags={tags}
+                key={`${detail.id}:${data.externalRevision}`}
+                node={detail}
+                allTags={data.tags}
                 nodes={nodes}
-                relationTypes={graph?.relationTypes ?? []}
-                relationsRevision={relationsRevision}
+                relationTypes={data.graph?.relationTypes ?? []}
+                relationsRevision={data.relationsRevision}
                 onNavigate={select}
                 onNodeChanged={nodeChanged}
-                onTagsChanged={() => void refreshTags()}
+                onTagsChanged={() => void data.refreshTags()}
                 onRelationsChanged={relationsChanged}
                 onOpenDocument={(id) => openDocument(id)}
-                onAddDocument={() => setAddingDocumentFor(shownDetail.id)}
+                onAddDocument={() =>
+                  openOverlay('addingDocumentFor', detail.id)
+                }
               />
             </ErrorBoundary>
           )}
         </div>
 
-        {helpOpen && <HelpDialog onClose={() => setHelpOpen(false)} />}
-        {llmExportOpen && (
-          <LlmExportDialog
-            selected={selected}
-            onSubmit={(options) => void exportForLlm(options)}
-            onCancel={() => setLlmExportOpen(false)}
-          />
-        )}
-        {activityOpen && (
-          <AssistantActivityDialog
-            key={externalRevision}
-            onNavigate={(id) => {
-              setActivityOpen(false);
-              select(id);
-            }}
-            onChanged={() => {
-              void refreshTags();
-              relationsChanged();
-            }}
-            onClose={() => setActivityOpen(false)}
-          />
-        )}
-        {mcpOpen && (
-          <McpDialog
-            workspaceName={workspace.name}
-            workspaceFile={workspace.filePath}
-            onClose={() => setMcpOpen(false)}
-          />
-        )}
-        {editingDocumentId && (
-          <ErrorBoundary area="l’éditeur de document">
-            <DocumentEditorDialog
-              documentId={editingDocumentId}
-              revision={externalRevision}
-              onChanged={refreshDetail}
-              onClose={() => {
-                setEditingDocumentId(null);
-                refreshDetail();
-              }}
-            />
-          </ErrorBoundary>
-        )}
-        {addingDocumentFor && (
-          <NewDocumentDialog
-            onSubmit={(title, contentType, language) =>
-              void createDocument(
-                addingDocumentFor,
-                title,
-                contentType,
-                language,
-              )
-            }
-            onCancel={() => setAddingDocumentFor(null)}
-          />
-        )}
-        {dialog?.kind === 'relationTypes' && (
-          <RelationTypeManagerDialog
-            relationTypes={graph?.relationTypes ?? []}
-            onChanged={() => void refreshNodes()}
-            onClose={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'new' && (
-          <NewNodeDialog
-            parentTitle={
-              dialog.parentId
-                ? (index.byId.get(dialog.parentId)?.title ?? null)
-                : null
-            }
-            parentChoice={
-              dialog.position ? { index, parentId: dialog.parentId } : undefined
-            }
-            onSubmit={(title, nodeType, parentId) =>
-              void createNode(title, nodeType, parentId)
-            }
-            onCancel={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'move' && (
-          <MoveNodeDialog
-            index={index}
-            nodes={dialog.nodes}
-            onSubmit={(parentId) =>
-              dialog.bulk
-                ? void bulkMove(parentId)
-                : void moveTo(dialog.nodes[0]!, parentId)
-            }
-            onCancel={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'duplicate' && (
-          <DuplicateNodeDialog
-            node={dialog.node}
-            hasChildren={(index.children.get(dialog.node.id)?.length ?? 0) > 0}
-            onSubmit={(includeChildren) =>
-              void duplicate(dialog.node, includeChildren)
-            }
-            onCancel={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'delete' && (
-          <DeleteNodeDialog
-            title={`Supprimer « ${dialog.node.title} » ?`}
-            impact={dialog.impact}
-            busy={false}
-            onSubmit={(strategy) => void deleteNode(dialog.node, strategy)}
-            onCancel={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'bulkDelete' && (
-          <DeleteNodeDialog
-            title={`Supprimer ${dialog.impact.nodeCount} nœuds ?`}
-            impact={dialog.impact}
-            busy={false}
-            onSubmit={(strategy) => void bulkDelete(dialog.ids, strategy)}
-            onCancel={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'tags' && (
-          <TagManagerDialog
-            tags={tags}
-            onChanged={() => {
-              void refreshTags();
-              refreshDetail();
-            }}
-            onClose={() => setDialog(null)}
-          />
-        )}
-        {dialog?.kind === 'settings' && (
-          <WorkspaceSettingsDialog
-            workspace={workspace}
-            onUpdated={onWorkspaceChanged}
-            onDeleted={onDeleted}
-            onClose={() => setDialog(null)}
-          />
-        )}
+        <WorkspaceDialogs
+          workspace={workspace}
+          data={data}
+          index={index}
+          selected={selected}
+          dialog={dialog}
+          overlays={overlays}
+          onCloseDialog={() => setDialog(null)}
+          onCloseOverlay={closeOverlay}
+          onSelect={select}
+          onWorkspaceChanged={onWorkspaceChanged}
+          onWorkspaceDeleted={onDeleted}
+          onRelationsChanged={relationsChanged}
+          onCreateNode={(title, nodeType, parentId) =>
+            void createNode(title, nodeType, parentId)
+          }
+          onMove={(moved, parentId, bulk) =>
+            bulk ? void bulkMove(parentId) : void moveTo(moved[0]!, parentId)
+          }
+          onDuplicate={(node, includeChildren) =>
+            void duplicate(node, includeChildren)
+          }
+          onDeleteNode={(node, strategy) => void deleteNode(node, strategy)}
+          onBulkDelete={(ids, strategy) => void bulkDelete(ids, strategy)}
+          onExportForLlm={(options) => void exportForLlm(options)}
+          onCreateDocument={(nodeId, title, contentType, language) =>
+            void createDocument(nodeId, title, contentType, language)
+          }
+        />
       </div>
     </NodeLinkContext.Provider>
   );
