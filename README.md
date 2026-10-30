@@ -62,7 +62,18 @@ pièces jointes en BLOB).
     proches), les autres au survol ou en zoomant ; disposition qui regroupe
     chaque branche et écarte les branches entre elles ; repliage d'une
     branche (« Replier », « Tout replier », « Tout déplier »), le nœud
-    replié indiquant le nombre de descendants masqués.
+    replié indiquant le nombre de descendants masqués ;
+  - l’œil (arborescence) : masquer un nœud et ses descendants dans le
+    graphe, ou n’afficher qu’une branche (Alt+clic), touche H ; affichage
+    seulement (recherche, export et MCP inchangés) ;
+  - réglages du graphe conservés par espace (portée, filtres, replis,
+    masquages), clé `view.graph` de `workspace_settings`, hors export ;
+  - arborescence : glisser-déposer (avant, après ou dans un nœud, cycles
+    refusés) et menu contextuel (clic droit, touche Menu, Maj+F10) ;
+  - relecture des ajouts de l’IA : filtre « Ajouté par l’IA, non validé »,
+    marque « IA » dans l’arbre, action « Valider » (migration 005,
+    `assistant_change.validated_at`) ;
+  - préférence « Lier le repli de l’arbre et du graphe ».
 - **Lot 4 — Contenus riches** :
   - éditeur CodeMirror 6 pour tous les documents : coloration (Markdown,
     JSON, Java, JS/TS, Python, SQL, Go, YAML, Bash, C/C++), numéros de
@@ -117,12 +128,19 @@ pièces jointes en BLOB).
     trouvés et le contenu des documents trouvés (12 000 caractères par
     défaut, `maxChars`), et se rabat sur « au moins un mot » si aucun nœud
     ne les contient tous ; il est marqué `anthropic/alwaysLoad` pour que
-    Claude Code le charge sans passer par sa recherche d'outils ;
+    Claude Code le charge sans passer par sa recherche d'outils ; d’un long
+    document, seules les sections qui contiennent le plus de mots cherchés
+    sont renvoyées, avec leur `offset` ; `nodal_get_node` inclut le contenu
+    des documents courts ;
+  - `nodal_apply` : plusieurs écritures (nœud, documents, relations, tags)
+    en un appel et une transaction (tout ou rien), références `$1`, `$2`…
+    aux éléments créés plus tôt dans le même appel ;
   - orientation : `nodal_overview` donne les racines (avec leur nombre de
     descendants), les nœuds les plus reliés, l'activité récente et la part
     créée par l'assistant ;
   - provenance : `createdBy` (nœud) et `by` (relation) valent `user` ou
     `assistant`, d'après le journal ; pastille « IA » dans l'application ;
+    un nœud validé par l'utilisateur redevient `user` ;
   - écriture (sauf `--read-only`) : `nodal_create_node` (doublon refusé au
     même endroit), `nodal_update_node`, `nodal_add_document`,
     `nodal_update_document` (ajout en fin par défaut), `nodal_link` (type de
@@ -145,7 +163,8 @@ Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud raci
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
 `F2` renommer, `Suppr` supprimer, `F1` aide, `Ctrl+,` préférences,
 `Ctrl+=` / `Ctrl+-` / `Ctrl+0` taille du texte, flèches pour parcourir
-l'arborescence.
+l'arborescence, `H` masquer le nœud dans le graphe, touche Menu ou
+`Maj+F10` menu contextuel du nœud.
 
 Préférences de l'application (profil utilisateur, `preferences.json`) :
 thème (système, clair, sombre, appliqué par `nativeTheme`), couleur

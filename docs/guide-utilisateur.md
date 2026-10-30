@@ -70,7 +70,18 @@ apparaissent en pointillés.
 - **Portée** : _Tout l'espace_ ou _Voisinage_ du nœud sélectionné sur 1 à 5
   niveaux (utile pour les grands espaces).
 - **Filtres** : par type de nœud, tag et type de relation ; affichage ou non
-  de la hiérarchie.
+  de la hiérarchie ; « Ajouté par l’IA, non validé ».
+- **Réglages conservés** : la portée, les filtres, les nœuds repliés et les
+  nœuds masqués sont retrouvés à la réouverture de l’espace (affichage
+  seulement : rien n’est modifié dans les données ni dans les exports).
+- **L’œil** (arborescence) : au survol d’une ligne, l’œil **masque** le nœud
+  dans le graphe, avec ses descendants et leurs relations (la ligne est
+  grisée, l’œil reste barré). **Alt + clic** sur l’œil n’affiche que cette
+  branche (ses ancêtres restent visibles) ; un nouvel Alt + clic en sort.
+  Touche **H** sur le nœud sélectionné. La barre du graphe indique « N nœuds
+  masqués · Tout réafficher ». Si vous sélectionnez un nœud masqué (arbre,
+  recherche), le graphe le signale et propose **Le réafficher**. Masquer
+  n’affecte ni la recherche, ni l’export, ni l’assistant IA.
 - **Relations** : cliquez sur un trait (ou son libellé) pour ouvrir la fiche
   de la relation : source, type, cible et description. **Modifier** permet
   de changer le type, le libellé et la description ; un clic sur une
@@ -86,13 +97,20 @@ apparaissent en pointillés.
   branche et écarte les branches entre elles. Les positions déjà
   enregistrées sont conservées tant que vous ne cliquez pas sur Disposer.
 - **Actions groupées** (après une sélection multiple) : déplacer sous un
-  parent, changer le type, supprimer.
+  parent, changer le type, valider ce qu’a ajouté l’IA, supprimer.
 
 ## 4. Nœuds et hiérarchie
 
 - **Arborescence** (panneau gauche) : **+ Racine**, **+ Enfant**, ↑ / ↓ pour
   réordonner. Clavier : flèches pour parcourir, F2 pour renommer, Suppr pour
-  supprimer.
+  supprimer, H pour masquer dans le graphe.
+- **Glisser-déposer** dans l’arborescence : déposez un nœud sur le haut ou le
+  bas d’une ligne pour le placer avant ou après elle, au milieu pour le ranger
+  dedans. Un trait ou un cadre montre où il ira ; un nœud ne peut pas être
+  déposé dans l’un de ses propres descendants.
+- **Menu contextuel** (clic droit, touche Menu ou Maj + F10) : nouveau
+  sous-nœud, renommer, masquer / afficher dans le graphe, centrer dans le
+  graphe, ajouter un document, valider (si l’IA l’a ajouté), supprimer.
 - **Panneau de propriétés** (droite) : type, **parent** (pour passer un nœud
   en racine ou le rattacher à un autre), résumé, couleur, documents,
   relations, tags, pièces jointes.
@@ -177,7 +195,14 @@ Menu **Exporter ▾** et bouton **Paramètres** :
 - **Pastille « IA »** : un nœud (à côté de son type) ou une relation créés par
   l'assistant portent une pastille « IA » ; survolez-la pour voir quel
   assistant l'a créé et quand. L'assistant voit la même information et sait
-  qu'un élément qu'il a ajouté reste à valider.
+  qu'un élément qu'il a ajouté reste à valider. Dans l’arborescence, ces nœuds
+  portent la marque « IA ».
+- **Valider** ce qu’a ajouté l’IA : bouton **Valider** de la fiche du nœud,
+  menu contextuel de l’arborescence, ou **Valider (N)** après une sélection
+  multiple dans le graphe. Le nœud n’est plus signalé comme ajouté par l’IA
+  (y compris pour l’assistant) ; l’entrée reste dans « Activité IA »
+  (« validée le … ») et peut toujours être annulée. Le filtre « Ajouté par
+  l’IA, non validé » du graphe montre ce qui reste à relire.
 - **Consulter Nodal d'abord** : la fenêtre « Connecter un assistant IA »
   fournit un bloc de consignes à coller dans le fichier d'instructions de
   votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou
@@ -201,6 +226,9 @@ chaque changement s'applique et s'enregistre aussitôt.
 - **Rouvrir le dernier espace** au démarrage.
 - **Aide des gestes** dans la barre d'outils du graphe, à masquer une fois
   les gestes connus.
+- **Lier le repli de l’arbre et du graphe** (désactivé par défaut) : déplier
+  ou replier un nœud dans l’arborescence fait de même dans le graphe, et
+  inversement.
 
 La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 « Rétablir les valeurs par défaut » remet toutes les préférences à zéro.
@@ -217,6 +245,8 @@ La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 | Échap          | vider la sélection ou la recherche, fermer une fenêtre |
 | F2             | renommer le nœud sélectionné                           |
 | Suppr          | supprimer le nœud sélectionné (arborescence)           |
+| H              | masquer / afficher le nœud dans le graphe (arbre)      |
+| Menu, Maj+F10  | menu contextuel du nœud (arborescence)                 |
 | F1             | aide                                                   |
 | Ctrl + ,       | préférences                                            |
 | Ctrl + = / -   | agrandir / réduire le texte (Ctrl + 0 : rétablir)      |

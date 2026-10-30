@@ -11,6 +11,13 @@ const GRAPH_GESTURES: [string, string][] = [
   ['Molette, ⤢', 'zoomer, recadrer'],
 ];
 
+const TREE_GESTURES: [string, string][] = [
+  ['Glisser un nœud', 'le placer avant, après ou dans un autre nœud'],
+  ['Clic droit', 'menu contextuel du nœud'],
+  ['Œil (au survol)', 'masquer le nœud et ses descendants dans le graphe'],
+  ['Alt + clic sur l’œil', 'n’afficher que cette branche (ou en sortir)'],
+];
+
 const SHORTCUTS: [string, string][] = [
   ['Ctrl + N', 'nouveau sous-nœud du nœud sélectionné'],
   ['Ctrl + Maj + N', 'nouveau nœud racine'],
@@ -18,6 +25,8 @@ const SHORTCUTS: [string, string][] = [
   ['Ctrl + S', 'enregistrer immédiatement'],
   ['Échap', 'vider la sélection ou la recherche, fermer une fenêtre'],
   ['F2 / Suppr', 'renommer / supprimer le nœud (arborescence)'],
+  ['H', 'masquer / afficher le nœud dans le graphe (arborescence)'],
+  ['Menu, Maj + F10', 'menu contextuel du nœud (arborescence)'],
   ['F1', 'cette aide'],
   ['Ctrl + ,', 'préférences (thème, couleur, densité…)'],
   [
@@ -41,6 +50,15 @@ export function HelpDialog({ onClose }: { onClose(): void }) {
       <h3>Graphe</h3>
       <dl className="help-list">
         {GRAPH_GESTURES.map(([gesture, effect]) => (
+          <div key={gesture}>
+            <dt>{gesture}</dt>
+            <dd>{effect}</dd>
+          </div>
+        ))}
+      </dl>
+      <h3>Arborescence</h3>
+      <dl className="help-list">
+        {TREE_GESTURES.map(([gesture, effect]) => (
           <div key={gesture}>
             <dt>{gesture}</dt>
             <dd>{effect}</dd>
