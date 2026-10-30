@@ -103,6 +103,9 @@ export const graphViewSettingsSchema = z.strictObject({
   hiddenRelationTypeIds: viewIds,
   showHierarchy: z.boolean(),
   collapsed: viewIds,
+  // Absents des réglages enregistrés avant l'œil : valeurs par défaut.
+  hidden: viewIds.default([]),
+  solo: idSchema.nullable().default(null),
 });
 
 const idInput = z.strictObject({ id: idSchema });

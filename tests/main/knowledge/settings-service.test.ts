@@ -16,6 +16,8 @@ const view: GraphViewSettings = {
   hiddenRelationTypeIds: [],
   showHierarchy: false,
   collapsed: ['n1', 'n2'],
+  hidden: ['n3'],
+  solo: null,
 };
 
 describe('réglages d’affichage du graphe', () => {
@@ -46,6 +48,22 @@ describe('réglages d’affichage du graphe', () => {
     expect(settings.getGraphView()).toBeNull();
     store(JSON.stringify({ ...view, depth: 42 }));
     expect(settings.getGraphView()).toBeNull();
+  });
+
+  it('complètent les réglages enregistrés avant l’œil', () => {
+    const { context } = workspace();
+    const ctx = context();
+    const { hidden: _hidden, solo: _solo, ...before } = view;
+    ctx.db
+      .prepare(
+        "INSERT INTO workspace_settings (workspace_id, key, value) VALUES (?, 'view.graph', ?)",
+      )
+      .run(ctx.workspaceId, JSON.stringify(before));
+    expect(new SettingsService(context).getGraphView()).toEqual({
+      ...before,
+      hidden: [],
+      solo: null,
+    });
   });
 
   it('refusent des réglages invalides à l’écriture', () => {

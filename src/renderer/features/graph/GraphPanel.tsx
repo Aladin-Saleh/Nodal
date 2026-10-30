@@ -20,6 +20,7 @@ import {
 import {
   DEFAULT_FILTERS,
   LARGE_GRAPH_THRESHOLD,
+  maskedNodeIds,
   visibleGraph,
   type GraphFilters,
   type GraphScope,
@@ -95,7 +96,7 @@ export function GraphPanel({
   const {
     selectedId,
     multiSelection,
-    graph: { scope, depth, filters, collapsed },
+    graph: { scope, depth, filters, collapsed, hidden, solo },
   } = useViewState();
   const dispatch = useViewDispatch();
   const scopeKind =
@@ -125,8 +126,46 @@ export function GraphPanel({
       scopeKind === 'neighborhood' && selectedId
         ? { kind: 'neighborhood', centerId: selectedId, depth }
         : { kind: 'all' };
-    return visibleGraph(graph, graphScope, filters, collapsed);
-  }, [graph, filters, collapsed, scopeKind, selectedId, depth]);
+    return visibleGraph(graph, graphScope, filters, {
+      collapsed,
+      hidden,
+      solo,
+    });
+  }, [graph, filters, collapsed, hidden, solo, scopeKind, selectedId, depth]);
+  // Œil : nœuds absents du graphe (pour signaler une sélection masquée).
+  const masked = useMemo(
+    () => maskedNodeIds(graph.nodes, { hidden, solo }),
+    [graph, hidden, solo],
+  );
+  const selectedMasked = !!selectedId && masked.has(selectedId);
+  const soloTitle = solo
+    ? (graph.nodes.find((node) => node.id === solo)?.title ?? null)
+    : null;
+  /**
+   * Réaffiche le nœud sélectionné : lui et ses ancêtres ne sont plus masqués,
+   * et le solo est quitté s'il le laissait de côté.
+   */
+  const revealSelected = () => {
+    if (!selectedId) return;
+    const parentOf = new Map(
+      graph.nodes.map((node) => [node.id, node.parentId]),
+    );
+    const chain: string[] = [];
+    for (
+      let id: string | null = selectedId;
+      id && !chain.includes(id);
+      id = parentOf.get(id) ?? null
+    ) {
+      chain.push(id);
+    }
+    dispatch({ type: 'unhide', ids: chain });
+    const remaining = new Set([...hidden].filter((id) => !chain.includes(id)));
+    if (
+      maskedNodeIds(graph.nodes, { hidden: remaining, solo }).has(selectedId)
+    ) {
+      dispatch({ type: 'setSolo', id: null });
+    }
+  };
   const parents = useMemo(
     () =>
       new Set(
@@ -462,6 +501,37 @@ export function GraphPanel({
           ⤢
         </button>
       </div>
+
+      {(visible.maskedCount ?? 0) > 0 && (
+        <div className="graph-mask-bar" role="status">
+          <span>
+            {soloTitle ? `Branche seule : « ${soloTitle} » · ` : ''}
+            {visible.maskedCount} nœud
+            {visible.maskedCount === 1 ? ' masqué' : 's masqués'}
+          </span>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => dispatch({ type: 'showAll' })}
+          >
+            Tout réafficher
+          </button>
+        </div>
+      )}
+
+      {selectedMasked && (
+        <p className="graph-hint graph-hint-masked">
+          « {graph.nodes.find((node) => node.id === selectedId)?.title} » est
+          masqué dans le graphe.{' '}
+          <button
+            type="button"
+            className="link-button"
+            onClick={revealSelected}
+          >
+            Le réafficher
+          </button>
+        </p>
+      )}
 
       {scopeKind === 'neighborhood' && !selectedId && (
         <p className="graph-hint">

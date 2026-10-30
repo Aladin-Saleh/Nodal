@@ -804,3 +804,62 @@ kbd {
 .edge-card-actions button {
   padding: 4px 10px;
 }
+
+/* Œil : visibilité dans le graphe (arborescence) */
+
+.tree-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 2px 4px;
+  color: var(--muted);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm, 4px);
+  /* Visible au survol de la ligne ; toujours visible quand il est actif. */
+  visibility: hidden;
+}
+
+.tree-row:hover .tree-eye,
+.tree-row:focus-within .tree-eye,
+.tree-row.selected .tree-eye,
+.tree-row.eye-active .tree-eye {
+  visibility: visible;
+}
+
+.tree-eye:hover,
+.tree-eye:focus-visible,
+.tree-eye.solo {
+  color: var(--accent);
+}
+
+.tree-row.masked .tree-title,
+.tree-row.masked .type-dot {
+  opacity: 0.45;
+}
+
+.tree-row.masked .tree-title {
+  font-style: italic;
+}
+
+/* Barre du graphe : nœuds masqués par l'œil */
+
+.graph-mask-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 13px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.graph-mask-bar .link-button,
+.graph-hint .link-button {
+  padding: 0;
+  font-size: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+}

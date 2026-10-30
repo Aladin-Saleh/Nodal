@@ -42,6 +42,8 @@ const stored: GraphViewSettings = {
   hiddenRelationTypeIds: [],
   showHierarchy: true,
   collapsed: ['a', 'supprimé'],
+  hidden: ['a'],
+  solo: 'supprimé',
 };
 
 function setup(initial: GraphViewSettings | null) {
@@ -89,6 +91,8 @@ describe('persistance des réglages du graphe', () => {
       scope: 'neighborhood',
       depth: 4,
       collapsed: new Set(['a']),
+      hidden: new Set(['a']),
+      solo: null,
     });
   });
 

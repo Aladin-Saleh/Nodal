@@ -114,6 +114,10 @@ export interface GraphViewSettings {
   showHierarchy: boolean;
   /** Nœuds repliés. */
   collapsed: string[];
+  /** Nœuds masqués avec l'œil (et donc leurs descendants). */
+  hidden: string[];
+  /** Branche affichée seule (Alt+clic sur l'œil). */
+  solo: string | null;
 }
 
 export interface RecentWorkspace {

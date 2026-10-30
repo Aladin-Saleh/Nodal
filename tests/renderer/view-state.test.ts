@@ -64,6 +64,8 @@ describe('viewReducer', () => {
       depth: 4,
       filters,
       collapsed: new Set(['r']),
+      hidden: new Set(),
+      solo: null,
     });
     expect(
       viewReducer(state, { type: 'toggleCollapsed', id: 'r' }).graph.collapsed
@@ -98,6 +100,8 @@ describe('réglages du graphe enregistrés', () => {
         showHierarchy: false,
       },
       collapsed: new Set(['a']),
+      hidden: new Set(['b']),
+      solo: 'a',
     };
     expect(fromGraphViewSettings(toGraphViewSettings(graph), known)).toEqual(
       graph,
@@ -114,11 +118,41 @@ describe('réglages du graphe enregistrés', () => {
         hiddenRelationTypeIds: ['ancien'],
         showHierarchy: true,
         collapsed: ['b', 'disparu'],
+        hidden: ['disparu', 'a'],
+        solo: 'disparu',
       },
       known,
     );
+    expect([...restored.hidden]).toEqual(['a']);
+    expect(restored.solo).toBeNull();
     expect([...restored.filters.tagIds]).toEqual(['t1']);
     expect(restored.filters.hiddenRelationTypeIds.size).toBe(0);
     expect([...restored.collapsed]).toEqual(['b']);
+  });
+});
+
+describe('œil dans l’état de la vue', () => {
+  it('masque, réaffiche et passe en solo', () => {
+    let state = apply(
+      { type: 'toggleHidden', id: 'a' },
+      { type: 'toggleHidden', id: 'b' },
+      { type: 'toggleSolo', id: 'r' },
+    );
+    expect([...state.graph.hidden]).toEqual(['a', 'b']);
+    expect(state.graph.solo).toBe('r');
+    state = viewReducer(state, { type: 'unhide', ids: ['b', 'x'] });
+    expect([...state.graph.hidden]).toEqual(['a']);
+    // Re-Alt+clic sur la même branche : sortie du solo.
+    expect(viewReducer(state, { type: 'toggleSolo', id: 'r' }).graph.solo).toBe(
+      null,
+    );
+    const cleared = viewReducer(state, { type: 'showAll' });
+    expect(cleared.graph.hidden.size).toBe(0);
+    expect(cleared.graph.solo).toBeNull();
+  });
+
+  it('ne change rien quand il n’y a rien à réafficher', () => {
+    const state = apply({ type: 'toggleHidden', id: 'a' });
+    expect(viewReducer(state, { type: 'unhide', ids: ['z'] })).toBe(state);
   });
 });

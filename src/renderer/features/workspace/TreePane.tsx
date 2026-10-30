@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+import { maskedNodeIds } from '../graph/graph-model';
 import { NodeTree } from '../nodes/NodeTree';
 import { siblingsOf, type TreeIndex } from '../nodes/tree';
 import { useViewDispatch, useViewState } from './view-state-context';
@@ -24,8 +26,18 @@ export function TreePane({
   onDelete,
   onRename,
 }: TreePaneProps) {
-  const { selectedId, expanded, multiSelection } = useViewState();
+  const {
+    selectedId,
+    expanded,
+    multiSelection,
+    graph: { hidden, solo },
+  } = useViewState();
   const dispatch = useViewDispatch();
+  // Lignes grisées : nœuds absents du graphe à cause de l'œil.
+  const masked = useMemo(
+    () => maskedNodeIds([...index.byId.values()], { hidden, solo }),
+    [index, hidden, solo],
+  );
   const selected = selectedId ? (index.byId.get(selectedId) ?? null) : null;
   const siblings = selected ? siblingsOf(index, selected) : [];
   const siblingPosition = selected
@@ -85,6 +97,11 @@ export function TreePane({
         highlighted={searchMatches}
         multiSelection={multiSelection}
         onToggleMulti={(id) => dispatch({ type: 'toggleMulti', id })}
+        hidden={hidden}
+        masked={masked}
+        solo={solo}
+        onToggleHidden={(id) => dispatch({ type: 'toggleHidden', id })}
+        onToggleSolo={(id) => dispatch({ type: 'toggleSolo', id })}
       />
     </nav>
   );

@@ -15,12 +15,40 @@ export interface NodeTreeProps {
   /** Sélection multiple (Ctrl+clic). */
   multiSelection?: ReadonlySet<string>;
   onToggleMulti?(id: string): void;
+  /** Œil : nœuds masqués dans le graphe (bouton enfoncé). */
+  hidden?: ReadonlySet<string>;
+  /** Nœuds absents du graphe (masqués, sous un nœud masqué, hors solo) : grisés. */
+  masked?: ReadonlySet<string>;
+  /** Branche affichée seule dans le graphe. */
+  solo?: string | null;
+  /** Clic sur l'œil ou touche H : masquer / afficher dans le graphe. */
+  onToggleHidden?(id: string): void;
+  /** Alt+clic sur l'œil : n'afficher que cette branche (ou quitter le solo). */
+  onToggleSolo?(id: string): void;
+}
+
+/** Œil ouvert, ou barré quand le nœud est masqué. */
+function EyeIcon({ crossed }: { crossed: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path
+        d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <circle cx="8" cy="8" r="2" fill="currentColor" />
+      {crossed && (
+        <path d="M2.5 13.5 13.5 2.5" stroke="currentColor" strokeWidth="1.5" />
+      )}
+    </svg>
+  );
 }
 
 /**
  * Arborescence des nœuds (§7), navigable au clavier selon le motif ARIA
  * « tree » : flèches haut/bas, droite (déplier / premier enfant), gauche
- * (replier / parent), Début/Fin, Suppr et F2.
+ * (replier / parent), Début/Fin, Suppr, F2 et H (masquer dans le graphe).
  */
 export function NodeTree({
   index,
@@ -33,6 +61,11 @@ export function NodeTree({
   highlighted = null,
   multiSelection,
   onToggleMulti,
+  hidden,
+  masked,
+  solo = null,
+  onToggleHidden,
+  onToggleSolo,
 }: NodeTreeProps) {
   const rows = visibleRows(index, expanded);
   const container = useRef<HTMLUListElement>(null);
@@ -95,6 +128,12 @@ export function NodeTree({
       case 'F2':
         if (current) onRename(current.node.id);
         break;
+      case 'h':
+      case 'H':
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (!current || !onToggleHidden) return;
+        onToggleHidden(current.node.id);
+        break;
       default:
         return;
     }
@@ -113,6 +152,8 @@ export function NodeTree({
         const selected = row.node.id === selectedId;
         // Tabulation itinérante : un seul élément focalisable.
         const tabbable = selected || (position === -1 && rowIndex === 0);
+        const isHidden = !!hidden?.has(row.node.id);
+        const isSolo = solo === row.node.id;
         return (
           <li
             key={row.node.id}
@@ -127,6 +168,8 @@ export function NodeTree({
               selected ? 'selected' : '',
               highlighted?.has(row.node.id) ? 'search-match' : '',
               multiSelection?.has(row.node.id) ? 'multi-selected' : '',
+              masked?.has(row.node.id) ? 'masked' : '',
+              isHidden || isSolo ? 'eye-active' : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -159,6 +202,36 @@ export function NodeTree({
               aria-hidden="true"
             />
             <span className="tree-title">{row.node.title}</span>
+            {onToggleHidden && (
+              <button
+                type="button"
+                className={isSolo ? 'tree-eye solo' : 'tree-eye'}
+                // Hors de la tabulation de l'arbre (une seule entrée) : la
+                // touche H fait la même chose au clavier.
+                tabIndex={-1}
+                aria-pressed={isHidden}
+                aria-label={
+                  isHidden
+                    ? 'Afficher dans le graphe'
+                    : 'Masquer dans le graphe'
+                }
+                title={
+                  (isHidden
+                    ? 'Afficher dans le graphe (H)'
+                    : 'Masquer dans le graphe (H)') +
+                  (isSolo
+                    ? ' · Alt+clic : quitter le solo'
+                    : ' · Alt+clic : n’afficher que cette branche')
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (event.altKey && onToggleSolo) onToggleSolo(row.node.id);
+                  else onToggleHidden(row.node.id);
+                }}
+              >
+                <EyeIcon crossed={isHidden} />
+              </button>
+            )}
           </li>
         );
       })}

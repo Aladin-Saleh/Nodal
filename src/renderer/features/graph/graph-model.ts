@@ -47,6 +47,88 @@ export interface VisibleGraph {
   hierarchy: HierarchyLink[];
   /** Nœuds repliés affichés → nombre de descendants masqués. */
   hiddenDescendants?: ReadonlyMap<string, number>;
+  /** Nœuds retirés par l'œil (masqués, leurs descendants, hors solo). */
+  maskedCount?: number;
+}
+
+/** Visibilité choisie avec l'œil de l'arborescence (affichage seulement). */
+export interface GraphMasking {
+  /** Nœuds masqués : retirés du graphe avec leurs descendants. */
+  hidden: ReadonlySet<string>;
+  /** Branche affichée seule (avec ses ancêtres, pour le contexte). */
+  solo: string | null;
+}
+
+export const NO_MASKING: GraphMasking = { hidden: new Set(), solo: null };
+
+/** Réglages d'affichage autres que les filtres. */
+export interface GraphDisplay extends Partial<GraphMasking> {
+  collapsed?: ReadonlySet<string>;
+}
+
+type TreeLink = Pick<GraphNode, 'id' | 'parentId'>;
+
+function childrenMap(nodes: readonly TreeLink[]): Map<string, string[]> {
+  const children = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const list = children.get(node.parentId);
+    if (list) list.push(node.id);
+    else children.set(node.parentId, [node.id]);
+  }
+  return children;
+}
+
+/** Descendants d'un nœud (lui exclu), protégé contre les cycles. */
+function descendantsOf(
+  children: ReadonlyMap<string, string[]>,
+  id: string,
+): Set<string> {
+  const seen = new Set<string>([id]);
+  const stack = [...(children.get(id) ?? [])];
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    // Garde-fou contre un cycle introduit hors de l'application.
+    if (seen.has(current)) continue;
+    seen.add(current);
+    stack.push(...(children.get(current) ?? []));
+  }
+  seen.delete(id);
+  return seen;
+}
+
+/**
+ * Nœuds retirés du graphe par l'œil : chaque nœud masqué et tous ses
+ * descendants ; en solo, tout ce qui n'est ni la branche choisie ni l'un de
+ * ses ancêtres. Un solo sur un nœud inconnu est ignoré.
+ */
+export function maskedNodeIds(
+  nodes: readonly TreeLink[],
+  masking: GraphMasking,
+): Set<string> {
+  const masked = new Set<string>();
+  if (masking.hidden.size === 0 && !masking.solo) return masked;
+  const children = childrenMap(nodes);
+  const known = new Map(nodes.map((node) => [node.id, node.parentId]));
+  for (const id of masking.hidden) {
+    if (!known.has(id)) continue;
+    masked.add(id);
+    for (const descendant of descendantsOf(children, id))
+      masked.add(descendant);
+  }
+  if (masking.solo && known.has(masking.solo)) {
+    const keep = descendantsOf(children, masking.solo);
+    keep.add(masking.solo);
+    for (
+      let parent = known.get(masking.solo) ?? null;
+      parent && !keep.has(parent);
+      parent = known.get(parent) ?? null
+    ) {
+      keep.add(parent);
+    }
+    for (const node of nodes) if (!keep.has(node.id)) masked.add(node.id);
+  }
+  return masked;
 }
 
 /**
@@ -60,25 +142,11 @@ export function collapsedDescendants(
   const hidden = new Set<string>();
   const counts = new Map<string, number>();
   if (collapsed.size === 0) return { hidden, counts };
-  const children = new Map<string, string[]>();
-  for (const node of nodes) {
-    if (!node.parentId) continue;
-    const list = children.get(node.parentId);
-    if (list) list.push(node.id);
-    else children.set(node.parentId, [node.id]);
-  }
+  const children = childrenMap(nodes);
   for (const id of collapsed) {
-    const seen = new Set<string>([id]);
-    const stack = [...(children.get(id) ?? [])];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      // Garde-fou contre un cycle introduit hors de l'application.
-      if (seen.has(current)) continue;
-      seen.add(current);
-      hidden.add(current);
-      stack.push(...(children.get(current) ?? []));
-    }
-    if (seen.size > 1) counts.set(id, seen.size - 1);
+    const descendants = descendantsOf(children, id);
+    for (const descendant of descendants) hidden.add(descendant);
+    if (descendants.size > 0) counts.set(id, descendants.size);
   }
   return { hidden, counts };
 }
@@ -131,23 +199,33 @@ export function neighborhood(
 }
 
 /**
- * Applique filtres, repliage et portée. Le nœud central reste toujours
- * visible.
+ * Applique l'œil (masquage, solo), filtres, repliage et portée. Le nœud
+ * central reste visible malgré les filtres et le repliage, mais pas s'il est
+ * masqué : la portée retombe alors sur tout l'espace affiché.
  */
 export function visibleGraph(
   graph: GraphData,
   scope: GraphScope,
   filters: GraphFilters,
-  collapsed: ReadonlySet<string> = new Set(),
+  display: GraphDisplay = {},
 ): VisibleGraph {
   const centerId = scope.kind === 'neighborhood' ? scope.centerId : null;
-  const folded = collapsedDescendants(graph.nodes, collapsed);
+  const masked = maskedNodeIds(graph.nodes, {
+    hidden: display.hidden ?? NO_MASKING.hidden,
+    solo: display.solo ?? null,
+  });
+  const folded = collapsedDescendants(
+    graph.nodes,
+    display.collapsed ?? new Set(),
+  );
   const matches = (node: GraphNode) =>
-    node.id === centerId ||
-    (!folded.hidden.has(node.id) &&
-      (filters.nodeTypes.size === 0 || filters.nodeTypes.has(node.nodeType)) &&
-      (filters.tagIds.size === 0 ||
-        node.tagIds.some((tagId) => filters.tagIds.has(tagId))));
+    !masked.has(node.id) &&
+    (node.id === centerId ||
+      (!folded.hidden.has(node.id) &&
+        (filters.nodeTypes.size === 0 ||
+          filters.nodeTypes.has(node.nodeType)) &&
+        (filters.tagIds.size === 0 ||
+          node.tagIds.some((tagId) => filters.tagIds.has(tagId)))));
 
   const candidates = new Set(
     graph.nodes.filter(matches).map((node) => node.id),
@@ -189,7 +267,13 @@ export function visibleGraph(
   const hiddenDescendants = new Map(
     [...folded.counts].filter(([id]) => ids.has(id)),
   );
-  return { nodes, edges, hierarchy, hiddenDescendants };
+  return {
+    nodes,
+    edges,
+    hierarchy,
+    hiddenDescendants,
+    maskedCount: masked.size,
+  };
 }
 
 /**

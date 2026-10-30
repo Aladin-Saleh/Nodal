@@ -16,6 +16,10 @@ export interface GraphViewState {
   filters: GraphFilters;
   /** Nœuds repliés : leurs descendants sont masqués, le nœud reste. */
   collapsed: ReadonlySet<string>;
+  /** Œil : nœuds retirés du graphe avec leurs descendants. */
+  hidden: ReadonlySet<string>;
+  /** Œil (Alt+clic) : branche affichée seule. */
+  solo: string | null;
 }
 
 export interface ViewState {
@@ -31,6 +35,8 @@ export const DEFAULT_GRAPH_VIEW: GraphViewState = {
   depth: 2,
   filters: DEFAULT_FILTERS,
   collapsed: new Set(),
+  hidden: new Set(),
+  solo: null,
 };
 
 export const INITIAL_VIEW_STATE: ViewState = {
@@ -52,6 +58,14 @@ export type ViewAction =
   | { type: 'setFilters'; filters: GraphFilters }
   | { type: 'setCollapsed'; ids: ReadonlySet<string> }
   | { type: 'toggleCollapsed'; id: string }
+  | { type: 'toggleHidden'; id: string }
+  /** Réaffiche ces nœuds (masqués eux-mêmes ou par un ancêtre masqué). */
+  | { type: 'unhide'; ids: readonly string[] }
+  /** Solo sur ce nœud, ou sortie du solo s'il l'est déjà. */
+  | { type: 'toggleSolo'; id: string }
+  | { type: 'setSolo'; id: string | null }
+  /** Plus rien de masqué ni de solo. */
+  | { type: 'showAll' }
   /** Réglages du graphe restaurés à l'ouverture de l'espace. */
   | { type: 'restoreGraph'; graph: GraphViewState };
 
@@ -112,6 +126,24 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
       return updateGraph(state, {
         collapsed: toggled(state.graph.collapsed, action.id),
       });
+    case 'toggleHidden':
+      return updateGraph(state, {
+        hidden: toggled(state.graph.hidden, action.id),
+      });
+    case 'unhide': {
+      if (!action.ids.some((id) => state.graph.hidden.has(id))) return state;
+      const hidden = new Set(state.graph.hidden);
+      for (const id of action.ids) hidden.delete(id);
+      return updateGraph(state, { hidden });
+    }
+    case 'toggleSolo':
+      return updateGraph(state, {
+        solo: state.graph.solo === action.id ? null : action.id,
+      });
+    case 'setSolo':
+      return updateGraph(state, { solo: action.id });
+    case 'showAll':
+      return updateGraph(state, { hidden: new Set(), solo: null });
     case 'restoreGraph':
       return { ...state, graph: action.graph };
   }
@@ -135,6 +167,8 @@ export function toGraphViewSettings(graph: GraphViewState): GraphViewSettings {
     hiddenRelationTypeIds: [...graph.filters.hiddenRelationTypeIds],
     showHierarchy: graph.filters.showHierarchy,
     collapsed: [...graph.collapsed],
+    hidden: [...graph.hidden],
+    solo: graph.solo,
   };
 }
 
@@ -159,5 +193,10 @@ export function fromGraphViewSettings(
       showHierarchy: settings.showHierarchy,
     },
     collapsed: keep(settings.collapsed, known.nodeIds),
+    hidden: keep(settings.hidden, known.nodeIds),
+    solo:
+      settings.solo !== null && known.nodeIds.has(settings.solo)
+        ? settings.solo
+        : null,
   };
 }

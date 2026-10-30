@@ -6,6 +6,7 @@ import {
   DEFAULT_FILTERS,
   hasPosition,
   LABEL_GAP_PX,
+  maskedNodeIds,
   SEED_DISTANCE,
   seedPositions,
   visibleGraph,
@@ -247,12 +248,9 @@ describe('repliage', () => {
   });
 
   it('retire les descendants et leurs relations du graphe affiché', () => {
-    const visible = visibleGraph(
-      tree,
-      { kind: 'all' },
-      DEFAULT_FILTERS,
-      new Set(['r']),
-    );
+    const visible = visibleGraph(tree, { kind: 'all' }, DEFAULT_FILTERS, {
+      collapsed: new Set(['r']),
+    });
     expect(ids(visible.nodes)).toEqual(['e', 'r']);
     expect(visible.edges).toEqual([]);
     expect(visible.hierarchy).toEqual([]);
@@ -260,12 +258,9 @@ describe('repliage', () => {
   });
 
   it('ne signale que les nœuds repliés encore affichés', () => {
-    const visible = visibleGraph(
-      tree,
-      { kind: 'all' },
-      DEFAULT_FILTERS,
-      new Set(['r', 'm']),
-    );
+    const visible = visibleGraph(tree, { kind: 'all' }, DEFAULT_FILTERS, {
+      collapsed: new Set(['r', 'm']),
+    });
     expect(visible.hiddenDescendants).toEqual(new Map([['r', 4]]));
   });
 
@@ -274,7 +269,7 @@ describe('repliage', () => {
       tree,
       { kind: 'neighborhood', centerId: 'l2', depth: 1 },
       DEFAULT_FILTERS,
-      new Set(['m']),
+      { collapsed: new Set(['m']) },
     );
     // m, son parent, est replié mais reste affiché (seuls ses descendants sont masqués).
     expect(ids(visible.nodes)).toEqual(['e', 'l2', 'm']);
@@ -383,5 +378,99 @@ describe('declutterLabels et importance', () => {
       },
     ]);
     expect([...kept]).toEqual(['n:root']);
+  });
+});
+
+const masking = (hidden: string[], solo: string | null = null) => ({
+  hidden: new Set(hidden),
+  solo,
+});
+
+describe('œil : masquage et solo', () => {
+  // r → m → (l1, l2), r → s ; autre racine o ; relations l2→o, s→l1
+  const tree: GraphData = {
+    ...graph,
+    nodes: [
+      node('r'),
+      node('m', { parentId: 'r' }),
+      node('l1', { parentId: 'm' }),
+      node('l2', { parentId: 'm', nodeType: 'data' }),
+      node('s', { parentId: 'r' }),
+      node('o'),
+    ],
+    edges: [edge('l2o', 'l2', 'o'), edge('sl1', 's', 'l1')],
+  };
+
+  it('masque un nœud, tous ses descendants et leurs relations', () => {
+    expect([...maskedNodeIds(tree.nodes, masking(['m']))].toSorted()).toEqual([
+      'l1',
+      'l2',
+      'm',
+    ]);
+    const visible = visibleGraph(
+      tree,
+      { kind: 'all' },
+      DEFAULT_FILTERS,
+      masking(['m']),
+    );
+    expect(ids(visible.nodes)).toEqual(['o', 'r', 's']);
+    expect(visible.edges).toEqual([]);
+    expect(visible.maskedCount).toBe(3);
+  });
+
+  it('diffère du repli : le nœud masqué disparaît, le nœud replié reste', () => {
+    const collapsed = visibleGraph(tree, { kind: 'all' }, DEFAULT_FILTERS, {
+      collapsed: new Set(['m']),
+    });
+    expect(ids(collapsed.nodes)).toContain('m');
+    expect(collapsed.maskedCount).toBe(0);
+  });
+
+  it('en solo, ne garde que la branche et ses ancêtres', () => {
+    expect([...maskedNodeIds(tree.nodes, masking([], 'm'))].toSorted()).toEqual(
+      ['o', 's'],
+    );
+    // Un masquage dans la branche solo s'applique toujours.
+    expect(
+      [...maskedNodeIds(tree.nodes, masking(['l1'], 'm'))].toSorted(),
+    ).toEqual(['l1', 'o', 's']);
+  });
+
+  it('ignore un solo ou un masquage sur un nœud inconnu', () => {
+    expect(maskedNodeIds(tree.nodes, masking(['absent'], 'absent')).size).toBe(
+      0,
+    );
+  });
+
+  it('se combine avec les filtres et les replis', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'all' },
+      filters({ nodeTypes: new Set(['concept']) }),
+      { collapsed: new Set(['r']), hidden: new Set(['o']) },
+    );
+    expect(ids(visible.nodes)).toEqual(['r']);
+    expect(visible.hiddenDescendants).toEqual(new Map([['r', 4]]));
+  });
+
+  it('ne garde pas un nœud central masqué : la portée retombe sur l’espace affiché', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'neighborhood', centerId: 'l2', depth: 1 },
+      DEFAULT_FILTERS,
+      masking(['m']),
+    );
+    expect(ids(visible.nodes)).toEqual(['o', 'r', 's']);
+  });
+
+  it('limite le voisinage d’un nœud visible aux nœuds non masqués', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'neighborhood', centerId: 's', depth: 2 },
+      DEFAULT_FILTERS,
+      masking(['l1']),
+    );
+    // s → r (parent) → m (enfant de r) ; l1 est masqué malgré la relation s→l1.
+    expect(ids(visible.nodes)).toEqual(['m', 'r', 's']);
   });
 });
