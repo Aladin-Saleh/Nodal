@@ -18,6 +18,7 @@ const view: GraphViewSettings = {
   collapsed: ['n1', 'n2'],
   hidden: ['n3'],
   solo: null,
+  assistantPendingOnly: false,
 };
 
 describe('réglages d’affichage du graphe', () => {
@@ -53,7 +54,12 @@ describe('réglages d’affichage du graphe', () => {
   it('complètent les réglages enregistrés avant l’œil', () => {
     const { context } = workspace();
     const ctx = context();
-    const { hidden: _hidden, solo: _solo, ...before } = view;
+    const {
+      hidden: _hidden,
+      solo: _solo,
+      assistantPendingOnly: _pending,
+      ...before
+    } = view;
     ctx.db
       .prepare(
         "INSERT INTO workspace_settings (workspace_id, key, value) VALUES (?, 'view.graph', ?)",
@@ -63,6 +69,7 @@ describe('réglages d’affichage du graphe', () => {
       ...before,
       hidden: [],
       solo: null,
+      assistantPendingOnly: false,
     });
   });
 

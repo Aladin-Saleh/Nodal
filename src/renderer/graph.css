@@ -920,3 +920,21 @@ kbd {
 .context-menu button.danger-text {
   color: var(--danger, #c0392b);
 }
+
+/* Ajouté par l'IA, non validé (arborescence) */
+
+.tree-row.ai-pending .tree-title {
+  text-decoration: underline dotted var(--accent);
+  text-underline-offset: 3px;
+}
+
+.ai-mark {
+  flex: none;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--accent);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}

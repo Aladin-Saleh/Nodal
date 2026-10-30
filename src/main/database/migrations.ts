@@ -4,6 +4,7 @@ import { migration001 } from './migrations/001-initial-schema';
 import { migration002 } from './migrations/002-node-position-z';
 import { migration003 } from './migrations/003-search-index';
 import { migration004 } from './migrations/004-assistant-changes';
+import { migration005 } from './migrations/005-assistant-validation';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -19,6 +20,7 @@ export const MIGRATIONS: readonly Migration[] = [
   migration002,
   migration003,
   migration004,
+  migration005,
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;

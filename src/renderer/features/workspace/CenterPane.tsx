@@ -31,6 +31,7 @@ export interface CenterPaneProps {
   onBulkMove(): void;
   onBulkSetType(nodeType: NodeType): void;
   onBulkDelete(): void;
+  onValidate(ids: string[]): void;
 }
 
 /** Zone centrale : graphe, ou documents du nœud sélectionné. */
@@ -55,6 +56,7 @@ export function CenterPane({
   onBulkMove,
   onBulkSetType,
   onBulkDelete,
+  onValidate,
 }: CenterPaneProps) {
   const { nodes, graph, tags, detail } = data;
   return (
@@ -80,6 +82,7 @@ export function CenterPane({
               onBulkMove={onBulkMove}
               onBulkSetType={onBulkSetType}
               onBulkDelete={onBulkDelete}
+              onValidate={onValidate}
               onCreateAt={onCreateAt}
             />
           </ErrorBoundary>
@@ -95,6 +98,7 @@ export function CenterPane({
             onMove={() => onMove(selected)}
             onDuplicate={() => onDuplicate(selected)}
             onDelete={() => onDelete(selected.id)}
+            onValidate={() => onValidate([selected.id])}
           />
           <ErrorBoundary area="les documents">
             <DocumentsPanel

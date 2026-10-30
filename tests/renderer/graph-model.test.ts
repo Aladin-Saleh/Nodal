@@ -474,3 +474,23 @@ describe('œil : masquage et solo', () => {
     expect(ids(visible.nodes)).toEqual(['m', 'r', 's']);
   });
 });
+
+describe('filtre « Ajouté par l’IA, non validé »', () => {
+  it('ne garde que les nœuds ajoutés par l’IA et pas encore validés', () => {
+    const withAi: GraphData = {
+      ...graph,
+      nodes: graph.nodes.map((candidate) =>
+        candidate.id === 'b' || candidate.id === 'c'
+          ? { ...candidate, assistantPending: true }
+          : candidate,
+      ),
+    };
+    const visible = visibleGraph(
+      withAi,
+      { kind: 'all' },
+      filters({ assistantPendingOnly: true }),
+    );
+    expect(ids(visible.nodes)).toEqual(['b', 'c']);
+    expect(ids(visible.edges)).toEqual(['bc']);
+  });
+});

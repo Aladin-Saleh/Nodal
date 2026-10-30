@@ -282,6 +282,20 @@ function WorkspaceView({
     void data.refreshTags();
   };
 
+  /** Valide des nœuds ajoutés par l'IA : ils ne sont plus signalés comme tels. */
+  const validate = async (ids: string[]) => {
+    const result = await run(() =>
+      client.call('assistant:validateNodes', { ids }),
+    );
+    if (!result) return;
+    reportInfo(
+      result.validated === 1
+        ? '1 nœud validé.'
+        : `${result.validated} nœuds validés.`,
+    );
+    nodeChanged();
+  };
+
   const renameNode = async (title: string) => {
     if (!detail) return false;
     const updated = await run(() =>
@@ -453,6 +467,7 @@ function WorkspaceView({
               if (node) void moveTo(node, move.parentId, move.index);
             }}
             onAddDocument={(id) => openOverlay('addingDocumentFor', id)}
+            onValidate={(id) => void validate([id])}
             onCenter={(id) => {
               select(id);
               setView('graph');
@@ -497,6 +512,7 @@ function WorkspaceView({
             }
             onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
             onBulkDelete={() => void askBulkDelete()}
+            onValidate={(ids) => void validate(ids)}
           />
 
           {detail && (

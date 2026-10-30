@@ -217,6 +217,7 @@ export function NodeTree({
               highlighted?.has(row.node.id) ? 'search-match' : '',
               multiSelection?.has(row.node.id) ? 'multi-selected' : '',
               masked?.has(row.node.id) ? 'masked' : '',
+              row.node.assistantPending ? 'ai-pending' : '',
               isHidden || isSolo ? 'eye-active' : '',
               hint ? `drop-${hint}` : '',
               dragged === row.node.id ? 'dragging' : '',
@@ -306,6 +307,15 @@ export function NodeTree({
               aria-hidden="true"
             />
             <span className="tree-title">{row.node.title}</span>
+            {row.node.assistantPending && (
+              <span
+                className="ai-mark"
+                title="Ajouté par l’IA, non validé"
+                aria-label="Ajouté par l’IA, non validé"
+              >
+                IA
+              </span>
+            )}
             {onToggleHidden && (
               <button
                 type="button"

@@ -23,6 +23,8 @@ export interface GraphFilters {
   hiddenRelationTypeIds: ReadonlySet<string>;
   /** Affiche les liens parent → enfant (en pointillés). */
   showHierarchy: boolean;
+  /** Seulement ce qu'un assistant IA a ajouté et que personne n'a validé. */
+  assistantPendingOnly: boolean;
 }
 
 export const DEFAULT_FILTERS: GraphFilters = {
@@ -30,6 +32,7 @@ export const DEFAULT_FILTERS: GraphFilters = {
   tagIds: new Set(),
   hiddenRelationTypeIds: new Set(),
   showHierarchy: true,
+  assistantPendingOnly: false,
 };
 
 /** Au-delà, la vue démarre sur le voisinage du nœud sélectionné (§7.1). */
@@ -225,7 +228,8 @@ export function visibleGraph(
         (filters.nodeTypes.size === 0 ||
           filters.nodeTypes.has(node.nodeType)) &&
         (filters.tagIds.size === 0 ||
-          node.tagIds.some((tagId) => filters.tagIds.has(tagId)))));
+          node.tagIds.some((tagId) => filters.tagIds.has(tagId))) &&
+        (!filters.assistantPendingOnly || !!node.assistantPending)));
 
   const candidates = new Set(
     graph.nodes.filter(matches).map((node) => node.id),

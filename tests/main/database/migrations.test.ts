@@ -89,3 +89,21 @@ describe('runMigrations', () => {
     ).toEqual({ position_x: 1, position_y: 2, position_z: null });
   });
 });
+
+describe('migration 005 : validation de ce qu’a ajouté l’IA', () => {
+  it('ajoute validated_at au journal sans toucher aux entrées existantes', () => {
+    runMigrations(db, MIGRATIONS.slice(0, 4));
+    db.exec(
+      "INSERT INTO workspace VALUES ('w', 'W', NULL, 't', 't');" +
+        "INSERT INTO assistant_change (id, workspace_id, created_at, client, action, node_id, entity_id, summary) VALUES ('c', 'w', 't', 'claude', 'create_node', 'n', 'n', 'Nœud créé');",
+    );
+    expect(runMigrations(db)).toBe(LATEST_SCHEMA_VERSION);
+    expect(
+      db
+        .prepare(
+          'SELECT summary, undone_at, validated_at FROM assistant_change',
+        )
+        .get(),
+    ).toEqual({ summary: 'Nœud créé', undone_at: null, validated_at: null });
+  });
+});

@@ -132,6 +132,7 @@ interface ChangeRow {
   before_json: string | null;
   after_json: string | null;
   undone_at: string | null;
+  validated_at?: string | null;
 }
 
 const sameJson = (a: unknown, b: unknown) =>
@@ -155,7 +156,8 @@ export class AssistantChangeService {
       ctx.db
         .prepare(
           `SELECT c.id, c.created_at, c.client, c.action, c.node_id, n.title AS node_title,
-             c.entity_id, c.summary, c.before_json, c.after_json, c.undone_at
+             c.entity_id, c.summary, c.before_json, c.after_json, c.undone_at,
+             c.validated_at
            FROM assistant_change c
            LEFT JOIN node n ON n.id = c.node_id AND n.workspace_id = c.workspace_id
            WHERE c.workspace_id = ?
@@ -172,7 +174,30 @@ export class AssistantChangeService {
       nodeTitle: row.node_title,
       summary: row.summary,
       undoneAt: row.undone_at,
+      validatedAt: row.validated_at ?? null,
     }));
+  }
+
+  /**
+   * Valide des nœuds ajoutés par l'assistant : ils ne sont plus présentés
+   * comme « ajoutés par l'IA ». L'historique est conservé. Renvoie le nombre
+   * de nœuds validés (ceux qui ne l'étaient pas déjà).
+   */
+  validateNodes(ids: readonly string[]): number {
+    const ctx = this.context();
+    const validate = ctx.db.prepare(
+      `UPDATE assistant_change SET validated_at = ?
+       WHERE workspace_id = ? AND action = 'create_node' AND entity_id = ?
+         AND undone_at IS NULL AND validated_at IS NULL`,
+    );
+    let count = 0;
+    inTransaction(ctx.db, () => {
+      const now = ctx.now();
+      for (const id of new Set(ids)) {
+        count += Number(validate.run(now, ctx.workspaceId, id).changes);
+      }
+    });
+    return count;
   }
 
   /** Rétablit l'état d'avant la modification, si rien ne l'a touchée depuis. */

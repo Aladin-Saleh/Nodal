@@ -53,7 +53,10 @@ function Setup({ actions }: { actions: ViewAction[] }) {
   return null;
 }
 
-function renderPanel(actions: ViewAction[]) {
+function renderPanel(
+  actions: ViewAction[],
+  overrides: { graph?: GraphData; onValidate?: () => void } = {},
+) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ServicesProvider
       client={{ call: vi.fn() } as unknown as NodalClient}
@@ -71,7 +74,7 @@ function renderPanel(actions: ViewAction[]) {
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
   render(
     <GraphPanel
-      graph={graph}
+      graph={overrides.graph ?? graph}
       nodes={[]}
       tags={[]}
       onSelect={vi.fn()}
@@ -85,6 +88,7 @@ function renderPanel(actions: ViewAction[]) {
       onBulkMove={vi.fn()}
       onBulkSetType={vi.fn()}
       onBulkDelete={vi.fn()}
+      onValidate={overrides.onValidate ?? vi.fn()}
       onCreateAt={vi.fn()}
     />,
     { wrapper },
@@ -133,5 +137,25 @@ describe('œil dans le graphe', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Le réafficher' }));
     });
     expect(latest!.graph.solo).toBeNull();
+  });
+});
+
+describe('validation groupée', () => {
+  it('propose « Valider » pour les nœuds de la sélection ajoutés par l’IA', () => {
+    const onValidate = vi.fn();
+    const aiGraph: GraphData = {
+      ...graph,
+      nodes: graph.nodes.map((candidate) =>
+        candidate.id === 'm'
+          ? { ...candidate, assistantPending: true }
+          : candidate,
+      ),
+    };
+    renderPanel([{ type: 'setMultiSelection', ids: new Set(['m', 'o']) }], {
+      graph: aiGraph,
+      onValidate,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Valider (1)' }));
+    expect(onValidate).toHaveBeenCalledWith(['m']);
   });
 });

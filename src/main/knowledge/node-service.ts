@@ -22,7 +22,11 @@ import type {
   TagInfo,
 } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
-import { assistantCreations, toAssistantOrigin } from './assistant-origin';
+import {
+  assistantCreations,
+  pendingAssistantNodeIds,
+  toAssistantOrigin,
+} from './assistant-origin';
 import { listNodeAttachments } from './attachment-service';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { listNodeDocuments } from './document-service';
@@ -222,6 +226,7 @@ export class NodeService {
   /** Vue légère de tous les nœuds, pour l'arborescence. */
   list(): NodeSummary[] {
     const ctx = this.context();
+    const pending = pendingAssistantNodeIds(ctx);
     return asRows<NodeRow>(
       ctx.db
         .prepare(
@@ -229,7 +234,10 @@ export class NodeService {
            ORDER BY sort_order, rowid`,
         )
         .all(ctx.workspaceId),
-    ).map(toNodeSummary);
+    ).map((row) => ({
+      ...toNodeSummary(row),
+      assistantPending: pending.has(row.id),
+    }));
   }
 
   get(id: string): NodeDetail {

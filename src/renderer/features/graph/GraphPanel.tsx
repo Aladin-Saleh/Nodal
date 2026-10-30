@@ -53,6 +53,8 @@ export interface GraphPanelProps {
   onBulkMove(): void;
   onBulkSetType(nodeType: NodeType): void;
   onBulkDelete(): void;
+  /** Valide des nœuds ajoutés par l'IA. */
+  onValidate(ids: string[]): void;
   /** Double-clic dans le vide : créer un nœud à cet endroit. */
   onCreateAt(position: { x: number; y: number; z: number }): void;
 }
@@ -87,6 +89,7 @@ export function GraphPanel({
   onBulkMove,
   onBulkSetType,
   onBulkDelete,
+  onValidate,
   onCreateAt,
 }: GraphPanelProps) {
   const { preferences } = usePreferences();
@@ -290,7 +293,11 @@ export function GraphPanel({
   const activeFilterCount =
     filters.nodeTypes.size +
     filters.tagIds.size +
-    filters.hiddenRelationTypeIds.size;
+    filters.hiddenRelationTypeIds.size +
+    (filters.assistantPendingOnly ? 1 : 0);
+  const pendingSelected = graph.nodes.filter(
+    (node) => node.assistantPending && multiSelection.has(node.id),
+  );
   const selectedTitle = selectedId
     ? (graph.nodes.find((node) => node.id === selectedId)?.title ?? null)
     : null;
@@ -414,6 +421,19 @@ export function GraphPanel({
                 }
               />
               Afficher la hiérarchie (pointillés)
+            </label>
+            <label className="checkbox">
+              <input
+                type="checkbox"
+                checked={filters.assistantPendingOnly}
+                onChange={(event) =>
+                  setFilters({
+                    ...filters,
+                    assistantPendingOnly: event.target.checked,
+                  })
+                }
+              />
+              Ajouté par l’IA, non validé
             </label>
             {activeFilterCount > 0 && (
               <button
@@ -573,6 +593,16 @@ export function GraphPanel({
               </option>
             ))}
           </select>
+          {pendingSelected.length > 0 && (
+            <button
+              type="button"
+              className="secondary"
+              title="Marquer comme vérifiés les nœuds ajoutés par l’IA"
+              onClick={() => onValidate(pendingSelected.map((node) => node.id))}
+            >
+              Valider ({pendingSelected.length})
+            </button>
+          )}
           <button
             type="button"
             className="secondary danger-text"

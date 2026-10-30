@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AssistantChangeService } from '../../src/main/knowledge/assistant-change-service';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { EdgeService } from '../../src/main/knowledge/edge-service';
+import { GraphService } from '../../src/main/knowledge/graph-service';
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { RelationTypeService } from '../../src/main/knowledge/relation-type-service';
 import { TagService } from '../../src/main/knowledge/tag-service';
@@ -1053,6 +1054,52 @@ describe('nodal_apply : écriture groupée', () => {
         operations: [{ op: 'createNode', title: 'X', type: 'concept' }],
       }),
     ).rejects.toThrow(/not found/);
+    await client.close();
+  });
+});
+
+describe('validation de ce qu’a ajouté l’IA', () => {
+  it('fait passer un nœud de « assistant » à « user », historique conservé', async () => {
+    const client = await connect(file, false);
+    const created = toon(
+      await client.call('nodal_create_node', {
+        title: 'Hypothèse',
+        type: 'concept',
+      }),
+    );
+    const id = full(created.id);
+    const nodes = new NodeService(workspace().context);
+    expect(nodes.list().find((node) => node.id === id)?.assistantPending).toBe(
+      true,
+    );
+    expect(
+      new GraphService(workspace().context)
+        .get()
+        .nodes.find((node) => node.id === id)?.assistantPending,
+    ).toBe(true);
+
+    const journal = new AssistantChangeService(workspace().context);
+    expect(journal.validateNodes([id, id, ids.api])).toBe(1);
+    // Déjà validé : rien à faire.
+    expect(journal.validateNodes([id])).toBe(0);
+
+    expect(nodes.get(id).createdByAssistant).toBeNull();
+    expect(nodes.list().find((node) => node.id === id)?.assistantPending).toBe(
+      false,
+    );
+    const detail = toon(
+      await client.call('nodal_get_node', { id: created.id }),
+    );
+    expect(detail.node.createdBy).toBe('user');
+    expect(
+      toon(await client.call('nodal_overview')).stats.nodesByAssistant,
+    ).toBe(0);
+    // L'entrée reste dans le journal, marquée validée, et reste annulable.
+    const [entry] = changes();
+    expect(entry).toMatchObject({ action: 'create_node', undoneAt: null });
+    expect(entry!.validatedAt).toEqual(expect.any(String));
+    journal.undo(entry!.id);
+    expect(nodes.list().some((node) => node.id === id)).toBe(false);
     await client.close();
   });
 });

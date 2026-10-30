@@ -12,6 +12,8 @@ export interface NodeHeaderProps {
   onMove(): void;
   onDuplicate(): void;
   onDelete(): void;
+  /** Valider un nœud ajouté par l'IA. */
+  onValidate?(): void;
 }
 
 /** Chemin hiérarchique (§6.2), titre éditable et actions du nœud courant. */
@@ -23,6 +25,7 @@ export function NodeHeader({
   onMove,
   onDuplicate,
   onDelete,
+  onValidate,
 }: NodeHeaderProps) {
   const titleId = useId();
   const [title, setTitle] = useState(node.title);
@@ -79,6 +82,16 @@ export function NodeHeader({
           {NODE_TYPE_LABELS[node.nodeType]}
         </span>
         <AssistantBadge origin={node.createdByAssistant} what="Nœud créé" />
+        {node.createdByAssistant && onValidate && (
+          <button
+            type="button"
+            className="secondary"
+            title="Marquer ce nœud comme vérifié : il n’est plus signalé comme ajouté par l’IA"
+            onClick={onValidate}
+          >
+            Valider
+          </button>
+        )}
         <div className="node-actions">
           <button type="button" className="secondary" onClick={onMove}>
             Déplacer…

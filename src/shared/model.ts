@@ -11,6 +11,8 @@ export interface NodeSummary {
   nodeType: NodeType;
   color: string | null;
   sortOrder: number;
+  /** Ajouté par un assistant IA et pas encore validé par l'utilisateur. */
+  assistantPending?: boolean;
 }
 
 export interface NodePathItem {
@@ -118,6 +120,8 @@ export interface GraphViewSettings {
   hidden: string[];
   /** Branche affichée seule (Alt+clic sur l'œil). */
   solo: string | null;
+  /** Filtre « Ajouté par l'IA, non validé ». */
+  assistantPendingOnly: boolean;
 }
 
 export interface RecentWorkspace {
@@ -177,6 +181,8 @@ export interface GraphNode {
   y: number | null;
   z: number | null;
   tagIds: string[];
+  /** Ajouté par un assistant IA et pas encore validé. */
+  assistantPending?: boolean;
 }
 
 /** Données légères du graphe : aucun contenu documentaire (§9). */
@@ -256,4 +262,6 @@ export interface AssistantChange {
   nodeTitle: string | null;
   summary: string;
   undoneAt: string | null;
+  /** Élément validé par l'utilisateur (l'entrée reste dans le journal). */
+  validatedAt: string | null;
 }

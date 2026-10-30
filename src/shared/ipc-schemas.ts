@@ -106,6 +106,7 @@ export const graphViewSettingsSchema = z.strictObject({
   // Absents des réglages enregistrés avant l'œil : valeurs par défaut.
   hidden: viewIds.default([]),
   solo: idSchema.nullable().default(null),
+  assistantPendingOnly: z.boolean().default(false),
 });
 
 const idInput = z.strictObject({ id: idSchema });
@@ -335,5 +336,8 @@ export const ipcArgsSchemas = {
   'workspace:backup': noArgs,
   'assistant:listChanges': noArgs,
   'assistant:undo': one(idInput),
+  'assistant:validateNodes': one(
+    z.strictObject({ ids: z.array(idSchema).min(1).max(10_000) }),
+  ),
   'workspace:checkIntegrity': noArgs,
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

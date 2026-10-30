@@ -182,3 +182,20 @@ describe('menu contextuel de l’arborescence', () => {
     expect(onContextMenu.mock.calls[0]![0]).toBe('a');
   });
 });
+
+describe('ajouts de l’IA dans l’arborescence', () => {
+  it('signale un nœud ajouté par l’IA et pas encore validé', () => {
+    renderTree({
+      index: buildTreeIndex([
+        { ...node('a', null), assistantPending: true },
+        { ...node('b', null), sortOrder: 1 },
+      ]),
+    });
+    const [a, b] = screen.getAllByRole('treeitem');
+    expect(a!.classList.contains('ai-pending')).toBe(true);
+    expect(
+      a!.querySelector('[aria-label="Ajouté par l’IA, non validé"]'),
+    ).not.toBeNull();
+    expect(b!.classList.contains('ai-pending')).toBe(false);
+  });
+});

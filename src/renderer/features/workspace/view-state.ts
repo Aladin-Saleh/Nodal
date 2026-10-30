@@ -169,6 +169,7 @@ export function toGraphViewSettings(graph: GraphViewState): GraphViewSettings {
     collapsed: [...graph.collapsed],
     hidden: [...graph.hidden],
     solo: graph.solo,
+    assistantPendingOnly: graph.filters.assistantPendingOnly,
   };
 }
 
@@ -191,6 +192,7 @@ export function fromGraphViewSettings(
         known.relationTypeIds,
       ),
       showHierarchy: settings.showHierarchy,
+      assistantPendingOnly: settings.assistantPendingOnly,
     },
     collapsed: keep(settings.collapsed, known.nodeIds),
     hidden: keep(settings.hidden, known.nodeIds),

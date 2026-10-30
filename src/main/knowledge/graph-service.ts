@@ -1,4 +1,5 @@
 import type { NodeType } from '../../shared/domain';
+import { pendingAssistantNodeIds } from './assistant-origin';
 import type { GraphData, GraphNode, NodePosition } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
 import type { ContextProvider } from './context';
@@ -44,6 +45,7 @@ export class GraphService {
       else tagsByNode.set(node_id, [tag_id]);
     }
 
+    const pending = pendingAssistantNodeIds(ctx);
     const nodes: GraphNode[] = asRows<GraphNodeRow>(
       ctx.db
         .prepare(
@@ -61,6 +63,7 @@ export class GraphService {
       y: row.position_y,
       z: row.position_z,
       tagIds: tagsByNode.get(row.id) ?? [],
+      assistantPending: pending.has(row.id),
     }));
 
     return {

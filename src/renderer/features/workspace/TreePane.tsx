@@ -18,6 +18,8 @@ export interface TreePaneProps {
   /** Glisser-déposer : nouveau parent et rang. */
   onMove(id: string, move: DropMove): void;
   onAddDocument(id: string): void;
+  /** Valide un nœud ajouté par l'IA. */
+  onValidate(id: string): void;
   /** Sélectionne le nœud et le centre dans la vue graphe. */
   onCenter(id: string): void;
 }
@@ -40,6 +42,7 @@ export function TreePane({
   onRename,
   onMove,
   onAddDocument,
+  onValidate,
   onCenter,
 }: TreePaneProps) {
   const [menu, setMenu] = useState<{
@@ -148,6 +151,14 @@ export function TreePane({
               label: 'Centrer dans le graphe',
               onSelect: () => onCenter(menu.id),
             },
+            ...(index.byId.get(menu.id)?.assistantPending
+              ? [
+                  {
+                    label: 'Valider (ajouté par l’IA)',
+                    onSelect: () => onValidate(menu.id),
+                  },
+                ]
+              : []),
             {
               label: 'Ajouter un document',
               onSelect: () => onAddDocument(menu.id),

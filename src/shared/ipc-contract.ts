@@ -284,6 +284,11 @@ export interface IpcContract {
   /** Journal des modifications d'un assistant IA (MCP), plus récentes d'abord. */
   'assistant:listChanges': { args: []; result: AssistantChange[] };
   'assistant:undo': { args: [IdInput]; result: null };
+  /** Valide des nœuds ajoutés par l'IA ; renvoie combien l'étaient pas encore. */
+  'assistant:validateNodes': {
+    args: [{ ids: string[] }];
+    result: { validated: number };
+  };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -352,6 +357,7 @@ export const IPC_CHANNELS = [
   'workspace:checkIntegrity',
   'assistant:listChanges',
   'assistant:undo',
+  'assistant:validateNodes',
 ] as const satisfies readonly IpcChannel[];
 
 /** Événements main → renderer. */

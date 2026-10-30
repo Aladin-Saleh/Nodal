@@ -81,6 +81,8 @@ export function AssistantActivityDialog({
                   {change.client && ` · ${change.client}`}
                   {change.undoneAt &&
                     ` · annulée le ${dateFormat.format(new Date(change.undoneAt))}`}
+                  {change.validatedAt &&
+                    ` · validée le ${dateFormat.format(new Date(change.validatedAt))}`}
                 </span>
               </div>
               <div className="assistant-change-actions">

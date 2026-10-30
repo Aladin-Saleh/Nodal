@@ -322,6 +322,9 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
     'workspace:checkIntegrity': () => maintenance.checkIntegrity(),
     'assistant:listChanges': () => assistantChanges.list(),
+    'assistant:validateNodes': ({ ids }) => ({
+      validated: assistantChanges.validateNodes(ids),
+    }),
     'assistant:undo': ({ id }) => {
       assistantChanges.undo(id);
       return null;

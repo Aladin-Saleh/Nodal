@@ -44,6 +44,7 @@ const stored: GraphViewSettings = {
   collapsed: ['a', 'supprimé'],
   hidden: ['a'],
   solo: 'supprimé',
+  assistantPendingOnly: true,
 };
 
 function setup(initial: GraphViewSettings | null) {
