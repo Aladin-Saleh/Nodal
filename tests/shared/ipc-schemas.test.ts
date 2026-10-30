@@ -62,3 +62,32 @@ describe('ipcArgsSchemas', () => {
     }
   });
 });
+
+const parseViewSettings = (value: unknown) =>
+  ipcArgsSchemas['view:saveGraph'].safeParse([value]).success;
+
+describe('view:saveGraph', () => {
+  const valid = {
+    scope: null,
+    depth: 2,
+    nodeTypes: ['concept'],
+    tagIds: [],
+    hiddenRelationTypeIds: [],
+    showHierarchy: true,
+    collapsed: ['n1'],
+  };
+
+  it('accepte des réglages complets', () => {
+    expect(parseViewSettings(valid)).toBe(true);
+  });
+
+  it.each([
+    ['portée inconnue', { ...valid, scope: 'partout' }],
+    ['niveaux hors bornes', { ...valid, depth: 6 }],
+    ['type de nœud inconnu', { ...valid, nodeTypes: ['dossier'] }],
+    ['propriété inconnue', { ...valid, extra: true }],
+    ['champ manquant', { ...valid, collapsed: undefined }],
+  ])('refuse %s', (_label, value) => {
+    expect(parseViewSettings(value)).toBe(false);
+  });
+});

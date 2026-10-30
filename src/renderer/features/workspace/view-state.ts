@@ -3,6 +3,7 @@
  * sélection multiple et réglages du graphe (portée, filtres, replis). Logique
  * pure (reducer), sans React : voir view-state-context.tsx pour le partage.
  */
+import type { GraphViewSettings } from '../../../shared/model';
 import { DEFAULT_FILTERS, type GraphFilters } from '../graph/graph-model';
 
 export type GraphScopeKind = 'all' | 'neighborhood';
@@ -114,4 +115,49 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
     case 'restoreGraph':
       return { ...state, graph: action.graph };
   }
+}
+
+// --- Persistance des réglages du graphe (voir view:getGraph / view:saveGraph)
+
+/** Identifiants existants : les autres sont ignorés à la restauration. */
+export interface KnownIds {
+  nodeIds: ReadonlySet<string>;
+  tagIds: ReadonlySet<string>;
+  relationTypeIds: ReadonlySet<string>;
+}
+
+export function toGraphViewSettings(graph: GraphViewState): GraphViewSettings {
+  return {
+    scope: graph.scope,
+    depth: graph.depth,
+    nodeTypes: [...graph.filters.nodeTypes],
+    tagIds: [...graph.filters.tagIds],
+    hiddenRelationTypeIds: [...graph.filters.hiddenRelationTypeIds],
+    showHierarchy: graph.filters.showHierarchy,
+    collapsed: [...graph.collapsed],
+  };
+}
+
+const keep = (ids: readonly string[], existing: ReadonlySet<string>) =>
+  new Set(ids.filter((id) => existing.has(id)));
+
+/** Réglages enregistrés → état de la vue, sans les identifiants disparus. */
+export function fromGraphViewSettings(
+  settings: GraphViewSettings,
+  known: KnownIds,
+): GraphViewState {
+  return {
+    scope: settings.scope,
+    depth: settings.depth,
+    filters: {
+      nodeTypes: new Set(settings.nodeTypes),
+      tagIds: keep(settings.tagIds, known.tagIds),
+      hiddenRelationTypeIds: keep(
+        settings.hiddenRelationTypeIds,
+        known.relationTypeIds,
+      ),
+      showHierarchy: settings.showHierarchy,
+    },
+    collapsed: keep(settings.collapsed, known.nodeIds),
+  };
 }

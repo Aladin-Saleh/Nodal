@@ -152,6 +152,11 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
     'workspace:getSettings': () => settings.get(),
     'workspace:updateSettings': (input) => settings.update(input),
+    'view:getGraph': () => settings.getGraphView(),
+    'view:saveGraph': (input) => {
+      settings.saveGraphView(input);
+      return null;
+    },
 
     'node:list': () => nodes.list(),
     'node:get': ({ id }) => nodes.get(id),

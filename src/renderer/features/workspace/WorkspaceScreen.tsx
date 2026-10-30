@@ -24,6 +24,7 @@ import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { CenterPane } from './CenterPane';
 import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
+import { useGraphViewPersistence } from './useGraphViewPersistence';
 import { useWorkspaceData } from './useWorkspaceData';
 import {
   ViewStateProvider,
@@ -72,6 +73,7 @@ function WorkspaceView({
   const dispatch = useViewDispatch();
   const data = useWorkspaceData(selectedId);
   const { nodes, detail } = data;
+  useGraphViewPersistence(data.graph);
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [overlays, setOverlays] = useState<Overlays>(NO_OVERLAYS);

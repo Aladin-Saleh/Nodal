@@ -1,11 +1,19 @@
 import { ATTACHMENT_MAX_SIZE_DEFAULT_BYTES } from '../../shared/domain';
-import type { WorkspaceSettings } from '../../shared/model';
-import { workspaceSettingsSchema } from '../../shared/ipc-schemas';
+import type { GraphViewSettings, WorkspaceSettings } from '../../shared/model';
+import {
+  graphViewSettingsSchema,
+  workspaceSettingsSchema,
+} from '../../shared/ipc-schemas';
 import type { ContextProvider, ServiceContext } from './context';
 import { inTransaction } from '../database/transaction';
 
 const KEYS = {
   attachmentMaxSizeBytes: 'attachment.maxSizeBytes',
+  /**
+   * Réglages d'affichage du graphe (JSON). Hors de WorkspaceSettings : ce
+   * n'est pas un paramètre de l'espace et il n'est pas exporté.
+   */
+  graphView: 'view.graph',
 } as const;
 
 const DEFAULTS: WorkspaceSettings = {
@@ -55,5 +63,34 @@ export class SettingsService {
       );
     });
     return readSettings(ctx);
+  }
+
+  /** Réglages d'affichage du graphe ; `null` s'ils sont absents ou illisibles. */
+  getGraphView(): GraphViewSettings | null {
+    const ctx = this.context();
+    const row = ctx.db
+      .prepare(
+        'SELECT value FROM workspace_settings WHERE workspace_id = ? AND key = ?',
+      )
+      .get(ctx.workspaceId, KEYS.graphView) as { value: string } | undefined;
+    if (!row) return null;
+    try {
+      const parsed = graphViewSettingsSchema.safeParse(JSON.parse(row.value));
+      return parsed.success ? parsed.data : null;
+    } catch {
+      // JSON modifié à la main : on repart des réglages par défaut.
+      return null;
+    }
+  }
+
+  saveGraphView(view: GraphViewSettings): void {
+    const ctx = this.context();
+    const value = JSON.stringify(graphViewSettingsSchema.parse(view));
+    ctx.db
+      .prepare(
+        `INSERT INTO workspace_settings (workspace_id, key, value) VALUES (?, ?, ?)
+         ON CONFLICT (workspace_id, key) DO UPDATE SET value = excluded.value`,
+      )
+      .run(ctx.workspaceId, KEYS.graphView, value);
   }
 }

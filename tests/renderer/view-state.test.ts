@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_GRAPH_VIEW,
+  fromGraphViewSettings,
   INITIAL_VIEW_STATE,
+  toGraphViewSettings,
   viewReducer,
   type ViewState,
 } from '../../src/renderer/features/workspace/view-state';
@@ -75,5 +77,48 @@ describe('viewReducer', () => {
     const state = viewReducer(selected, { type: 'restoreGraph', graph });
     expect(state.graph).toBe(graph);
     expect(state.selectedId).toBe('a');
+  });
+});
+
+describe('réglages du graphe enregistrés', () => {
+  const known = {
+    nodeIds: new Set(['a', 'b']),
+    tagIds: new Set(['t1']),
+    relationTypeIds: new Set(['uses']),
+  };
+
+  it('fait l’aller-retour état → réglages → état', () => {
+    const graph = {
+      scope: 'neighborhood' as const,
+      depth: 3,
+      filters: {
+        nodeTypes: new Set(['data' as const]),
+        tagIds: new Set(['t1']),
+        hiddenRelationTypeIds: new Set(['uses']),
+        showHierarchy: false,
+      },
+      collapsed: new Set(['a']),
+    };
+    expect(fromGraphViewSettings(toGraphViewSettings(graph), known)).toEqual(
+      graph,
+    );
+  });
+
+  it('ignore les nœuds, tags et types de relations qui n’existent plus', () => {
+    const restored = fromGraphViewSettings(
+      {
+        scope: null,
+        depth: 2,
+        nodeTypes: [],
+        tagIds: ['t1', 'supprimé'],
+        hiddenRelationTypeIds: ['ancien'],
+        showHierarchy: true,
+        collapsed: ['b', 'disparu'],
+      },
+      known,
+    );
+    expect([...restored.filters.tagIds]).toEqual(['t1']);
+    expect(restored.filters.hiddenRelationTypeIds.size).toBe(0);
+    expect([...restored.collapsed]).toEqual(['b']);
   });
 });

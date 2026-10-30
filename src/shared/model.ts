@@ -99,6 +99,23 @@ export interface WorkspaceSettings {
   attachmentMaxSizeBytes: number;
 }
 
+/**
+ * Réglages d'affichage du graphe d'un espace, restaurés à sa réouverture.
+ * Affichage seulement : sans effet sur la recherche, l'export ou le serveur
+ * MCP. Les identifiants qui n'existent plus sont ignorés à la restauration.
+ */
+export interface GraphViewSettings {
+  /** `null` : choix automatique selon la taille de l'espace. */
+  scope: 'all' | 'neighborhood' | null;
+  depth: number;
+  nodeTypes: NodeType[];
+  tagIds: string[];
+  hiddenRelationTypeIds: string[];
+  showHierarchy: boolean;
+  /** Nœuds repliés. */
+  collapsed: string[];
+}
+
 export interface RecentWorkspace {
   id: string;
   name: string;

@@ -81,6 +81,8 @@ function fakeClient(overrides: Handlers = {}) {
       relationTypes: [],
     }),
     'edge:listForNode': () => [],
+    'view:getGraph': () => null,
+    'view:saveGraph': () => null,
     'tag:list': () => [],
     'node:create': ({ parentId, title, nodeType }) => {
       const node: NodeSummary = {

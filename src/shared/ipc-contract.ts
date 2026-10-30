@@ -30,6 +30,7 @@ import type {
   SearchHit,
   TagInfo,
   WorkspaceSettings,
+  GraphViewSettings,
 } from './model';
 
 export interface AppInfo {
@@ -208,6 +209,9 @@ export interface IpcContract {
     args: [WorkspaceSettings];
     result: WorkspaceSettings;
   };
+  /** Réglages d'affichage du graphe enregistrés ; `null` s'il n'y en a pas. */
+  'view:getGraph': { args: []; result: GraphViewSettings | null };
+  'view:saveGraph': { args: [GraphViewSettings]; result: null };
 
   'node:list': { args: []; result: NodeSummary[] };
   'node:get': { args: [IdInput]; result: NodeDetail };
@@ -303,6 +307,8 @@ export const IPC_CHANNELS = [
   'workspace:delete',
   'workspace:getSettings',
   'workspace:updateSettings',
+  'view:getGraph',
+  'view:saveGraph',
   'node:list',
   'node:get',
   'node:create',

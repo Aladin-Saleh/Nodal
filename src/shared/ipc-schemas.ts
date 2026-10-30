@@ -92,6 +92,19 @@ export const workspaceSettingsSchema = z.strictObject({
     ),
 });
 
+/** Au-delà, une liste d'identifiants de la vue est refusée (garde-fou). */
+export const VIEW_IDS_MAX = 50_000;
+const viewIds = z.array(idSchema).max(VIEW_IDS_MAX);
+export const graphViewSettingsSchema = z.strictObject({
+  scope: z.enum(['all', 'neighborhood']).nullable(),
+  depth: z.number().int().min(1).max(5),
+  nodeTypes: z.array(z.enum(NODE_TYPES)).max(NODE_TYPES.length),
+  tagIds: viewIds,
+  hiddenRelationTypeIds: viewIds,
+  showHierarchy: z.boolean(),
+  collapsed: viewIds,
+});
+
 const idInput = z.strictObject({ id: idSchema });
 
 export const createNodeInputSchema = z.strictObject({
@@ -243,6 +256,8 @@ export const ipcArgsSchemas = {
   'workspace:delete': noArgs,
   'workspace:getSettings': noArgs,
   'workspace:updateSettings': one(workspaceSettingsSchema),
+  'view:getGraph': noArgs,
+  'view:saveGraph': one(graphViewSettingsSchema),
 
   'node:list': noArgs,
   'node:get': one(idInput),
