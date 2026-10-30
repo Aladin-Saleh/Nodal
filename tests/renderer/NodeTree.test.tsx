@@ -199,3 +199,40 @@ describe('ajouts de l’IA dans l’arborescence', () => {
     expect(b!.classList.contains('ai-pending')).toBe(false);
   });
 });
+
+describe('sélection venue du graphe', () => {
+  it('amène la ligne du nœud sélectionné à l’écran', () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push((this as HTMLElement).dataset.nodeId ?? '');
+    };
+    try {
+      const handlers = {
+        onSelect: vi.fn(),
+        onToggle: vi.fn(),
+        onDelete: vi.fn(),
+        onRename: vi.fn(),
+      };
+      const { rerender } = render(
+        <NodeTree
+          index={index}
+          expanded={new Set(['a'])}
+          selectedId="a"
+          {...handlers}
+        />,
+      );
+      rerender(
+        <NodeTree
+          index={index}
+          expanded={new Set(['a'])}
+          selectedId="b"
+          {...handlers}
+        />,
+      );
+      expect(scrolled).toEqual(['a', 'b']);
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+});

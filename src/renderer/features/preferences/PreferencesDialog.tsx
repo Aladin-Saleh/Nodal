@@ -208,6 +208,16 @@ export function PreferencesDialog({ onClose }: { onClose(): void }) {
             />
             Afficher l’aide des gestes
           </label>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.linkTreeAndGraphFolding}
+              onChange={(event) =>
+                set('linkTreeAndGraphFolding', event.target.checked)
+              }
+            />
+            Lier le repli de l’arbre et du graphe
+          </label>
         </Row>
       </section>
     </Modal>

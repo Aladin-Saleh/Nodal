@@ -106,6 +106,16 @@ export function NodeTree({
     position: DropPosition;
   } | null>(null);
 
+  // Sélection venue d'ailleurs (graphe, recherche) : la ligne est amenée à
+  // l'écran si elle n'y est pas déjà (ses ancêtres sont dépliés par la
+  // sélection elle-même).
+  useEffect(() => {
+    if (!selectedId) return;
+    container.current
+      ?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(selectedId)}"]`)
+      ?.scrollIntoView?.({ block: 'nearest' });
+  }, [selectedId]);
+
   useEffect(() => {
     if (!focusOnSelect.current || !selectedId) return;
     focusOnSelect.current = false;

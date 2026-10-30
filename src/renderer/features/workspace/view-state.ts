@@ -76,13 +76,6 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   return next;
 }
 
-/** Ajoute des éléments ; renvoie l'ensemble d'origine s'il n'y a rien de nouveau. */
-function withAll<T>(set: ReadonlySet<T>, values: readonly T[]): ReadonlySet<T> {
-  return values.every((value) => set.has(value))
-    ? set
-    : new Set([...set, ...values]);
-}
-
 function updateGraph(
   state: ViewState,
   changes: Partial<GraphViewState>,
@@ -90,23 +83,85 @@ function updateGraph(
   return { ...state, graph: { ...state.graph, ...changes } };
 }
 
-export function viewReducer(state: ViewState, action: ViewAction): ViewState {
+export interface ViewOptions {
+  /**
+   * Préférence « Lier le repli de l'arbre et du graphe » : chaque nœud déplié
+   * ou replié d'un côté l'est aussi de l'autre. Seuls les changements sont
+   * reportés : activer l'option ne replie pas tout le graphe d'un coup.
+   */
+  linkFolding?: boolean;
+}
+
+/** Ensemble modifié : ajouts puis retraits ; l'original s'il ne change pas. */
+function adjusted<T>(
+  set: ReadonlySet<T>,
+  add: readonly T[],
+  remove: readonly T[],
+): ReadonlySet<T> {
+  if (add.every((v) => set.has(v)) && remove.every((v) => !set.has(v))) {
+    return set;
+  }
+  const next = new Set(set);
+  for (const value of add) next.add(value);
+  for (const value of remove) next.delete(value);
+  return next;
+}
+
+/** Dépliés / repliés dans l'arbre : reportés dans le graphe si lié. */
+function withTreeFolding(
+  state: ViewState,
+  opened: readonly string[],
+  closed: readonly string[],
+  options: ViewOptions,
+): ViewState {
+  const expanded = adjusted(state.expanded, opened, closed);
+  if (!options.linkFolding) return { ...state, expanded };
+  return {
+    ...state,
+    expanded,
+    graph: {
+      ...state.graph,
+      collapsed: adjusted(state.graph.collapsed, closed, opened),
+    },
+  };
+}
+
+/** Repliés / dépliés dans le graphe : reportés dans l'arbre si lié. */
+function withGraphFolding(
+  state: ViewState,
+  collapsed: ReadonlySet<string>,
+  options: ViewOptions,
+): ViewState {
+  const next = updateGraph(state, { collapsed });
+  if (!options.linkFolding) return next;
+  const before = state.graph.collapsed;
+  const folded = [...collapsed].filter((id) => !before.has(id));
+  const unfolded = [...before].filter((id) => !collapsed.has(id));
+  return { ...next, expanded: adjusted(state.expanded, unfolded, folded) };
+}
+
+export function viewReducer(
+  state: ViewState,
+  action: ViewAction,
+  options: ViewOptions = {},
+): ViewState {
   switch (action.type) {
-    case 'select':
+    case 'select': {
+      const opened = (action.reveal ?? []).filter(
+        (id) => !state.expanded.has(id),
+      );
       return {
-        ...state,
+        ...withTreeFolding(state, opened, [], options),
         selectedId: action.id,
-        expanded: withAll(state.expanded, action.reveal ?? []),
       };
-    case 'setExpanded': {
-      if (state.expanded.has(action.id) === action.open) return state;
-      const expanded = new Set(state.expanded);
-      if (action.open) expanded.add(action.id);
-      else expanded.delete(action.id);
-      return { ...state, expanded };
     }
+    case 'setExpanded':
+      if (state.expanded.has(action.id) === action.open) return state;
+      return action.open
+        ? withTreeFolding(state, [action.id], [], options)
+        : withTreeFolding(state, [], [action.id], options);
     case 'expand':
-      return { ...state, expanded: withAll(state.expanded, action.ids) };
+      return withTreeFolding(state, action.ids, [], options);
     case 'setMultiSelection':
       return { ...state, multiSelection: action.ids };
     case 'toggleMulti':
@@ -121,11 +176,13 @@ export function viewReducer(state: ViewState, action: ViewAction): ViewState {
     case 'setFilters':
       return updateGraph(state, { filters: action.filters });
     case 'setCollapsed':
-      return updateGraph(state, { collapsed: action.ids });
+      return withGraphFolding(state, action.ids, options);
     case 'toggleCollapsed':
-      return updateGraph(state, {
-        collapsed: toggled(state.graph.collapsed, action.id),
-      });
+      return withGraphFolding(
+        state,
+        toggled(state.graph.collapsed, action.id),
+        options,
+      );
     case 'toggleHidden':
       return updateGraph(state, {
         hidden: toggled(state.graph.hidden, action.id),

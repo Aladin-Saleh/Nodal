@@ -16,8 +16,20 @@ const ViewStateContext = createContext<ViewState | null>(null);
 const ViewDispatchContext = createContext<Dispatch<ViewAction> | null>(null);
 
 /** État de la vue partagé par l'arborescence, le graphe et les panneaux. */
-export function ViewStateProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(viewReducer, INITIAL_VIEW_STATE);
+export function ViewStateProvider({
+  linkFolding = false,
+  children,
+}: {
+  /** Préférence « Lier le repli de l'arbre et du graphe ». */
+  linkFolding?: boolean;
+  children: ReactNode;
+}) {
+  // Le reducer suit la préférence courante (React prend le plus récent).
+  const [state, dispatch] = useReducer(
+    (current: ViewState, action: ViewAction) =>
+      viewReducer(current, action, { linkFolding }),
+    INITIAL_VIEW_STATE,
+  );
   return (
     <ViewStateContext.Provider value={state}>
       <ViewDispatchContext.Provider value={dispatch}>

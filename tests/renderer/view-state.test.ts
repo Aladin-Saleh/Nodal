@@ -9,7 +9,10 @@ import {
 } from '../../src/renderer/features/workspace/view-state';
 
 const apply = (...actions: Parameters<typeof viewReducer>[1][]) =>
-  actions.reduce<ViewState>(viewReducer, INITIAL_VIEW_STATE);
+  actions.reduce<ViewState>(
+    (state, action) => viewReducer(state, action),
+    INITIAL_VIEW_STATE,
+  );
 
 describe('viewReducer', () => {
   it('sélectionne un nœud en dépliant ses ancêtres dans l’arbre', () => {
@@ -156,5 +159,66 @@ describe('œil dans l’état de la vue', () => {
   it('ne change rien quand il n’y a rien à réafficher', () => {
     const state = apply({ type: 'toggleHidden', id: 'a' });
     expect(viewReducer(state, { type: 'unhide', ids: ['z'] })).toBe(state);
+  });
+});
+
+describe('repli lié entre l’arbre et le graphe', () => {
+  const linked = { linkFolding: true };
+  const run = (
+    actions: Parameters<typeof viewReducer>[1][],
+    options = linked,
+  ) =>
+    actions.reduce<ViewState>(
+      (state, action) => viewReducer(state, action, options),
+      INITIAL_VIEW_STATE,
+    );
+
+  it('replie dans le graphe ce qui est replié dans l’arbre, et inversement', () => {
+    let state = run([
+      { type: 'setCollapsed', ids: new Set(['a', 'b']) },
+      { type: 'setExpanded', id: 'a', open: true },
+    ]);
+    expect([...state.graph.collapsed]).toEqual(['b']);
+    expect([...state.expanded]).toEqual(['a']);
+    state = viewReducer(
+      state,
+      { type: 'setExpanded', id: 'a', open: false },
+      linked,
+    );
+    expect([...state.graph.collapsed].toSorted()).toEqual(['a', 'b']);
+  });
+
+  it('déplie dans l’arbre ce qui est déplié dans le graphe', () => {
+    const state = run([
+      { type: 'expand', ids: ['a', 'b'] },
+      { type: 'toggleCollapsed', id: 'a' },
+    ]);
+    expect([...state.expanded]).toEqual(['b']);
+    const unfolded = viewReducer(
+      state,
+      { type: 'toggleCollapsed', id: 'a' },
+      linked,
+    );
+    expect([...unfolded.expanded].toSorted()).toEqual(['a', 'b']);
+  });
+
+  it('révèle dans le graphe les ancêtres dépliés pour une sélection', () => {
+    const state = run([
+      { type: 'setCollapsed', ids: new Set(['r', 'm']) },
+      { type: 'select', id: 'l', reveal: ['m', 'r'] },
+    ]);
+    expect(state.graph.collapsed.size).toBe(0);
+  });
+
+  it('ne reporte rien quand l’option est désactivée', () => {
+    const state = run(
+      [
+        { type: 'setCollapsed', ids: new Set(['a']) },
+        { type: 'setExpanded', id: 'b', open: true },
+      ],
+      { linkFolding: false },
+    );
+    expect([...state.graph.collapsed]).toEqual(['a']);
+    expect([...state.expanded]).toEqual(['b']);
   });
 });

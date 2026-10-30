@@ -51,8 +51,9 @@ export interface WorkspaceScreenProps {
  * réglages du graphe) est partagé par un contexte (voir view-state).
  */
 export function WorkspaceScreen(props: WorkspaceScreenProps) {
+  const { preferences } = usePreferences();
   return (
-    <ViewStateProvider>
+    <ViewStateProvider linkFolding={preferences.linkTreeAndGraphFolding}>
       <WorkspaceView {...props} />
     </ViewStateProvider>
   );

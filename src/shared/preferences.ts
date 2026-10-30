@@ -38,6 +38,8 @@ export const preferencesSchema = z.strictObject({
   startView: z.enum(START_VIEWS),
   reopenLastWorkspace: z.boolean(),
   showGraphHints: z.boolean(),
+  /** Déplier / replier dans l'arbre fait de même dans le graphe, et inversement. */
+  linkTreeAndGraphFolding: z.boolean(),
 });
 
 export type AppPreferences = z.infer<typeof preferencesSchema>;
@@ -53,6 +55,7 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   startView: 'graph',
   reopenLastWorkspace: true,
   showGraphHints: true,
+  linkTreeAndGraphFolding: false,
 };
 
 /** Niveau de zoom voisin (Ctrl+= / Ctrl+-), borné aux niveaux proposés. */
