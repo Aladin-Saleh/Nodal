@@ -91,6 +91,39 @@ pièces jointes en BLOB).
   - installateur Windows (`npm run make`) avec icône de l'application ;
   - [guide d'utilisation](docs/guide-utilisateur.md) et aide intégrée (F1).
 
+- **Serveur MCP — base partagée avec un assistant IA** :
+  `resources/nodal-mcp.cjs`, exécuté par Node.js ≥ 22.13
+  (`node nodal-mcp.cjs <fichier.nodal> [--read-only]`, stdio). Pas lancé par
+  l'exécutable Electron, qui écrit une ligne vide sur stdout au démarrage
+  sous Windows.
+  - lecture : `nodal_overview`, `nodal_search`, `nodal_get_node`,
+    `nodal_read_document` (par tranches), `nodal_tree`,
+    `nodal_neighborhood` ; réponses structurées en TOON (listes
+    tabulaires), contenu des documents brut, identifiants abrégés (plus
+    court préfixe unique d'UUID, 8 caractères au moins ; voir le
+    [benchmark](docs/benchmark-tokens-mcp.md)) ;
+  - orientation : `nodal_overview` donne les racines (avec leur nombre de
+    descendants), les nœuds les plus reliés, l'activité récente et la part
+    créée par l'assistant ;
+  - provenance : `createdBy` (nœud) et `by` (relation) valent `user` ou
+    `assistant`, d'après le journal ; pastille « IA » dans l'application ;
+  - écriture (sauf `--read-only`) : `nodal_create_node` (doublon refusé au
+    même endroit), `nodal_update_node`, `nodal_add_document`,
+    `nodal_update_document` (ajout en fin par défaut), `nodal_link` (type de
+    relation par son nom), `nodal_tag` ; aucune suppression. Via les
+    services métier, une transaction par appel ;
+  - journal `assistant_change` (migration 004) écrit dans la même
+    transaction, avec états avant / après ; fenêtre « Activité IA » pour
+    relire et annuler (refusé si l'élément a été retouché depuis) ;
+  - une connexion par appel (`query_only` en lecture) : aucune transaction
+    ne reste ouverte, aucun fichier annexe ne reste ;
+  - Nodal détecte les écritures d'un autre processus (`PRAGMA data_version`,
+    chaque seconde) et recharge l'affichage, après la fin d'une saisie en
+    cours le cas échéant ;
+  - configuration prête à copier : menu Export → « Connecter un assistant IA
+    (MCP)… », avec un bloc de consignes CLAUDE.md / AGENTS.md pour que
+    l'assistant consulte Nodal avant de parcourir les fichiers.
+
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
@@ -106,6 +139,7 @@ l'arborescence. Le détail est dans le [guide d'utilisation](docs/guide-utilisat
 - CodeMirror 6 (édition), markdown-it (aperçu), Mermaid (diagrammes)
 - SQLite via le module intégré **`node:sqlite`** (`DatabaseSync`), FTS5
 - @toon-format/toon et js-tiktoken pour l'export LLM
+- @modelcontextprotocol/server pour le serveur MCP
 - zod pour la validation des messages IPC et des manifests d'import
 - Vitest + Testing Library, oxlint + oxfmt
 

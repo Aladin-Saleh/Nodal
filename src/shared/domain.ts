@@ -25,6 +25,17 @@ export const CONTENT_TYPES = [
 ] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
+/** Modifications d'un assistant IA tracées dans le journal (migration 004). */
+export const ASSISTANT_ACTIONS = [
+  'create_node',
+  'update_node',
+  'create_document',
+  'update_document',
+  'link',
+  'tag',
+] as const;
+export type AssistantAction = (typeof ASSISTANT_ACTIONS)[number];
+
 /** Types de relations insérés à la création d'un espace (§5.3). */
 export const DEFAULT_RELATION_TYPES = [
   'dépend de',

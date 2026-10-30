@@ -13,6 +13,8 @@ const config: ForgeConfig = {
     icon: 'assets/icon',
     asar: true,
     appCopyright: 'Aladin',
+    // Serveur MCP exécuté par Node.js : il doit rester hors de l'archive asar.
+    extraResource: ['.vite/build/nodal-mcp.cjs'],
     win32metadata: {
       CompanyName: 'Aladin',
       ProductName: 'Nodal',
@@ -36,6 +38,11 @@ const config: ForgeConfig = {
         {
           entry: 'src/main/index.ts',
           config: 'vite.main.config.mts',
+          target: 'main',
+        },
+        {
+          entry: 'src/mcp/index.ts',
+          config: 'vite.mcp.config.mts',
           target: 'main',
         },
         {

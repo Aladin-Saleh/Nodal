@@ -17,6 +17,8 @@ import { WorkspaceService } from './workspace/workspace-service';
 
 /** Délai laissé au renderer pour enregistrer avant de demander confirmation. */
 const FLUSH_TIMEOUT_MS = 3000;
+/** Intervalle de détection des écritures externes (serveur MCP). */
+const EXTERNAL_CHANGE_POLL_MS = 1000;
 
 // Tests de bout en bout (version non packagée uniquement) : profil isolé,
 // pour ne toucher ni aux espaces récents ni au verrou de l'utilisateur.
@@ -55,6 +57,9 @@ function bootstrap(): void {
       chromeVersion: process.versions.chrome,
       nodeVersion: process.versions.node,
       sqliteVersion: getSqliteVersion(),
+      mcpServerPath: app.isPackaged
+        ? path.join(process.resourcesPath, 'nodal-mcp.cjs')
+        : path.join(app.getAppPath(), '.vite', 'build', 'nodal-mcp.cjs'),
     });
 
   const closeWorkspace = () => {
@@ -105,6 +110,18 @@ function bootstrap(): void {
     }, FLUSH_TIMEOUT_MS);
   };
 
+  // Écritures d'un autre processus (assistant IA via MCP) : le renderer
+  // recharge ce qu'il affiche.
+  const pollExternalChanges = () => {
+    try {
+      if (workspaces.takeExternalChange()) {
+        mainWindow?.webContents.send(IPC_EVENTS.externalChange);
+      }
+    } catch (error) {
+      console.error('[app] lecture de data_version impossible', error);
+    }
+  };
+
   app.on('web-contents-created', (_event, contents) =>
     hardenWebContents(contents, isAppUrl),
   );
@@ -139,6 +156,7 @@ function bootstrap(): void {
       isTrustedSender: createSenderValidator(getMainWindow, isAppUrl),
     });
     openWindow();
+    setInterval(pollExternalChanges, EXTERNAL_CHANGE_POLL_MS);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openWindow();

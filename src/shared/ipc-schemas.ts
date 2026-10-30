@@ -312,5 +312,7 @@ export const ipcArgsSchemas = {
   ),
   'workspace:import': noArgs,
   'workspace:backup': noArgs,
+  'assistant:listChanges': noArgs,
+  'assistant:undo': one(idInput),
   'workspace:checkIntegrity': noArgs,
 } satisfies { [C in IpcChannel]: z.ZodType<IpcArgs<C>> };

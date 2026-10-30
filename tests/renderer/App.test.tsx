@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -38,6 +39,7 @@ type Handlers = {
 
 /** Faux backend : un nœud créé apparaît dans `node:list` et `node:get`. */
 function fakeClient(overrides: Handlers = {}) {
+  const externalListeners = new Set<() => void>();
   const nodes: NodeSummary[] = [];
   const defaults: Handlers = {
     'app:getInfo': () => ({
@@ -47,6 +49,7 @@ function fakeClient(overrides: Handlers = {}) {
       chromeVersion: '1',
       nodeVersion: '24',
       sqliteVersion: '3.53.0',
+      mcpServerPath: 'C:/Nodal/resources/nodal-mcp.cjs',
     }),
     'app:setUnsavedChanges': () => null,
     'workspace:getCurrent': () => null,
@@ -96,6 +99,7 @@ function fakeClient(overrides: Handlers = {}) {
         attachments: [],
         childCount: 0,
         edgeCount: 0,
+        createdByAssistant: null,
       };
     },
   };
@@ -111,8 +115,16 @@ function fakeClient(overrides: Handlers = {}) {
   const client: NodalClient = {
     call: call as unknown as NodalClient['call'],
     onFlushRequest: () => () => undefined,
+    onExternalChange: (listener) => {
+      externalListeners.add(listener);
+      return () => externalListeners.delete(listener);
+    },
   };
-  return { client, call };
+  /** Simule une écriture du serveur MCP détectée par le main. */
+  const emitExternalChange = () => {
+    for (const listener of externalListeners) listener();
+  };
+  return { client, call, emitExternalChange };
 }
 
 describe('App', () => {
@@ -191,6 +203,38 @@ describe('App', () => {
     expect(await screen.findByDisplayValue('Kafka')).toBeTruthy();
     expect(
       screen.getByText('Ce nœud ne contient aucun document.'),
+    ).toBeTruthy();
+  });
+
+  it('recharge l’arborescence après une écriture de l’assistant IA', async () => {
+    const listed: NodeSummary[] = [];
+    const { client, emitExternalChange } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+      'node:list': () => [...listed],
+    });
+    render(<App client={client} />);
+    expect(await screen.findByText('Cet espace est vide.')).toBeTruthy();
+
+    listed.push({
+      id: 'n1',
+      parentId: null,
+      title: 'Ajouté par l’IA',
+      nodeType: 'concept',
+      color: null,
+      sortOrder: 0,
+    });
+    act(() => emitExternalChange());
+
+    const tree = await screen.findByRole('tree');
+    expect(
+      await within(tree).findByText('Ajouté par l’IA', {}, { timeout: 5000 }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Espace mis à jour par l’assistant IA.',
+        {},
+        { timeout: 5000 },
+      ),
     ).toBeTruthy();
   });
 

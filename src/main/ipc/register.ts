@@ -8,6 +8,7 @@ import {
   type WorkspaceInfo,
 } from '../../shared/ipc-contract';
 import type { FileDialogs } from '../file-dialogs';
+import { AssistantChangeService } from '../knowledge/assistant-change-service';
 import { AttachmentService } from '../knowledge/attachment-service';
 import type { ContextProvider } from '../knowledge/context';
 import { DocumentService } from '../knowledge/document-service';
@@ -63,6 +64,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const graph = new GraphService(context);
   const search = new SearchService(context);
   const maintenance = new MaintenanceService(context);
+  const assistantChanges = new AssistantChangeService(context);
   // Le dictionnaire du tokenizer est chargé une seule fois, à la demande.
   let tokenizer: Promise<Tokenizer> | null = null;
   const requireCurrent = () => {
@@ -305,6 +307,11 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return target;
     },
     'workspace:checkIntegrity': () => maintenance.checkIntegrity(),
+    'assistant:listChanges': () => assistantChanges.list(),
+    'assistant:undo': ({ id }) => {
+      assistantChanges.undo(id);
+      return null;
+    },
     'workspace:export': async () => {
       const current = workspaces.getCurrent();
       if (!current) {

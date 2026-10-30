@@ -29,6 +29,14 @@ const api: NodalApi = {
       ipcRenderer.removeListener(IPC_EVENTS.flushRequest, handler);
     };
   },
+
+  onExternalChange(listener) {
+    const handler = () => listener();
+    ipcRenderer.on(IPC_EVENTS.externalChange, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_EVENTS.externalChange, handler);
+    };
+  },
 };
 
 contextBridge.exposeInMainWorld('nodal', api);

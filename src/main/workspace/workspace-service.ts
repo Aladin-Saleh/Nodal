@@ -38,6 +38,14 @@ export interface WorkspaceServiceOptions {
 interface OpenWorkspace {
   db: DatabaseSync;
   info: WorkspaceInfo;
+  /** Dernière valeur vue de PRAGMA data_version (écritures externes). */
+  dataVersion: number;
+}
+
+/** Compteur qui change quand une autre connexion valide une écriture. */
+function readDataVersion(db: DatabaseSync): number {
+  return (db.prepare('PRAGMA data_version').get() as { data_version: number })
+    .data_version;
 }
 
 /** Ajoute l'extension .nodal si le chemin n'en a pas déjà. */
@@ -203,6 +211,21 @@ export class WorkspaceService {
     return this.requireCurrent().db;
   }
 
+  /**
+   * `true` si une autre connexion (le serveur MCP) a validé une écriture dans
+   * le fichier depuis l'appel précédent — ou depuis l'ouverture de l'espace :
+   * la référence est relevée dès l'ouverture, pour ne manquer aucune écriture.
+   * Nos propres écritures ne comptent pas.
+   */
+  takeExternalChange(): boolean {
+    const current = this.current;
+    if (!current) return false;
+    const version = readDataVersion(current.db);
+    if (version === current.dataVersion) return false;
+    current.dataVersion = version;
+    return true;
+  }
+
   /** Contexte transmis aux services métier (nœuds, documents, tags…). */
   getContext(): ServiceContext {
     const { db, info } = this.requireCurrent();
@@ -243,9 +266,9 @@ export class WorkspaceService {
     return this.current;
   }
 
-  private replaceCurrent(next: OpenWorkspace): void {
+  private replaceCurrent(next: Omit<OpenWorkspace, 'dataVersion'>): void {
     const previous = this.current;
-    this.current = next;
+    this.current = { ...next, dataVersion: readDataVersion(next.db) };
     if (!previous) return;
     try {
       closeNodalDatabase(previous.db);

@@ -17,6 +17,8 @@ export type Language = (typeof CODE_LANGUAGES)[number];
 export interface DocumentsPanelProps {
   nodeId: string;
   documents: DocumentSummary[];
+  /** Change après une modification externe : l'éditeur est rechargé. */
+  revision?: number;
   onChanged(): void;
 }
 
@@ -24,6 +26,7 @@ export interface DocumentsPanelProps {
 export function DocumentsPanel({
   nodeId,
   documents,
+  revision = 0,
   onChanged,
 }: DocumentsPanelProps) {
   const client = useClient();
@@ -139,7 +142,7 @@ export function DocumentsPanel({
             </button>
           </div>
           <DocumentEditor
-            key={selected.id}
+            key={`${selected.id}:${revision}`}
             documentId={selected.id}
             onMetadataChanged={onChanged}
           />

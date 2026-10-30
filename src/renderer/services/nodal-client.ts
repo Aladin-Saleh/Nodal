@@ -16,6 +16,7 @@ export interface NodalClient {
     ...args: IpcArgs<C>
   ): Promise<IpcResultData<C>>;
   onFlushRequest(listener: () => void): () => void;
+  onExternalChange(listener: () => void): () => void;
 }
 
 export function createNodalClient(api: NodalApi): NodalClient {
@@ -28,6 +29,7 @@ export function createNodalClient(api: NodalApi): NodalClient {
       return result.data;
     },
     onFlushRequest: (listener) => api.onFlushRequest(listener),
+    onExternalChange: (listener) => api.onExternalChange(listener),
   };
 }
 

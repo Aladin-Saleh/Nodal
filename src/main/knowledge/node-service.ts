@@ -22,6 +22,7 @@ import type {
   TagInfo,
 } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
+import { assistantCreations, toAssistantOrigin } from './assistant-origin';
 import { listNodeAttachments } from './attachment-service';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { listNodeDocuments } from './document-service';
@@ -253,6 +254,16 @@ export class NodeService {
         'SELECT count(*) AS n FROM edge WHERE source_node_id = ? OR target_node_id = ?',
         id,
         id,
+      ),
+      createdByAssistant: toAssistantOrigin(
+        (ctx.db
+          .prepare(
+            `SELECT created_at AS origin_at, client AS origin_client
+             FROM ${assistantCreations('create_node')} WHERE entity_id = ?`,
+          )
+          .get(id) as
+          | { origin_at: string; origin_client: string | null }
+          | undefined) ?? { origin_at: null, origin_client: null },
       ),
     };
   }

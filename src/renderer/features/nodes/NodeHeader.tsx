@@ -1,6 +1,7 @@
 import { useId, useState, type RefObject } from 'react';
 import { NODE_TYPE_LABELS, TITLE_MAX_LENGTH } from '../../../shared/domain';
 import type { NodeDetail } from '../../../shared/model';
+import { AssistantBadge } from '../workspace/AssistantBadge';
 
 export interface NodeHeaderProps {
   node: NodeDetail;
@@ -77,6 +78,7 @@ export function NodeHeader({
         <span className={`badge type-${node.nodeType}`}>
           {NODE_TYPE_LABELS[node.nodeType]}
         </span>
+        <AssistantBadge origin={node.createdByAssistant} what="Nœud créé" />
         <div className="node-actions">
           <button type="button" className="secondary" onClick={onMove}>
             Déplacer…

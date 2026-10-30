@@ -6,6 +6,7 @@ import type {
 } from '../../../shared/model';
 import { useClient, useReportError, useRunner } from '../../app/context';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { AssistantBadge } from '../workspace/AssistantBadge';
 import { RelationDialog, type RelationFormValue } from './RelationDialog';
 
 export interface RelationListProps {
@@ -103,6 +104,10 @@ export function RelationList({
               >
                 {relation.otherNodeTitle}
               </button>
+              <AssistantBadge
+                origin={relation.createdByAssistant}
+                what="Relation créée"
+              />
               <button
                 type="button"
                 className="link-button"

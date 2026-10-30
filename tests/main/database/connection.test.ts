@@ -47,6 +47,7 @@ describe('createNodalDatabase', () => {
       expect(pragma(db, 'synchronous')).toBe(1); // NORMAL
       expect(pragma(db, 'busy_timeout')).toBe(5000);
       expect(tableNames(db)).toEqual([
+        'assistant_change',
         'attachment',
         'document',
         'edge',

@@ -140,6 +140,36 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   (`chunks.jsonl`) découpés selon la structure des documents. Portée : tout
   l'espace, un sous-arbre ou un voisinage. Les tailles sont comptées en tokens
   avec le tokenizer indiqué dans le manifest (o200k_base).
+- **Connecter un assistant IA (MCP)…** : permet à un assistant compatible
+  MCP (Claude Code, Claude Desktop, Cursor…) de consulter l'espace —
+  recherche, lecture des nœuds et documents, exploration du graphe — et, si
+  la case « Autoriser l'assistant à enrichir l'espace » est cochée, de
+  l'alimenter : créer des nœuds, ajouter ou compléter des documents, relier
+  des nœuds, poser des tags. L'assistant ne supprime jamais rien. La fenêtre
+  donne la commande `claude mcp add …` et le bloc JSON à copier dans la
+  configuration de l'assistant. Node.js 22.13 ou plus récent doit être
+  installé. Après une mise à jour de Nodal ou un déplacement du fichier,
+  refaites la configuration.
+- **Travailler à deux** : Nodal peut rester ouvert pendant que l'assistant
+  travaille. L'affichage se met à jour dans la seconde qui suit chacune de
+  ses écritures ; si vous êtes en train de taper, la mise à jour attend que
+  votre saisie soit enregistrée. Si vous modifiez le même texte que
+  l'assistant au même moment, votre version est conservée — la sienne reste
+  dans le journal.
+- **Activité IA** (en haut de l'espace) : liste les modifications faites par
+  l'assistant, avec la date et le nom de l'assistant. « Afficher » ouvre le
+  nœud concerné, « Annuler » rétablit l'état d'avant. L'annulation est
+  refusée si l'élément a été retouché depuis (par vous ou par l'assistant) :
+  annulez d'abord les modifications les plus récentes.
+- **Pastille « IA »** : un nœud (à côté de son type) ou une relation créés par
+  l'assistant portent une pastille « IA » ; survolez-la pour voir quel
+  assistant l'a créé et quand. L'assistant voit la même information et sait
+  qu'un élément qu'il a ajouté reste à valider.
+- **Consulter Nodal d'abord** : la fenêtre « Connecter un assistant IA »
+  fournit un bloc de consignes à coller dans le fichier d'instructions de
+  votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou
+  Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
+  ou de répondre de mémoire.
 
 ## 8. Raccourcis clavier
 

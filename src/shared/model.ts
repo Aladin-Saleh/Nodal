@@ -2,7 +2,7 @@
  * Objets du modèle documentaire échangés entre main et renderer (§5.1).
  * Ce sont des vues : le contenu binaire des pièces jointes n'y figure jamais.
  */
-import type { ContentType, NodeType } from './domain';
+import type { AssistantAction, ContentType, NodeType } from './domain';
 
 export interface NodeSummary {
   id: string;
@@ -29,6 +29,8 @@ export interface NodeDetail extends NodeSummary {
   attachments: AttachmentInfo[];
   childCount: number;
   edgeCount: number;
+  /** `null` : nœud créé dans l'application (ou avant le journal). */
+  createdByAssistant: AssistantOrigin | null;
 }
 
 export interface DocumentSummary {
@@ -129,11 +131,19 @@ export interface EdgeInfo {
 }
 
 /** Relation vue depuis un nœud (panneau de propriétés, §7). */
+/** Élément créé par un assistant IA via MCP (d'après le journal). */
+export interface AssistantOrigin {
+  client: string | null;
+  createdAt: string;
+}
+
 export interface NodeRelation extends EdgeInfo {
   direction: 'outgoing' | 'incoming';
   otherNodeId: string;
   otherNodeTitle: string;
   relationTypeName: string;
+  /** `null` : relation créée dans l'application (ou avant le journal). */
+  createdByAssistant: AssistantOrigin | null;
 }
 
 export interface GraphNode {
@@ -211,4 +221,18 @@ export interface NodePosition {
   x: number;
   y: number;
   z: number;
+}
+
+/** Entrée du journal des modifications d'un assistant IA (via MCP). */
+export interface AssistantChange {
+  id: string;
+  createdAt: string;
+  /** Nom de l'assistant, tel qu'il se présente au serveur MCP. */
+  client: string | null;
+  action: AssistantAction;
+  /** Nœud concerné, s'il existe encore. */
+  nodeId: string | null;
+  nodeTitle: string | null;
+  summary: string;
+  undoneAt: string | null;
 }

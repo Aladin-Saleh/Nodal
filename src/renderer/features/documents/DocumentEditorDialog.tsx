@@ -3,6 +3,8 @@ import { DocumentEditor } from './DocumentEditor';
 
 export interface DocumentEditorDialogProps {
   documentId: string;
+  /** Change après une modification externe : l'éditeur est rechargé. */
+  revision?: number;
   /** Titre ou langage modifié : rafraîchir les listes de documents. */
   onChanged(): void;
   onClose(): void;
@@ -15,6 +17,7 @@ export interface DocumentEditorDialogProps {
  */
 export function DocumentEditorDialog({
   documentId,
+  revision = 0,
   onChanged,
   onClose,
 }: DocumentEditorDialogProps) {
@@ -30,7 +33,7 @@ export function DocumentEditorDialog({
       }
     >
       <DocumentEditor
-        key={documentId}
+        key={`${documentId}:${revision}`}
         documentId={documentId}
         onMetadataChanged={onChanged}
       />

@@ -5,6 +5,7 @@ import type {
 } from '../../shared/ipc-contract';
 import type { EdgeInfo, NodeRelation } from '../../shared/model';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
+import { assistantCreations, toAssistantOrigin } from './assistant-origin';
 import { getRelationType } from './relation-type-service';
 import { asRow, asRows } from './rows';
 
@@ -97,15 +98,23 @@ export class EdgeService {
     const ctx = this.context();
     assertNodeExists(ctx, nodeId);
     const rows = asRows<
-      EdgeRow & { other_id: string; other_title: string; type_name: string }
+      EdgeRow & {
+        other_id: string;
+        other_title: string;
+        type_name: string;
+        origin_at: string | null;
+        origin_client: string | null;
+      }
     >(
       ctx.db
         .prepare(
           `SELECT ${EDGE_COLUMNS},
              CASE WHEN e.source_node_id = :id THEN e.target_node_id ELSE e.source_node_id END AS other_id,
-             n.title AS other_title, rt.name AS type_name
+             n.title AS other_title, rt.name AS type_name,
+             origin.created_at AS origin_at, origin.client AS origin_client
            FROM edge e
            JOIN relation_type rt ON rt.id = e.relation_type_id
+           LEFT JOIN ${assistantCreations('link')} origin ON origin.entity_id = e.id
            JOIN node n ON n.id = CASE WHEN e.source_node_id = :id THEN e.target_node_id ELSE e.source_node_id END
            WHERE e.source_node_id = :id OR e.target_node_id = :id
            ORDER BY rt.name COLLATE NOCASE, n.title COLLATE NOCASE`,
@@ -118,6 +127,7 @@ export class EdgeService {
       otherNodeId: row.other_id,
       otherNodeTitle: row.other_title,
       relationTypeName: row.type_name,
+      createdByAssistant: toAssistantOrigin(row),
     }));
   }
 

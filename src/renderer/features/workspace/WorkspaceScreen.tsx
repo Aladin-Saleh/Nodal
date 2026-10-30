@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { NodalError } from '../../../shared/errors';
 import type { ContentType, NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
@@ -43,6 +50,8 @@ import { SearchBox } from '../search/SearchBox';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { NodeLinkContext } from '../editor/previews';
 import { HelpDialog } from './HelpDialog';
+import { AssistantActivityDialog } from './AssistantActivityDialog';
+import { McpDialog } from './McpDialog';
 import { LlmExportDialog } from './PortabilityDialogs';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
@@ -96,6 +105,8 @@ export function WorkspaceScreen({
   // La vue Graphe est la vue par défaut à l'ouverture d'un espace.
   const [view, setView] = useState<ViewMode>('graph');
   const [relationsRevision, setRelationsRevision] = useState(0);
+  /** Incrémenté à chaque modification externe appliquée (assistant IA). */
+  const [externalRevision, setExternalRevision] = useState(0);
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
   const [editingDocumentId, setEditingDocumentId] = useState<string | null>(
     null,
@@ -105,6 +116,8 @@ export function WorkspaceScreen({
   );
   const [exporting, setExporting] = useState(false);
   const [llmExportOpen, setLlmExportOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   // F1 : aide, depuis n'importe où dans l'espace.
@@ -207,6 +220,38 @@ export function WorkspaceScreen({
 
   // La fiche affichée doit correspondre au nœud sélectionné.
   const shownDetail = detail?.id === selectedId ? detail : null;
+
+  /** Recharge tout ce qui est affiché après une écriture externe. */
+  const applyExternalChange = useRef(() => {});
+  useLayoutEffect(() => {
+    applyExternalChange.current = () => {
+      setExternalRevision((revision) => revision + 1);
+      setRelationsRevision((revision) => revision + 1);
+      void refreshNodes();
+      void refreshTags();
+      refreshDetail();
+      reportInfo('Espace mis à jour par l’assistant IA.');
+    };
+  });
+
+  // Écritures d'un assistant IA (serveur MCP) : on recharge ce qui est
+  // affiché, mais jamais pendant une saisie non enregistrée — le rechargement
+  // attend qu'elle soit écrite, pour ne rien perdre.
+  useEffect(() => {
+    let waiting = false;
+    const apply = () => {
+      waiting = tracker.hasUnsavedChanges();
+      if (!waiting) applyExternalChange.current();
+    };
+    const offChange = client.onExternalChange(apply);
+    const offTracker = tracker.subscribe(() => {
+      if (waiting) apply();
+    });
+    return () => {
+      offChange();
+      offTracker();
+    };
+  }, [client, tracker]);
 
   const toggle = (id: string, open: boolean) => {
     const next = new Set(expanded);
@@ -584,8 +629,29 @@ export function WorkspaceScreen({
                 >
                   Export pour LLM (TOON, fragments)…
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="secondary"
+                  onClick={(event) => {
+                    event.currentTarget
+                      .closest('details')
+                      ?.removeAttribute('open');
+                    setMcpOpen(true);
+                  }}
+                >
+                  Connecter un assistant IA (MCP)…
+                </button>
               </div>
             </details>
+            <button
+              type="button"
+              className="secondary"
+              title="Modifications faites par un assistant IA (MCP)"
+              onClick={() => setActivityOpen(true)}
+            >
+              Activité IA
+            </button>
             <button
               type="button"
               className="secondary"
@@ -730,6 +796,7 @@ export function WorkspaceScreen({
                     key={shownDetail.id}
                     nodeId={shownDetail.id}
                     documents={shownDetail.documents}
+                    revision={externalRevision}
                     onChanged={refreshDetail}
                   />
                 </ErrorBoundary>
@@ -756,7 +823,7 @@ export function WorkspaceScreen({
           {shownDetail && (
             <ErrorBoundary area="les propriétés du nœud">
               <NodeProperties
-                key={shownDetail.id}
+                key={`${shownDetail.id}:${externalRevision}`}
                 node={shownDetail}
                 allTags={tags}
                 nodes={nodes}
@@ -781,10 +848,32 @@ export function WorkspaceScreen({
             onCancel={() => setLlmExportOpen(false)}
           />
         )}
+        {activityOpen && (
+          <AssistantActivityDialog
+            key={externalRevision}
+            onNavigate={(id) => {
+              setActivityOpen(false);
+              select(id);
+            }}
+            onChanged={() => {
+              void refreshTags();
+              relationsChanged();
+            }}
+            onClose={() => setActivityOpen(false)}
+          />
+        )}
+        {mcpOpen && (
+          <McpDialog
+            workspaceName={workspace.name}
+            workspaceFile={workspace.filePath}
+            onClose={() => setMcpOpen(false)}
+          />
+        )}
         {editingDocumentId && (
           <ErrorBoundary area="l’éditeur de document">
             <DocumentEditorDialog
               documentId={editingDocumentId}
+              revision={externalRevision}
               onChanged={refreshDetail}
               onClose={() => {
                 setEditingDocumentId(null);

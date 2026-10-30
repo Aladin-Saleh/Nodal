@@ -8,6 +8,7 @@
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
 import type {
+  AssistantChange,
   AttachmentInfo,
   BulkDeletionImpact,
   ChildrenStrategy,
@@ -37,6 +38,8 @@ export interface AppInfo {
   chromeVersion: string;
   nodeVersion: string;
   sqliteVersion: string;
+  /** Script du serveur MCP (exécuté par Node.js, hors de l'archive asar). */
+  mcpServerPath: string;
 }
 
 export interface WorkspaceInfo {
@@ -269,6 +272,10 @@ export interface IpcContract {
   /** Copie de sauvegarde du fichier courant ; chemin créé, ou `null` si annulé. */
   'workspace:backup': { args: []; result: string | null };
   'workspace:checkIntegrity': { args: []; result: IntegrityReport };
+
+  /** Journal des modifications d'un assistant IA (MCP), plus récentes d'abord. */
+  'assistant:listChanges': { args: []; result: AssistantChange[] };
+  'assistant:undo': { args: [IdInput]; result: null };
 }
 
 export type IpcChannel = keyof IpcContract;
@@ -331,12 +338,16 @@ export const IPC_CHANNELS = [
   'workspace:import',
   'workspace:backup',
   'workspace:checkIntegrity',
+  'assistant:listChanges',
+  'assistant:undo',
 ] as const satisfies readonly IpcChannel[];
 
 /** Événements main → renderer. */
 export const IPC_EVENTS = {
   /** Le main demande d'enregistrer immédiatement (fermeture de la fenêtre). */
   flushRequest: 'app:flushRequest',
+  /** Le fichier de l'espace a été modifié par un autre processus (serveur MCP). */
+  externalChange: 'workspace:externalChange',
 } as const;
 
 /** Enveloppe de réponse : le main ne laisse jamais remonter d'exception brute. */
@@ -352,4 +363,6 @@ export interface NodalApi {
   ): Promise<IpcResult<IpcResultData<C>>>;
   /** Abonnement à la demande d'enregistrement ; retourne le désabonnement. */
   onFlushRequest(listener: () => void): () => void;
+  /** Abonnement aux modifications externes de l'espace ; retourne le désabonnement. */
+  onExternalChange(listener: () => void): () => void;
 }

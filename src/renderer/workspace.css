@@ -586,3 +586,76 @@ input[type='color'] {
 .save-status.save-pending {
   color: var(--warning);
 }
+
+/* Configuration MCP */
+
+.mcp-snippet {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.mcp-snippet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.mcp-snippet pre {
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+  user-select: text;
+}
+
+/* Activité de l'assistant IA */
+
+.assistant-changes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.assistant-changes li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-changes li.undone .assistant-change-text > span:first-child {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.assistant-change-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.assistant-change-text .muted {
+  font-size: 12px;
+}
+
+.assistant-change-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.assistant-badge {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
