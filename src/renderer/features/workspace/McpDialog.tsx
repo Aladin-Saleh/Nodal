@@ -29,7 +29,7 @@ export function assistantInstructions(
   if (allowWrites) {
     lines.push(
       '',
-      'Quand vous apprenez quelque chose de durable (décision, explication, procédure, lien entre deux notions), enregistrez-le dans Nodal : complétez le nœud existant plutôt que d’en créer un nouveau, et reliez les notions avec `nodal_link`. Chaque modification est journalisée et peut être annulée par l’utilisateur.',
+      'Quand vous apprenez quelque chose de durable (décision, explication, procédure, lien entre deux notions), enregistrez-le dans Nodal : complétez le nœud existant plutôt que d’en créer un nouveau, et reliez les notions avec `nodal_link`. Pour enregistrer plusieurs choses à la fois (nœud, documents, relations, tags), utilisez `nodal_apply` : un seul appel. Chaque modification est journalisée et peut être annulée par l’utilisateur.',
     );
   }
   return lines.join('\n');

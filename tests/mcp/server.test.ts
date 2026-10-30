@@ -528,6 +528,7 @@ describe('serveur MCP en écriture', () => {
     const writers = tools.filter((tool) => !tool.annotations?.readOnlyHint);
     expect(writers.map((tool) => tool.name).toSorted()).toEqual([
       'nodal_add_document',
+      'nodal_apply',
       'nodal_create_node',
       'nodal_link',
       'nodal_tag',
@@ -828,6 +829,147 @@ describe('serveur MCP en écriture', () => {
     const client = await connect(file);
     await expect(
       client.call('nodal_create_node', { title: 'X', type: 'concept' }),
+    ).rejects.toThrow(/not found/);
+    await client.close();
+  });
+});
+
+describe('nodal_apply : écriture groupée', () => {
+  it('enregistre une notion complète en un appel, avec des références $n', async () => {
+    const client = await connect(file, false);
+    const data = toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'createNode',
+            title: 'Éviction',
+            type: 'concept',
+            parentId: short(ids.redis),
+            summary: 'Politique LRU.',
+          },
+          {
+            op: 'addDocument',
+            nodeId: '$1',
+            title: 'Détail',
+            contentType: 'markdown',
+            body: '# LRU\n',
+          },
+          {
+            op: 'link',
+            sourceId: '$1',
+            targetId: ids.api,
+            relation: 'utilise',
+          },
+          { op: 'tag', nodeId: '$1', add: ['perf'] },
+          {
+            op: 'updateDocument',
+            id: '$2',
+            body: 'Clés les moins utilisées.',
+          },
+        ],
+      }),
+    );
+    expect(data.applied).toBe(5);
+    expect(data.results.map((row: { op: string }) => row.op)).toEqual([
+      'createNode',
+      'addDocument',
+      'link',
+      'tag',
+      'updateDocument',
+    ]);
+    const [node, doc] = data.results as { ref: string; id: string }[];
+    expect(node!.ref).toBe('$1');
+    // Identifiants abrégés, comme dans les autres réponses.
+    expect(node!.id).toHaveLength(8);
+    const detail = new NodeService(workspace().context).get(full(node!.id));
+    expect(detail.summary).toBe('Politique LRU.');
+    expect(detail.tags.map((tag) => tag.name)).toEqual(['perf']);
+    expect(
+      new DocumentService(workspace().context).get(full(doc!.id)).body,
+    ).toBe('# LRU\n\nClés les moins utilisées.');
+    // Chaque opération est journalisée comme avec les outils unitaires.
+    expect(
+      changes()
+        .map((change) => change.action)
+        .toSorted(),
+    ).toEqual([
+      'create_document',
+      'create_node',
+      'link',
+      'tag',
+      'update_document',
+    ]);
+    await client.close();
+  });
+
+  it('annule tout et nomme l’opération fautive en cas d’erreur', async () => {
+    const client = await connect(file, false);
+    const before = new NodeService(workspace().context).list().length;
+    const result = await client.call('nodal_apply', {
+      operations: [
+        { op: 'createNode', title: 'Orphelin', type: 'concept' },
+        {
+          op: 'link',
+          sourceId: '$1',
+          targetId: ids.api,
+          relation: 'inexistante',
+        },
+      ],
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toMatch(
+      /^Opération 2 \(link\) : Type de relation « inexistante » inconnu.*Rien n'a été enregistré\.$/s,
+    );
+    expect(new NodeService(workspace().context).list()).toHaveLength(before);
+    expect(changes()).toEqual([]);
+    await client.close();
+  });
+
+  it('refuse une référence à une opération qui n’a pas encore eu lieu', async () => {
+    const client = await connect(file, false);
+    const result = await client.call('nodal_apply', {
+      operations: [
+        { op: 'createNode', title: 'A', type: 'concept', parentId: '$1' },
+      ],
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toContain(
+      'Opération 1 (createNode) : référence $1 invalide',
+    );
+    await client.close();
+  });
+
+  it('permet d’annuler une opération depuis l’activité IA', async () => {
+    const client = await connect(file, false);
+    toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'link',
+            sourceId: ids.cache,
+            targetId: ids.api,
+            relation: 'utilise',
+          },
+        ],
+      }),
+    );
+    const [entry] = changes();
+    const service = new AssistantChangeService(workspace().context);
+    service.undo(entry!.id);
+    expect(
+      new EdgeService(workspace().context)
+        .listForNode(ids.cache)
+        .filter((relation) => relation.direction === 'outgoing'),
+    ).toEqual([]);
+    await client.close();
+  });
+
+  it('n’existe pas en lecture seule', async () => {
+    const client = await connect(file);
+    await expect(
+      client.call('nodal_apply', {
+        operations: [{ op: 'createNode', title: 'X', type: 'concept' }],
+      }),
     ).rejects.toThrow(/not found/);
     await client.close();
   });

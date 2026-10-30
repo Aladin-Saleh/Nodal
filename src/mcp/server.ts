@@ -22,6 +22,12 @@ import {
   search,
   tree,
 } from './tools';
+import {
+  APPLY_MAX_OPERATIONS,
+  applyOperations,
+  operationSchema,
+  type Operation,
+} from './apply-tool';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
 import {
   withWorkspace,
@@ -67,10 +73,11 @@ Cette base est partagée avec son utilisateur : enrichissez-la pour mémoriser
 ce que vous apprenez. Avant de créer un nœud, cherchez s'il existe déjà
 (nodal_search) et complétez-le plutôt que de le dupliquer. Rangez chaque nœud
 sous le bon parent, résumez-le en une ou deux phrases, mettez le détail dans
-des documents (nodal_add_document, ou nodal_update_document en mode append
-pour compléter) et reliez les notions entre elles (nodal_link) avec les types
-de relations existants. Rien n'est supprimé : chaque modification est
-journalisée et l'utilisateur peut l'annuler depuis Nodal.`;
+des documents et reliez les notions entre elles avec les types de relations
+existants. Pour enregistrer plusieurs choses (nœud, documents, relations,
+tags), préférez nodal_apply : un seul appel, une seule transaction. Rien
+n'est supprimé : chaque modification est journalisée et l'utilisateur peut
+l'annuler depuis Nodal.`;
 
 const READ_ONLY_INSTRUCTIONS = `
 
@@ -463,6 +470,30 @@ export function createNodalMcpServer(
       annotations: OVERWRITING,
     },
     write(tagNode),
+  );
+
+  server.registerTool(
+    'nodal_apply',
+    {
+      title: 'Écriture groupée',
+      description:
+        'Applique dans l’ordre une liste d’opérations, en une seule transaction (tout ou rien) : ' +
+        'createNode, updateNode, addDocument, updateDocument, link, tag — mêmes champs que les outils ' +
+        'unitaires, plus op. Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
+        'la n-ième opération (ex. nodeId: "$1"). Renvoie l’identifiant de chaque élément touché. ' +
+        'À préférer dès qu’il y a plusieurs choses à enregistrer.',
+      inputSchema: z.object({
+        operations: z
+          .array(operationSchema)
+          .min(1)
+          .max(APPLY_MAX_OPERATIONS)
+          .describe('Opérations, exécutées dans l’ordre'),
+      }),
+      annotations: OVERWRITING,
+    },
+    write((ctx, args: { operations: Operation[] }) =>
+      applyOperations(ctx, args.operations, loadShortIds(ctx)),
+    ),
   );
 
   return server;

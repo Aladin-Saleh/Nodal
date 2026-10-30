@@ -16,7 +16,9 @@ describe('consignes « Nodal d’abord »', () => {
   });
 
   it('invitent à enregistrer ce qui est appris seulement si l’écriture est autorisée', () => {
-    expect(assistantInstructions('Base infra', true)).toContain('`nodal_link`');
+    const text = assistantInstructions('Base infra', true);
+    expect(text).toContain('`nodal_link`');
+    expect(text).toContain('`nodal_apply`');
   });
 });
 
