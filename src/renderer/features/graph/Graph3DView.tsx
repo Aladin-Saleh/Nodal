@@ -28,6 +28,8 @@ export interface Graph3DViewProps extends GraphSceneCallbacks {
   multiSelection: ReadonlySet<string>;
   /** Relation dont la fiche est affichée. */
   selectedEdgeId: string | null;
+  /** Recentre la vue sur ce nœud à chaque nouvelle demande. */
+  centerRequest?: { id: string; nonce: number } | null;
 }
 
 /** Enveloppe React de la scène 3D ; toutes les données viennent des props. */
@@ -40,6 +42,7 @@ export function Graph3DView({
   searchMatches,
   multiSelection,
   selectedEdgeId,
+  centerRequest = null,
   ...handlers
 }: Graph3DViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -113,6 +116,10 @@ export function Graph3DView({
   useEffect(() => {
     sceneRef.current?.setSelectedEdge(selectedEdgeId);
   }, [selectedEdgeId]);
+
+  useEffect(() => {
+    if (centerRequest) sceneRef.current?.setSelection(centerRequest.id);
+  }, [centerRequest]);
 
   useImperativeHandle(
     ref,

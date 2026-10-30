@@ -33,6 +33,8 @@ import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
 
 export interface GraphPanelProps {
   graph: GraphData;
+  /** Centrer ce nœud (menu « Centrer dans le graphe »). */
+  centerRequest?: { id: string; nonce: number } | null;
   nodes: readonly NodeSummary[];
   tags: readonly TagInfo[];
   onSelect(id: string | null): void;
@@ -71,6 +73,7 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
  */
 export function GraphPanel({
   graph,
+  centerRequest = null,
   nodes,
   tags,
   onSelect,
@@ -593,6 +596,7 @@ export function GraphPanel({
         ) : (
           <Graph3DView
             ref={view}
+            centerRequest={centerRequest}
             visible={visible}
             relationTypes={graph.relationTypes}
             selectedId={selectedId}

@@ -10,6 +10,8 @@ import type { WorkspaceData } from './useWorkspaceData';
 
 export interface CenterPaneProps {
   view: ViewMode;
+  /** Centrer ce nœud dans le graphe (nouvelle demande à chaque nonce). */
+  centerRequest: { id: string; nonce: number } | null;
   data: WorkspaceData;
   selected: NodeSummary | null;
   searchMatches: ReadonlySet<string> | null;
@@ -34,6 +36,7 @@ export interface CenterPaneProps {
 /** Zone centrale : graphe, ou documents du nœud sélectionné. */
 export function CenterPane({
   view,
+  centerRequest,
   data,
   selected,
   searchMatches,
@@ -63,6 +66,7 @@ export function CenterPane({
           <ErrorBoundary area="le graphe">
             <GraphPanel
               graph={graph}
+              centerRequest={centerRequest}
               nodes={nodes}
               tags={tags}
               onSelect={onSelect}

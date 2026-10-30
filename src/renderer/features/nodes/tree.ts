@@ -81,3 +81,47 @@ export function siblingsOf(index: TreeIndex, node: NodeSummary): NodeSummary[] {
       : null;
   return index.children.get(key) ?? [];
 }
+
+/** Place d'un dépôt par rapport à la ligne survolée. */
+export type DropPosition = 'before' | 'after' | 'inside';
+
+/** Déplacement demandé à node:move (index parmi les frères, nœud déplacé exclu). */
+export interface DropMove {
+  parentId: string | null;
+  /** Absent : en dernier. */
+  index?: number;
+}
+
+/**
+ * Déplacement correspondant au dépôt de `draggedId` avant, après ou dans
+ * `targetId` ; `null` si la cible est interdite (le nœud lui-même ou l'un de
+ * ses descendants : ce serait un cycle) ou si rien ne changerait.
+ */
+export function dropMove(
+  index: TreeIndex,
+  draggedId: string,
+  targetId: string,
+  position: DropPosition,
+): DropMove | null {
+  const dragged = index.byId.get(draggedId);
+  const target = index.byId.get(targetId);
+  if (!dragged || !target || subtreeIds(index, draggedId).has(targetId)) {
+    return null;
+  }
+  if (position === 'inside') {
+    return dragged.parentId === targetId ? null : { parentId: targetId };
+  }
+  const parentId = target.parentId;
+  const siblings = siblingsOf(index, target).filter(
+    (node) => node.id !== draggedId,
+  );
+  const targetIndex = siblings.findIndex((node) => node.id === targetId);
+  const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
+  if (dragged.parentId === parentId) {
+    const current = siblingsOf(index, dragged).findIndex(
+      (node) => node.id === draggedId,
+    );
+    if (current === newIndex) return null;
+  }
+  return { parentId, index: newIndex };
+}

@@ -1,6 +1,28 @@
-import { useEffect, useRef, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+} from 'react';
 import { NODE_TYPE_LABELS } from '../../../shared/domain';
-import { visibleRows, type TreeIndex } from './tree';
+import {
+  dropMove,
+  visibleRows,
+  type DropMove,
+  type DropPosition,
+  type TreeIndex,
+} from './tree';
+
+/** Type de donnée glissée : un nœud de l'arborescence. */
+const DRAG_TYPE = 'application/x-nodal-node';
+
+/** Quart haut : avant ; quart bas : après ; milieu : dans le nœud. */
+function dropPositionAt(event: DragEvent<HTMLElement>): DropPosition {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const ratio = (event.clientY - rect.top) / Math.max(rect.height, 1);
+  return ratio < 0.25 ? 'before' : ratio > 0.75 ? 'after' : 'inside';
+}
 
 export interface NodeTreeProps {
   index: TreeIndex;
@@ -25,6 +47,10 @@ export interface NodeTreeProps {
   onToggleHidden?(id: string): void;
   /** Alt+clic sur l'œil : n'afficher que cette branche (ou quitter le solo). */
   onToggleSolo?(id: string): void;
+  /** Glisser-déposer : déplacer le nœud (changer de parent ou de rang). */
+  onMove?(id: string, move: DropMove): void;
+  /** Clic droit, touche Menu ou Maj+F10 : menu contextuel du nœud. */
+  onContextMenu?(id: string, point: { x: number; y: number }): void;
 }
 
 /** Œil ouvert, ou barré quand le nœud est masqué. */
@@ -48,7 +74,9 @@ function EyeIcon({ crossed }: { crossed: boolean }) {
 /**
  * Arborescence des nœuds (§7), navigable au clavier selon le motif ARIA
  * « tree » : flèches haut/bas, droite (déplier / premier enfant), gauche
- * (replier / parent), Début/Fin, Suppr, F2 et H (masquer dans le graphe).
+ * (replier / parent), Début/Fin, Suppr, F2, H (masquer dans le graphe) et
+ * Menu ou Maj+F10 (menu contextuel). Les nœuds se déplacent aussi par
+ * glisser-déposer : avant, après ou dans un autre nœud.
  */
 export function NodeTree({
   index,
@@ -66,10 +94,17 @@ export function NodeTree({
   solo = null,
   onToggleHidden,
   onToggleSolo,
+  onMove,
+  onContextMenu,
 }: NodeTreeProps) {
   const rows = visibleRows(index, expanded);
   const container = useRef<HTMLUListElement>(null);
   const focusOnSelect = useRef(false);
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [dropHint, setDropHint] = useState<{
+    id: string;
+    position: DropPosition;
+  } | null>(null);
 
   useEffect(() => {
     if (!focusOnSelect.current || !selectedId) return;
@@ -128,6 +163,18 @@ export function NodeTree({
       case 'F2':
         if (current) onRename(current.node.id);
         break;
+      case 'ContextMenu':
+      case 'F10': {
+        if (event.key === 'F10' && !event.shiftKey) return;
+        if (!current || !onContextMenu) return;
+        const row = (event.target as HTMLElement).closest('[data-node-id]');
+        const rect = row?.getBoundingClientRect();
+        onContextMenu(current.node.id, {
+          x: (rect?.left ?? 0) + 24,
+          y: rect?.bottom ?? 0,
+        });
+        break;
+      }
       case 'h':
       case 'H':
         if (event.ctrlKey || event.metaKey || event.altKey) return;
@@ -154,6 +201,7 @@ export function NodeTree({
         const tabbable = selected || (position === -1 && rowIndex === 0);
         const isHidden = !!hidden?.has(row.node.id);
         const isSolo = solo === row.node.id;
+        const hint = dropHint?.id === row.node.id ? dropHint.position : null;
         return (
           <li
             key={row.node.id}
@@ -170,10 +218,66 @@ export function NodeTree({
               multiSelection?.has(row.node.id) ? 'multi-selected' : '',
               masked?.has(row.node.id) ? 'masked' : '',
               isHidden || isSolo ? 'eye-active' : '',
+              hint ? `drop-${hint}` : '',
+              dragged === row.node.id ? 'dragging' : '',
             ]
               .filter(Boolean)
               .join(' ')}
             style={{ paddingLeft: `${row.depth * 16 + 4}px` }}
+            draggable={!!onMove}
+            onDragStart={(event) => {
+              event.dataTransfer.setData(DRAG_TYPE, row.node.id);
+              event.dataTransfer.effectAllowed = 'move';
+              setDragged(row.node.id);
+            }}
+            onDragOver={(event) => {
+              if (!dragged || !onMove) return;
+              const place = dropPositionAt(event);
+              // Cible interdite (descendant) ou sans effet : pas de dépôt.
+              if (!dropMove(index, dragged, row.node.id, place)) {
+                if (hint) setDropHint(null);
+                return;
+              }
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              if (hint !== place)
+                setDropHint({ id: row.node.id, position: place });
+            }}
+            onDragLeave={(event) => {
+              if (
+                hint &&
+                !event.currentTarget.contains(event.relatedTarget as Node)
+              ) {
+                setDropHint(null);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const id = dragged ?? event.dataTransfer.getData(DRAG_TYPE);
+              setDragged(null);
+              setDropHint(null);
+              if (!id || !onMove) return;
+              const drop = dropMove(
+                index,
+                id,
+                row.node.id,
+                dropPositionAt(event),
+              );
+              if (drop) onMove(id, drop);
+            }}
+            onDragEnd={() => {
+              setDragged(null);
+              setDropHint(null);
+            }}
+            onContextMenu={(event) => {
+              if (!onContextMenu) return;
+              event.preventDefault();
+              onSelect(row.node.id);
+              onContextMenu(row.node.id, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+            }}
             onClick={(event) => {
               if ((event.ctrlKey || event.metaKey) && onToggleMulti) {
                 onToggleMulti(row.node.id);

@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { ContextMenu } from '../../components/ContextMenu';
 import { maskedNodeIds } from '../graph/graph-model';
 import { NodeTree } from '../nodes/NodeTree';
-import { siblingsOf, type TreeIndex } from '../nodes/tree';
+import { siblingsOf, type DropMove, type TreeIndex } from '../nodes/tree';
 import { useViewDispatch, useViewState } from './view-state-context';
 
 export interface TreePaneProps {
@@ -13,7 +14,19 @@ export interface TreePaneProps {
   /** Déplace le nœud sélectionné d'un rang parmi ses frères. */
   onShift(offset: -1 | 1): void;
   onDelete(id: string): void;
-  onRename(): void;
+  onRename(id: string): void;
+  /** Glisser-déposer : nouveau parent et rang. */
+  onMove(id: string, move: DropMove): void;
+  onAddDocument(id: string): void;
+  /** Sélectionne le nœud et le centre dans la vue graphe. */
+  onCenter(id: string): void;
+}
+
+/** Remet le focus sur la ligne d'un nœud (après le menu contextuel). */
+function focusRow(id: string) {
+  document
+    .querySelector<HTMLElement>(`.tree [data-node-id="${CSS.escape(id)}"]`)
+    ?.focus();
 }
 
 /** Panneau gauche : actions sur les nœuds et arborescence. */
@@ -25,7 +38,15 @@ export function TreePane({
   onShift,
   onDelete,
   onRename,
+  onMove,
+  onAddDocument,
+  onCenter,
 }: TreePaneProps) {
+  const [menu, setMenu] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const {
     selectedId,
     expanded,
@@ -94,6 +115,8 @@ export function TreePane({
         onToggle={(id, open) => dispatch({ type: 'setExpanded', id, open })}
         onDelete={onDelete}
         onRename={onRename}
+        onMove={onMove}
+        onContextMenu={(id, point) => setMenu({ id, ...point })}
         highlighted={searchMatches}
         multiSelection={multiSelection}
         onToggleMulti={(id) => dispatch({ type: 'toggleMulti', id })}
@@ -103,6 +126,40 @@ export function TreePane({
         onToggleHidden={(id) => dispatch({ type: 'toggleHidden', id })}
         onToggleSolo={(id) => dispatch({ type: 'toggleSolo', id })}
       />
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          label={`Actions sur « ${index.byId.get(menu.id)?.title ?? ''} »`}
+          onClose={() => {
+            setMenu(null);
+            focusRow(menu.id);
+          }}
+          items={[
+            { label: 'Nouveau sous-nœud', onSelect: () => onNew(menu.id) },
+            { label: 'Renommer', onSelect: () => onRename(menu.id) },
+            {
+              label: hidden.has(menu.id)
+                ? 'Afficher dans le graphe'
+                : 'Masquer dans le graphe',
+              onSelect: () => dispatch({ type: 'toggleHidden', id: menu.id }),
+            },
+            {
+              label: 'Centrer dans le graphe',
+              onSelect: () => onCenter(menu.id),
+            },
+            {
+              label: 'Ajouter un document',
+              onSelect: () => onAddDocument(menu.id),
+            },
+            {
+              label: 'Supprimer…',
+              danger: true,
+              onSelect: () => onDelete(menu.id),
+            },
+          ]}
+        />
+      )}
     </nav>
   );
 }

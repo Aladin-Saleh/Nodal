@@ -215,7 +215,10 @@ describe('App', () => {
       nodeType: 'component',
     });
     // Vue Graphe par défaut (WebGL absent sous jsdom : message de repli).
-    expect(screen.getByText(/rendu 3D n’est pas disponible/)).toBeTruthy();
+    // Message affiché par un effet de la vue 3D : à attendre, pas à lire aussitôt.
+    expect(
+      await screen.findByText(/rendu 3D n’est pas disponible/),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Documents' }));
     // La fiche du nœud créé est ouverte.
     expect(await screen.findByDisplayValue('Kafka')).toBeTruthy();
@@ -345,5 +348,36 @@ describe('Préférences', () => {
       (within(dialog).getByLabelText('Taille du texte') as HTMLSelectElement)
         .value,
     ).toBe('125');
+  });
+});
+
+describe('menu contextuel de l’arborescence', () => {
+  it('« Renommer » ouvre la fiche en vue Documents, titre sélectionné', async () => {
+    const { client } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+    });
+    render(<App client={client} />);
+    fireEvent.click(await screen.findByRole('button', { name: '+ Racine' }));
+    const dialog = screen.getByRole('dialog', { name: 'Nouveau nœud racine' });
+    fireEvent.change(within(dialog).getByLabelText('Titre'), {
+      target: { value: 'Kafka' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    const row = await within(await screen.findByRole('tree')).findByText(
+      'Kafka',
+    );
+
+    fireEvent.contextMenu(row, { clientX: 20, clientY: 20 });
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Renommer' }));
+    const title = (await screen.findByLabelText(
+      'Titre du nœud',
+      {},
+      { timeout: 5000 },
+    )) as HTMLInputElement;
+    await waitFor(() => expect(document.activeElement).toBe(title));
+    expect(title.value).toBe('Kafka');
+    expect(
+      screen.getByRole('button', { name: 'Documents', pressed: true }),
+    ).toBeTruthy();
   });
 });

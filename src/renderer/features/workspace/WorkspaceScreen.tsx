@@ -105,6 +105,13 @@ function WorkspaceView({
 
   const searchInput = useRef<HTMLInputElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
+  /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
+  const renaming = useRef<string | null>(null);
+  /** Demande de centrage dans le graphe (même nœud : nouvelle demande). */
+  const [centerRequest, setCenterRequest] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
   const searchMatches = useMemo(
     () => (searchHits ? new Set(searchHits.map((hit) => hit.nodeId)) : null),
     [searchHits],
@@ -284,6 +291,23 @@ function WorkspaceView({
     return Boolean(updated);
   };
 
+  /** Renommer (F2, menu contextuel) : titre de la fiche, en vue Documents. */
+  const rename = (id: string) => {
+    renaming.current = id;
+    select(id);
+    setView('documents');
+    // Fiche déjà affichée : focus immédiat ; sinon, à son affichage (effet).
+    if (detail?.id === id && view === 'documents') focusTitle();
+  };
+  const focusTitle = () => {
+    renaming.current = null;
+    titleInput.current?.focus();
+    titleInput.current?.select();
+  };
+  useEffect(() => {
+    if (renaming.current && renaming.current === detail?.id) focusTitle();
+  });
+
   // --- Documents depuis le graphe ou la recherche --------------------------
 
   const openDocument = (documentId: string, nodeId?: string) => {
@@ -423,11 +447,25 @@ function WorkspaceView({
             onNew={(parentId) => setDialog({ kind: 'new', parentId })}
             onShift={shift}
             onDelete={(id) => void askDelete(id)}
-            onRename={() => titleInput.current?.focus()}
+            onRename={rename}
+            onMove={(id, move) => {
+              const node = index.byId.get(id);
+              if (node) void moveTo(node, move.parentId, move.index);
+            }}
+            onAddDocument={(id) => openOverlay('addingDocumentFor', id)}
+            onCenter={(id) => {
+              select(id);
+              setView('graph');
+              setCenterRequest((current) => ({
+                id,
+                nonce: (current?.nonce ?? 0) + 1,
+              }));
+            }}
           />
 
           <CenterPane
             view={view}
+            centerRequest={centerRequest}
             data={data}
             selected={selected}
             searchMatches={searchMatches}
