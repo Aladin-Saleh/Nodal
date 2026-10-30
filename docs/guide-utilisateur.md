@@ -71,7 +71,20 @@ apparaissent en pointillés.
   niveaux (utile pour les grands espaces).
 - **Filtres** : par type de nœud, tag et type de relation ; affichage ou non
   de la hiérarchie.
-- **Disposer** : relance la disposition automatique.
+- **Relations** : cliquez sur un trait (ou son libellé) pour ouvrir la fiche
+  de la relation : source, type, cible et description. **Modifier** permet
+  de changer le type, le libellé et la description ; un clic sur une
+  extrémité sélectionne ce nœud ; Échap ferme la fiche.
+- **Replier** / **Déplier** : masque ou réaffiche les descendants du nœud
+  sélectionné ; le nœud replié affiche leur nombre, par exemple
+  « Facturation (+22) ». **Tout replier** ne garde que les racines, une par
+  branche ; **Tout déplier** réaffiche tout.
+- **Étiquettes** : quand le graphe est chargé, seules les étiquettes qui ont
+  de la place s'affichent, les plus importantes d'abord ; survolez un nœud
+  ou zoomez pour voir les autres.
+- **Disposer** : relance la disposition automatique, qui regroupe chaque
+  branche et écarte les branches entre elles. Les positions déjà
+  enregistrées sont conservées tant que vous ne cliquez pas sur Disposer.
 - **Actions groupées** (après une sélection multiple) : déplacer sous un
   parent, changer le type, supprimer.
 

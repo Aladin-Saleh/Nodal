@@ -45,6 +45,42 @@ export interface VisibleGraph {
   nodes: GraphNode[];
   edges: EdgeInfo[];
   hierarchy: HierarchyLink[];
+  /** Nœuds repliés affichés → nombre de descendants masqués. */
+  hiddenDescendants?: ReadonlyMap<string, number>;
+}
+
+/**
+ * Descendants masqués par le repliage : l'ensemble des nœuds cachés et, pour
+ * chaque nœud replié qui a des enfants, le nombre de ses descendants.
+ */
+export function collapsedDescendants(
+  nodes: readonly GraphNode[],
+  collapsed: ReadonlySet<string>,
+): { hidden: Set<string>; counts: Map<string, number> } {
+  const hidden = new Set<string>();
+  const counts = new Map<string, number>();
+  if (collapsed.size === 0) return { hidden, counts };
+  const children = new Map<string, string[]>();
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    const list = children.get(node.parentId);
+    if (list) list.push(node.id);
+    else children.set(node.parentId, [node.id]);
+  }
+  for (const id of collapsed) {
+    const seen = new Set<string>([id]);
+    const stack = [...(children.get(id) ?? [])];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      // Garde-fou contre un cycle introduit hors de l'application.
+      if (seen.has(current)) continue;
+      seen.add(current);
+      hidden.add(current);
+      stack.push(...(children.get(current) ?? []));
+    }
+    if (seen.size > 1) counts.set(id, seen.size - 1);
+  }
+  return { hidden, counts };
 }
 
 /**
@@ -94,16 +130,22 @@ export function neighborhood(
   return visited;
 }
 
-/** Applique filtres et portée. Le nœud central reste toujours visible. */
+/**
+ * Applique filtres, repliage et portée. Le nœud central reste toujours
+ * visible.
+ */
 export function visibleGraph(
   graph: GraphData,
   scope: GraphScope,
   filters: GraphFilters,
+  collapsed: ReadonlySet<string> = new Set(),
 ): VisibleGraph {
   const centerId = scope.kind === 'neighborhood' ? scope.centerId : null;
+  const folded = collapsedDescendants(graph.nodes, collapsed);
   const matches = (node: GraphNode) =>
     node.id === centerId ||
-    ((filters.nodeTypes.size === 0 || filters.nodeTypes.has(node.nodeType)) &&
+    (!folded.hidden.has(node.id) &&
+      (filters.nodeTypes.size === 0 || filters.nodeTypes.has(node.nodeType)) &&
       (filters.tagIds.size === 0 ||
         node.tagIds.some((tagId) => filters.tagIds.has(tagId))));
 
@@ -144,7 +186,93 @@ export function visibleGraph(
           childId: node.id,
         }))
     : [];
-  return { nodes, edges, hierarchy };
+  const hiddenDescendants = new Map(
+    [...folded.counts].filter(([id]) => ids.has(id)),
+  );
+  return { nodes, edges, hierarchy, hiddenDescendants };
+}
+
+/**
+ * Branche de chaque nœud : son ancêtre affiché le plus haut (lui-même s'il
+ * n'a pas de parent affiché). La disposition regroupe chaque branche.
+ */
+export function branchRoots(nodes: readonly GraphNode[]): Map<string, string> {
+  const parentOf = new Map(nodes.map((node) => [node.id, node.parentId]));
+  const roots = new Map<string, string>();
+  const rootOf = (id: string): string => {
+    const known = roots.get(id);
+    if (known) return known;
+    const chain: string[] = [];
+    let current = id;
+    for (;;) {
+      chain.push(current);
+      const parent = parentOf.get(current);
+      if (!parent || !parentOf.has(parent) || chain.includes(parent)) break;
+      const parentRoot = roots.get(parent);
+      if (parentRoot) {
+        current = parentRoot;
+        break;
+      }
+      current = parent;
+    }
+    for (const member of chain) roots.set(member, current);
+    return current;
+  };
+  for (const node of nodes) rootOf(node.id);
+  return roots;
+}
+
+/** Étiquette candidate, en pixels : ancrée par son coin haut-gauche. */
+export interface LabelBox {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  /** Toujours affichée (sélection, survol), même si elle en chevauche une autre. */
+  forced: boolean;
+  /**
+   * Emprise d'un nœud à l'écran : aucune étiquette ne la recouvre, sauf la
+   * sienne et celles de nœuds plus importants que lui.
+   */
+  obstacle?: boolean;
+  /** Importance du nœud (enfants, relations) : voir obstacle. */
+  rank?: number;
+  /** Nœud auquel appartient l'étiquette ou l'emprise. */
+  owner?: string;
+}
+
+/** Espace minimal entre deux étiquettes, en pixels. */
+export const LABEL_GAP_PX = 3;
+
+/**
+ * Étiquettes à afficher sans chevauchement : parcourues dans l'ordre donné
+ * (la plus prioritaire d'abord), chacune est gardée si elle ne recouvre ni
+ * une étiquette déjà gardée, ni l'emprise d'un autre nœud au moins aussi
+ * important (un parent peut nommer sa branche par-dessus ses feuilles). Les étiquettes
+ * forcées passent en premier et sont toujours gardées.
+ */
+export function declutterLabels(boxes: readonly LabelBox[]): Set<string> {
+  const kept: LabelBox[] = boxes.filter((box) => box.obstacle);
+  const labels = boxes.filter((box) => !box.obstacle);
+  const ordered = [
+    ...labels.filter((box) => box.forced),
+    ...labels.filter((box) => !box.forced),
+  ];
+  const overlaps = (a: LabelBox, b: LabelBox) =>
+    !(b.obstacle && (b.owner === a.owner || (b.rank ?? 0) < (a.rank ?? 0))) &&
+    a.left < b.left + b.width + LABEL_GAP_PX &&
+    b.left < a.left + a.width + LABEL_GAP_PX &&
+    a.top < b.top + b.height + LABEL_GAP_PX &&
+    b.top < a.top + a.height + LABEL_GAP_PX;
+  const shown = new Set<string>();
+  for (const box of ordered) {
+    if (box.forced || !kept.some((other) => overlaps(box, other))) {
+      kept.push(box);
+      shown.add(box.id);
+    }
+  }
+  return shown;
 }
 
 /** Distance entre un nouveau nœud et le voisin près duquel il apparaît. */

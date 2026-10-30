@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  branchRoots,
+  collapsedDescendants,
+  declutterLabels,
   DEFAULT_FILTERS,
   hasPosition,
+  LABEL_GAP_PX,
   SEED_DISTANCE,
   seedPositions,
   visibleGraph,
@@ -214,5 +218,170 @@ describe('seedPositions', () => {
     });
     const keys = new Set(seeds.map((seed) => `${seed.x},${seed.y},${seed.z}`));
     expect(keys.size).toBe(8);
+  });
+});
+
+describe('repliage', () => {
+  // r → m → (l1, l2), r → s ; l2 relié à e (hors branche)
+  const tree: GraphData = {
+    ...graph,
+    nodes: [
+      node('r'),
+      node('m', { parentId: 'r' }),
+      node('l1', { parentId: 'm' }),
+      node('l2', { parentId: 'm' }),
+      node('s', { parentId: 'r' }),
+      node('e'),
+    ],
+    edges: [edge('l2e', 'l2', 'e')],
+  };
+
+  it('compte et masque tous les descendants d’un nœud replié', () => {
+    const { hidden, counts } = collapsedDescendants(
+      tree.nodes,
+      new Set(['m', 'l1']),
+    );
+    expect([...hidden].toSorted()).toEqual(['l1', 'l2']);
+    // l1 n'a pas d'enfant : rien à compter.
+    expect(counts).toEqual(new Map([['m', 2]]));
+  });
+
+  it('retire les descendants et leurs relations du graphe affiché', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'all' },
+      DEFAULT_FILTERS,
+      new Set(['r']),
+    );
+    expect(ids(visible.nodes)).toEqual(['e', 'r']);
+    expect(visible.edges).toEqual([]);
+    expect(visible.hierarchy).toEqual([]);
+    expect(visible.hiddenDescendants).toEqual(new Map([['r', 4]]));
+  });
+
+  it('ne signale que les nœuds repliés encore affichés', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'all' },
+      DEFAULT_FILTERS,
+      new Set(['r', 'm']),
+    );
+    expect(visible.hiddenDescendants).toEqual(new Map([['r', 4]]));
+  });
+
+  it('garde le nœud central du voisinage même s’il est replié dans une branche', () => {
+    const visible = visibleGraph(
+      tree,
+      { kind: 'neighborhood', centerId: 'l2', depth: 1 },
+      DEFAULT_FILTERS,
+      new Set(['m']),
+    );
+    // m, son parent, est replié mais reste affiché (seuls ses descendants sont masqués).
+    expect(ids(visible.nodes)).toEqual(['e', 'l2', 'm']);
+  });
+});
+
+describe('branchRoots', () => {
+  it('rattache chaque nœud à son ancêtre affiché le plus haut', () => {
+    const roots = branchRoots([
+      node('r'),
+      node('m', { parentId: 'r' }),
+      node('l', { parentId: 'm' }),
+      // Parent non affiché : le nœud est sa propre racine.
+      node('o', { parentId: 'absent' }),
+      node('p', { parentId: 'o' }),
+    ]);
+    expect(Object.fromEntries(roots)).toEqual({
+      r: 'r',
+      m: 'r',
+      l: 'r',
+      o: 'o',
+      p: 'o',
+    });
+  });
+
+  it('ne boucle pas sur un cycle', () => {
+    const roots = branchRoots([
+      node('x', { parentId: 'y' }),
+      node('y', { parentId: 'x' }),
+    ]);
+    expect(roots.size).toBe(2);
+  });
+});
+
+const box = (id: string, left: number, top: number, forced = false) => ({
+  id,
+  left,
+  top,
+  width: 100,
+  height: 20,
+  forced,
+});
+
+describe('declutterLabels', () => {
+  it('garde les étiquettes prioritaires et écarte celles qui les chevauchent', () => {
+    const kept = declutterLabels([
+      box('a', 0, 0),
+      box('b', 50, 10), // chevauche a
+      box('c', 0, 30), // en dessous, libre
+      box('d', 200, 0),
+    ]);
+    expect([...kept].toSorted()).toEqual(['a', 'c', 'd']);
+  });
+
+  it('affiche toujours les étiquettes forcées, en premier', () => {
+    const kept = declutterLabels([box('a', 0, 0), box('hover', 50, 10, true)]);
+    expect([...kept]).toEqual(['hover']);
+  });
+
+  it('laisse un espace minimal entre deux étiquettes', () => {
+    const kept = declutterLabels([
+      box('a', 0, 0),
+      box('b', 100 + LABEL_GAP_PX - 1, 0),
+      box('c', 0, 20 + LABEL_GAP_PX),
+    ]);
+    expect([...kept].toSorted()).toEqual(['a', 'c']);
+  });
+});
+
+describe('declutterLabels et emprise des nœuds', () => {
+  it('écarte une étiquette posée sur un autre nœud, pas sur le sien', () => {
+    const footprint = (owner: string, left: number, top: number) => ({
+      ...box(`o:${owner}`, left, top),
+      width: 20,
+      obstacle: true,
+      owner,
+    });
+    const kept = declutterLabels([
+      footprint('a', 40, 30),
+      footprint('b', 240, 30),
+      { ...box('n:a', 0, 20), owner: 'a' }, // sur son propre nœud
+      { ...box('n:c', 200, 20), owner: 'c' }, // sur le nœud b
+    ]);
+    expect([...kept]).toEqual(['n:a']);
+  });
+});
+
+describe('declutterLabels et importance', () => {
+  it('laisse un nœud important nommer sa branche par-dessus ses feuilles', () => {
+    const kept = declutterLabels([
+      {
+        ...box('o:leaf', 40, 30),
+        width: 20,
+        obstacle: true,
+        owner: 'leaf',
+        rank: 1,
+      },
+      { ...box('n:root', 0, 20), owner: 'root', rank: 5 },
+      { ...box('n:other', 0, 200), owner: 'other', rank: 0 },
+      {
+        ...box('o:hub', 40, 210),
+        width: 20,
+        obstacle: true,
+        owner: 'hub',
+        rank: 3,
+      },
+    ]);
+    expect([...kept]).toEqual(['n:root']);
   });
 });

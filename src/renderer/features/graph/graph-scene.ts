@@ -10,9 +10,11 @@
  */
 import {
   forceCenter,
+  forceCollide,
   forceLink,
   forceManyBody,
   forceSimulation,
+  type Force,
   type LinkForce,
   type Simulation,
   type SimulationNode,
@@ -27,7 +29,14 @@ import type {
   RelationTypeInfo,
 } from '../../../shared/model';
 import { APPEARANCE_EVENT } from '../../app/preferences';
-import { hasPosition, seedPositions, type VisibleGraph } from './graph-model';
+import {
+  branchRoots,
+  declutterLabels,
+  hasPosition,
+  seedPositions,
+  type LabelBox,
+  type VisibleGraph,
+} from './graph-model';
 import {
   createDocumentPage,
   PAGE_HEIGHT,
@@ -35,6 +44,7 @@ import {
   createLabel,
   createNodeGeometry,
   disposeObject,
+  LABEL_MAX_CHARS,
   NODE_RADIUS,
   readTheme,
   type GraphTheme,
@@ -53,6 +63,8 @@ export interface GraphSceneCallbacks {
   onToggleSelect(id: string): void;
   /** Double-clic dans le vide : créer un nœud à cet endroit. */
   onCreateAt(position: { x: number; y: number; z: number }): void;
+  /** Clic sur une relation (trait, flèche ou libellé) ; `null` : clic dans le vide. */
+  onSelectEdge(id: string | null): void;
 }
 
 type CardTarget =
@@ -67,6 +79,10 @@ interface DocumentCard {
 
 interface SimNode extends SimulationNode {
   id: string;
+  /** Racine de la branche (voir branchRoots). */
+  branch?: string;
+  /** Nombre d'enfants affichés : un parent repousse plus fort ses voisins. */
+  weight?: number;
 }
 
 interface SimLink {
@@ -84,6 +100,12 @@ interface NodeEntry {
   /** Étiquette créée à la demande (voir LABEL_LIMIT). */
   label: THREE.Sprite | null;
   labelKey: string;
+  /** Descendants masqués par le repliage, indiqués dans l'étiquette. */
+  hiddenCount: number;
+  /** Enfants, relations et descendants repliés : priorité de l'étiquette. */
+  importance: number;
+  /** Rang de priorité de l'étiquette (0 : toujours affichée). */
+  labelTier: number;
 }
 
 interface LinkEntry {
@@ -94,6 +116,11 @@ interface LinkEntry {
   arrow: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> | null;
   label: THREE.Sprite | null;
   labelKey: string;
+  /** Libellé autorisé (graphe peu chargé ou relation du nœud sélectionné). */
+  labelWanted: boolean;
+  labelTier: number;
+  /** Couleur propre (type de relation), remplacée par l'accent si mise en évidence. */
+  color: string;
 }
 
 type PointerMode =
@@ -112,17 +139,33 @@ type PointerMode =
 /** Au-delà, les libellés des relations ne s'affichent qu'autour de la sélection. */
 const EDGE_LABEL_LIMIT = 120;
 /**
- * Au-delà, seules les étiquettes utiles (sélection, voisins, survol,
- * recherche, sélection multiple) sont créées : chaque étiquette est une
- * texture, et des milliers satureraient la mémoire graphique.
+ * Au-delà, seules les étiquettes des nœuds les plus importants et les
+ * étiquettes utiles (sélection, voisins, survol, recherche, sélection
+ * multiple) sont créées : chaque étiquette est une texture, et des milliers
+ * satureraient la mémoire graphique.
  */
 const LABEL_LIMIT = 250;
+/** Rangs de priorité des étiquettes, de la plus à la moins prioritaire. */
+const TIER_FORCED = 0;
+const TIER_HIGHLIGHT = 1;
+const TIER_NORMAL = 2;
+const TIER_FADED = 3;
+/** Disposition : longueur et raideur des liens, répulsion, regroupement. */
+const HIERARCHY_DISTANCE = 32;
+const RELATION_DISTANCE = 80;
+const CHARGE_BASE = -90;
+const CHARGE_PER_CHILD = -35;
+const BRANCH_PULL = 0.08;
+/** Rayon d'une branche = BRANCH_SPACING × racine cubique de son nombre de nœuds. */
+const BRANCH_SPACING = 30;
 const CLICK_TOLERANCE_PX = 5;
+/** Distance maximale, en pixels, entre le pointeur et le trait d'une relation. */
+const EDGE_HIT_PX = 6;
 const FADED_OPACITY = 0.15;
 const LABEL_OFFSET = NODE_RADIUS + 3;
 /** Hauteur des étiquettes en fraction de la hauteur de la vue. */
-const NODE_LABEL_HEIGHT = 0.036;
-const EDGE_LABEL_HEIGHT = 0.026;
+const NODE_LABEL_HEIGHT = 0.028;
+const EDGE_LABEL_HEIGHT = 0.022;
 /** Cartes des documents : hauteur (fraction de la vue) et espacement. */
 const CARD_LABEL_HEIGHT = 0.03;
 /** Distance de la caméra après un zoom sur un nœud. */
@@ -131,6 +174,115 @@ const FLIGHT_MS = 450;
 
 function round(value: number | undefined): number {
   return Math.round((value ?? 0) * 10) / 10;
+}
+
+/** Distance, en pixels, entre un point et un segment de l'écran. */
+function distanceToSegment(
+  x: number,
+  y: number,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSq = dx * dx + dy * dy;
+  const t =
+    lengthSq === 0
+      ? 0
+      : Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSq));
+  return Math.hypot(x - (a.x + t * dx), y - (a.y + t * dy));
+}
+
+/** Incrémente un compteur par identifiant. */
+const bump = (counts: Map<string, number>, id: string) =>
+  counts.set(id, (counts.get(id) ?? 0) + 1);
+
+const branchOf = (end: string | SimNode) =>
+  typeof end === 'string' ? undefined : end.branch;
+
+/**
+ * Regroupe chaque branche et sépare les branches : chaque nœud libre est
+ * attiré vers le centre de sa branche, et deux branches dont les volumes se
+ * recouvrent s'écartent l'une de l'autre (rayon de chaque branche selon
+ * son nombre de nœuds).
+ */
+function forceBranch(pull: number, spacing: number): Force<SimNode> {
+  let nodes: SimNode[] = [];
+  const placed = (node: SimNode) =>
+    !!node.branch && node.x !== undefined && !Number.isNaN(node.x);
+  const force = (alpha: number) => {
+    const groups = new Map<
+      string,
+      { x: number; y: number; z: number; members: SimNode[] }
+    >();
+    for (const node of nodes) {
+      if (!placed(node)) continue;
+      let group = groups.get(node.branch!);
+      if (!group) {
+        group = { x: 0, y: 0, z: 0, members: [] };
+        groups.set(node.branch!, group);
+      }
+      group.x += node.x!;
+      group.y += node.y ?? 0;
+      group.z += node.z ?? 0;
+      group.members.push(node);
+    }
+    const centers = [...groups.values()].map((group) => {
+      const n = group.members.length;
+      return {
+        x: group.x / n,
+        y: group.y / n,
+        z: group.z / n,
+        members: group.members,
+        radius: spacing * Math.cbrt(n),
+      };
+    });
+    const k = pull * alpha;
+    for (const center of centers) {
+      if (center.members.length < 2) continue;
+      for (const node of center.members) {
+        node.vx = (node.vx ?? 0) + (center.x - node.x!) * k;
+        node.vy = (node.vy ?? 0) + (center.y - (node.y ?? 0)) * k;
+        node.vz = (node.vz ?? 0) + (center.z - (node.z ?? 0)) * k;
+      }
+    }
+    // Écartement des branches qui se recouvrent (les nœuds isolés sont
+    // laissés à la répulsion générale).
+    const groupsOnly = centers.filter((center) => center.members.length > 1);
+    for (let i = 0; i < groupsOnly.length; i++) {
+      for (let j = i + 1; j < groupsOnly.length; j++) {
+        const a = groupsOnly[i]!;
+        const b = groupsOnly[j]!;
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        let dz = b.z - a.z;
+        let distance = Math.hypot(dx, dy, dz);
+        const overlap = a.radius + b.radius - distance;
+        if (overlap <= 0) continue;
+        if (distance < 1e-6) {
+          // Centres confondus : direction arbitraire mais stable.
+          dx = 1;
+          dy = dz = 0;
+          distance = 1;
+        }
+        const push = (overlap / distance) * alpha * 0.5;
+        for (const [group, sign] of [
+          [a, -1],
+          [b, 1],
+        ] as const) {
+          for (const node of group.members) {
+            node.vx = (node.vx ?? 0) + sign * dx * push;
+            node.vy = (node.vy ?? 0) + sign * dy * push;
+            node.vz = (node.vz ?? 0) + sign * dz * push;
+          }
+        }
+      }
+    }
+  };
+  force.initialize = (next: SimNode[]) => {
+    nodes = next;
+  };
+  return force;
 }
 
 export class GraphScene {
@@ -162,6 +314,12 @@ export class GraphScene {
   } | null = null;
   private hoveredId: string | null = null;
   private linkTargetId: string | null = null;
+  private hoveredEdgeId: string | null = null;
+  private selectedEdgeId: string | null = null;
+  /** Nœuds dont l'étiquette peut exister hors mise en évidence (voir LABEL_LIMIT). */
+  private labelBudget = new Set<string>();
+  private viewWidth = 1;
+  private viewHeight = 1;
   private pointer: PointerMode = { kind: 'idle' };
   private tempLine: THREE.Line | null = null;
   private dirty = true;
@@ -200,14 +358,34 @@ export class GraphScene {
     };
     this.controls.addEventListener('change', this.markDirty);
 
+    // Hiérarchie courte et raide : un enfant reste près de son parent. Une
+    // relation entre deux branches tire peu, pour ne pas les mêler.
     const linkForce = forceLink<SimNode, SimLink>([])
       .id((node) => node.id)
-      .distance((link) => (link.kind === 'hierarchy' ? 45 : 70))
-      .strength((link) => (link.kind === 'hierarchy' ? 0.3 : 0.7));
+      .distance((link) =>
+        link.kind === 'hierarchy' ? HIERARCHY_DISTANCE : RELATION_DISTANCE,
+      )
+      .strength((link) =>
+        link.kind === 'hierarchy'
+          ? 0.9
+          : branchOf(link.source) === branchOf(link.target)
+            ? 0.4
+            : 0.06,
+      );
     this.simulation = forceSimulation<SimNode>([], 3)
       .alphaDecay(0.03)
       .velocityDecay(0.35)
-      .force('charge', forceManyBody<SimNode>().strength(-140).distanceMax(400))
+      .force(
+        'charge',
+        forceManyBody<SimNode>()
+          .strength(
+            (node) =>
+              CHARGE_BASE + CHARGE_PER_CHILD * Math.sqrt(node.weight ?? 0),
+          )
+          .distanceMax(500),
+      )
+      .force('collide', forceCollide<SimNode>(NODE_RADIUS * 1.9).strength(0.9))
+      .force('branch', forceBranch(BRANCH_PULL, BRANCH_SPACING))
       .force('link', linkForce)
       .on('tick', this.onTick)
       .on('end', this.onSimulationEnd)
@@ -253,16 +431,36 @@ export class GraphScene {
     }
     if (this.cards && !wanted.has(this.cards.nodeId)) this.clearCards();
 
+    const branches = branchRoots(visible.nodes);
+    const childCounts = new Map<string, number>();
+    const degrees = new Map<string, number>();
+    for (const node of visible.nodes) {
+      if (node.parentId && wanted.has(node.parentId))
+        bump(childCounts, node.parentId);
+    }
+    for (const edge of visible.edges) {
+      bump(degrees, edge.sourceId);
+      bump(degrees, edge.targetId);
+    }
+
     let hasFree = false;
     for (const data of visible.nodes) {
       let entry = this.nodes.get(data.id);
       const isNew = !entry;
+      const hiddenCount = visible.hiddenDescendants?.get(data.id) ?? 0;
       if (!entry) {
         entry = this.createNode(data);
+        entry.hiddenCount = hiddenCount;
         this.nodes.set(data.id, entry);
       } else {
+        entry.hiddenCount = hiddenCount;
         this.updateNode(entry, data);
       }
+      const children = childCounts.get(data.id) ?? 0;
+      entry.sim.branch = branches.get(data.id);
+      entry.sim.weight = children;
+      entry.importance =
+        children + (degrees.get(data.id) ?? 0) + Math.sqrt(hiddenCount);
       const dragging =
         this.pointer.kind === 'move' && this.pointer.nodeId === data.id;
       if (hasPosition(data)) {
@@ -303,6 +501,12 @@ export class GraphScene {
       })),
     ];
     this.syncLinks(visible, linkSpecs);
+    this.labelBudget = new Set(
+      [...this.nodes.values()]
+        .toSorted((a, b) => b.importance - a.importance)
+        .slice(0, LABEL_LIMIT)
+        .map((entry) => entry.data.id),
+    );
 
     const simNodes = [...this.nodes.values()].map((entry) => entry.sim);
     const allFree = simNodes.every((node) => node.fx == null);
@@ -328,6 +532,12 @@ export class GraphScene {
     this.selectedId = id;
     this.applyHighlight();
     if (id) this.flyTo(id);
+  }
+
+  /** Relation sélectionnée (fiche affichée par le panneau), mise en évidence. */
+  setSelectedEdge(id: string | null): void {
+    this.selectedEdgeId = id;
+    this.applyHighlight();
   }
 
   /** Sélection multiple (Ctrl+clic, Ctrl+A), mise en évidence. */
@@ -614,7 +824,19 @@ export class GraphScene {
       mesh,
       label: null,
       labelKey: '',
+      hiddenCount: 0,
+      importance: 0,
+      labelTier: TIER_NORMAL,
     };
+  }
+
+  /** Titre affiché, suivi du nombre de descendants masqués si le nœud est replié. */
+  private labelText(entry: NodeEntry): string {
+    const { title } = entry.data;
+    if (entry.hiddenCount === 0) return title;
+    const suffix = ` (+${entry.hiddenCount})`;
+    const room = LABEL_MAX_CHARS - suffix.length;
+    return `${title.length > room ? `${title.slice(0, room - 1)}…` : title}${suffix}`;
   }
 
   /** Crée ou retire l'étiquette d'un nœud selon qu'elle doit être visible. */
@@ -628,8 +850,9 @@ export class GraphScene {
       }
       return;
     }
-    if (entry.label && entry.labelKey === entry.data.title) return;
-    this.replaceNodeLabel(entry, entry.data.title);
+    const text = this.labelText(entry);
+    if (entry.label && entry.labelKey === text) return;
+    this.replaceNodeLabel(entry, text);
   }
 
   private updateNode(entry: NodeEntry, data: GraphNode): void {
@@ -639,8 +862,9 @@ export class GraphScene {
     }
     entry.mesh.material.color.set(this.nodeColor(data));
     entry.data = data;
-    if (entry.label && entry.labelKey !== data.title) {
-      this.replaceNodeLabel(entry, data.title);
+    const text = this.labelText(entry);
+    if (entry.label && entry.labelKey !== text) {
+      this.replaceNodeLabel(entry, text);
     }
   }
 
@@ -750,6 +974,9 @@ export class GraphScene {
       arrow,
       label,
       labelKey,
+      labelWanted: true,
+      labelTier: TIER_NORMAL,
+      color,
     };
   }
 
@@ -857,17 +1084,20 @@ export class GraphScene {
       const opacity = visible ? 1 : FADED_OPACITY;
       entry.mesh.material.opacity = opacity;
       entry.mesh.material.depthWrite = visible;
-      const labelled =
-        this.nodes.size <= LABEL_LIMIT ||
-        id === focus ||
-        (!!focus && close.has(id)) ||
-        id === this.hoveredId ||
-        id === this.linkTargetId ||
-        !!matches?.has(id) ||
-        this.multiSelection.has(id);
-      this.syncLabel(entry, labelled);
-      if (entry.label) entry.label.material.opacity = opacity;
       const matched = !!matches?.has(id) || this.multiSelection.has(id);
+      entry.labelTier =
+        id === focus || id === this.hoveredId || id === this.linkTargetId
+          ? TIER_FORCED
+          : (!!focus && close.has(id)) || matched
+            ? TIER_HIGHLIGHT
+            : visible
+              ? TIER_NORMAL
+              : TIER_FADED;
+      this.syncLabel(
+        entry,
+        entry.labelTier <= TIER_HIGHLIGHT || this.labelBudget.has(id),
+      );
+      if (entry.label) entry.label.material.opacity = opacity;
       const emphasized = id === focus || id === this.linkTargetId || matched;
       entry.mesh.material.emissive.copy(emphasized ? accent : black);
       entry.mesh.material.emissiveIntensity =
@@ -883,21 +1113,147 @@ export class GraphScene {
       entry.mesh.scale.setScalar(scale);
     }
     const crowded = this.links.size > EDGE_LABEL_LIMIT;
-    for (const entry of this.links.values()) {
+    for (const [id, entry] of this.links) {
       const touches =
         !!focus && (entry.sourceId === focus || entry.targetId === focus);
+      // Relation survolée ou sélectionnée : nette, à la couleur d'accent.
+      const pointed = id === this.selectedEdgeId || id === this.hoveredEdgeId;
       const opacity =
-        touches || (!focus && shown(entry.sourceId) && shown(entry.targetId))
+        pointed ||
+        touches ||
+        (!focus && shown(entry.sourceId) && shown(entry.targetId))
           ? 1
           : FADED_OPACITY;
+      const color = pointed ? this.theme.accent : entry.color;
       entry.line.material.opacity = opacity;
-      if (entry.arrow) entry.arrow.material.opacity = opacity;
-      if (entry.label) {
-        entry.label.material.opacity = opacity;
-        entry.label.visible = !crowded || touches;
+      entry.line.material.color.set(color);
+      if (entry.arrow) {
+        entry.arrow.material.opacity = opacity;
+        entry.arrow.material.color.set(color);
       }
+      if (entry.label) entry.label.material.opacity = opacity;
+      entry.labelWanted = !crowded || touches || pointed;
+      entry.labelTier = pointed
+        ? TIER_FORCED
+        : touches
+          ? TIER_HIGHLIGHT
+          : opacity === 1
+            ? TIER_NORMAL
+            : TIER_FADED;
     }
     this.markDirty();
+  }
+
+  /**
+   * N'affiche que les étiquettes qui tiennent à l'écran sans se chevaucher,
+   * de la plus prioritaire à la moins prioritaire : sélection et survol,
+   * voisins et résultats de recherche, puis les nœuds les plus reliés et les
+   * plus proches de la caméra ; les libellés de relations passent après les
+   * étiquettes des nœuds de même rang. Les autres réapparaissent au survol
+   * ou en zoomant.
+   */
+  private declutter(): void {
+    this.scene.updateMatrixWorld();
+    // Sprites de taille fixe à l'écran : échelle × ce facteur = pixels.
+    const pixels =
+      (this.camera.projectionMatrix.elements[5]! * this.viewHeight) / 2;
+    const point = new THREE.Vector3();
+    // Emprise à l'écran des nœuds nets : les étiquettes ne les recouvrent pas.
+    const obstacles: LabelBox[] = [];
+    for (const [id, entry] of this.nodes) {
+      if (entry.mesh.material.opacity < 1) continue;
+      point
+        .copy(entry.group.position)
+        .applyMatrix4(this.camera.matrixWorldInverse);
+      const distance = -point.z;
+      if (distance <= 0) continue;
+      const radius = (NODE_RADIUS * entry.mesh.scale.x * pixels) / distance;
+      point.copy(entry.group.position).project(this.camera);
+      const x = ((point.x + 1) / 2) * this.viewWidth;
+      const y = ((1 - point.y) / 2) * this.viewHeight;
+      obstacles.push({
+        id: `o:${id}`,
+        left: x - radius,
+        top: y - radius,
+        width: radius * 2,
+        height: radius * 2,
+        forced: false,
+        obstacle: true,
+        owner: id,
+        rank: entry.importance,
+      });
+    }
+    const candidates: {
+      box: LabelBox;
+      sprite: THREE.Sprite;
+      tier: number;
+      importance: number;
+      depth: number;
+    }[] = [];
+    const consider = (
+      key: string,
+      sprite: THREE.Sprite,
+      tier: number,
+      importance: number,
+      owner?: string,
+    ) => {
+      sprite.getWorldPosition(point).project(this.camera);
+      const width = sprite.scale.x * pixels;
+      const height = sprite.scale.y * pixels;
+      const x = ((point.x + 1) / 2) * this.viewWidth;
+      const y = ((1 - point.y) / 2) * this.viewHeight;
+      // Le point d'ancrage du sprite (center) est en bas pour les nœuds.
+      const top = y - height * (1 - sprite.center.y);
+      const offscreen =
+        point.z < -1 ||
+        point.z > 1 ||
+        x + width / 2 < 0 ||
+        x - width / 2 > this.viewWidth ||
+        top + height < 0 ||
+        top > this.viewHeight;
+      if (offscreen) {
+        sprite.visible = false;
+        return;
+      }
+      candidates.push({
+        box: {
+          id: key,
+          left: x - width / 2,
+          top,
+          width,
+          height,
+          forced: tier === TIER_FORCED,
+          owner,
+          rank: importance,
+        },
+        sprite,
+        tier,
+        importance,
+        depth: point.z,
+      });
+    };
+    for (const [id, entry] of this.nodes) {
+      if (entry.label)
+        consider(`n:${id}`, entry.label, entry.labelTier, entry.importance, id);
+    }
+    for (const [id, entry] of this.links) {
+      if (!entry.label) continue;
+      if (!entry.labelWanted) {
+        entry.label.visible = false;
+        continue;
+      }
+      // Après les nœuds de même rang.
+      consider(`l:${id}`, entry.label, entry.labelTier + 0.5, -1);
+    }
+    candidates.sort(
+      (a, b) =>
+        a.tier - b.tier || b.importance - a.importance || a.depth - b.depth,
+    );
+    const kept = declutterLabels([
+      ...obstacles,
+      ...candidates.map((candidate) => candidate.box),
+    ]);
+    for (const { box, sprite } of candidates) sprite.visible = kept.has(box.id);
   }
 
   // --- Interactions --------------------------------------------------------
@@ -916,10 +1272,64 @@ export class GraphScene {
     for (const [id, entry] of this.nodes) {
       if (id === exclude) continue;
       targets.push(entry.mesh);
-      if (entry.label) targets.push(entry.label);
+      // Une étiquette masquée (chevauchement) ne doit pas capter le clic.
+      if (entry.label?.visible) targets.push(entry.label);
     }
     const [first] = this.raycaster.intersectObjects(targets, false);
     return (first?.object.userData.id as string | undefined) ?? null;
+  }
+
+  /**
+   * Relation sous le pointeur : libellé affiché, sinon trait ou flèche à
+   * moins de EDGE_HIT_PX pixels (un trait 3D fait 1 pixel de large : le
+   * viser exactement serait trop difficile). Les liens de hiérarchie ne
+   * sont pas des relations et ne se sélectionnent pas.
+   */
+  private hitEdge(event: PointerEvent | MouseEvent): string | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const px = event.clientX - rect.left;
+    const py = event.clientY - rect.top;
+    this.raycaster.setFromCamera(
+      new THREE.Vector2((px / rect.width) * 2 - 1, -(py / rect.height) * 2 + 1),
+      this.camera,
+    );
+    const labels: THREE.Object3D[] = [];
+    for (const [id, entry] of this.links) {
+      if (entry.label?.visible) {
+        entry.label.userData.edgeId = id;
+        labels.push(entry.label);
+      }
+    }
+    const [label] = this.raycaster.intersectObjects(labels, false);
+    if (label) return label.object.userData.edgeId as string;
+
+    const toScreen = (point: THREE.Vector3) => {
+      const ndc = point.clone().project(this.camera);
+      return {
+        x: ((ndc.x + 1) / 2) * rect.width,
+        y: ((1 - ndc.y) / 2) * rect.height,
+        visible: ndc.z > -1 && ndc.z < 1,
+      };
+    };
+    let best: { id: string; distance: number } | null = null;
+    for (const [id, entry] of this.links) {
+      if (entry.link.kind !== 'relation') continue;
+      const attribute = entry.line.geometry.getAttribute(
+        'position',
+      ) as THREE.BufferAttribute;
+      const a = toScreen(new THREE.Vector3().fromBufferAttribute(attribute, 0));
+      // Jusqu'à la pointe de la flèche, au-delà de la fin du trait.
+      const b = toScreen(
+        entry.arrow?.position ??
+          new THREE.Vector3().fromBufferAttribute(attribute, 1),
+      );
+      if (!a.visible || !b.visible) continue;
+      const distance = distanceToSegment(px, py, a, b);
+      if (distance <= EDGE_HIT_PX && (!best || distance < best.distance)) {
+        best = { id, distance };
+      }
+    }
+    return best?.id ?? null;
   }
 
   /** Carte de document sous le pointeur, prioritaire sur les nœuds. */
@@ -1010,15 +1420,20 @@ export class GraphScene {
         return;
       }
       const id = this.hit(event);
-      if (id !== this.hoveredId) {
+      // Les nœuds passent avant les relations qui les touchent.
+      const edgeId = id ? null : this.hitEdge(event);
+      if (id !== this.hoveredId || edgeId !== this.hoveredEdgeId) {
         this.hoveredId = id;
+        this.hoveredEdgeId = edgeId;
         this.applyHighlight();
       }
       canvas.style.cursor = id
         ? event.shiftKey
           ? 'move'
           : 'crosshair'
-        : 'grab';
+        : edgeId
+          ? 'pointer'
+          : 'grab';
       return;
     }
     if (pointer.kind === 'orbit' || pointer.kind === 'card') return;
@@ -1097,7 +1512,14 @@ export class GraphScene {
           event.clientX - pointer.startX,
           event.clientY - pointer.startY,
         ) <= CLICK_TOLERANCE_PX;
-      if (still && event.type === 'pointerup') this.callbacks.onSelect(null);
+      if (!still || event.type !== 'pointerup') return;
+      const edgeId = this.hitEdge(event);
+      if (edgeId) {
+        this.callbacks.onSelectEdge(edgeId);
+      } else {
+        this.callbacks.onSelect(null);
+        this.callbacks.onSelectEdge(null);
+      }
       return;
     }
     if (pointer.kind === 'card') {
@@ -1171,8 +1593,12 @@ export class GraphScene {
   };
 
   private readonly onPointerLeave = () => {
-    if (this.hoveredId && this.pointer.kind === 'idle') {
+    if (
+      (this.hoveredId || this.hoveredEdgeId) &&
+      this.pointer.kind === 'idle'
+    ) {
       this.hoveredId = null;
+      this.hoveredEdgeId = null;
       this.applyHighlight();
     }
   };
@@ -1190,12 +1616,15 @@ export class GraphScene {
     if (!moving && !this.dirty) return;
     this.dirty = false;
     this.layoutCards();
+    this.declutter();
     this.renderer.render(this.scene, this.camera);
   };
 
   private resize(): void {
     const width = Math.max(this.container.clientWidth, 1);
     const height = Math.max(this.container.clientHeight, 1);
+    this.viewWidth = width;
+    this.viewHeight = height;
     this.renderer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -1216,7 +1645,7 @@ export class GraphScene {
     Object.assign(this.scene.fog as THREE.Fog, { near, far });
     for (const entry of this.nodes.values()) {
       entry.mesh.material.color.set(this.nodeColor(entry.data));
-      if (entry.label) this.replaceNodeLabel(entry, entry.data.title);
+      if (entry.label) this.replaceNodeLabel(entry, this.labelText(entry));
     }
     // Les relations sont recréées au prochain setData ; forcer leur rafraîchissement.
     for (const entry of this.links.values()) entry.labelKey = '';

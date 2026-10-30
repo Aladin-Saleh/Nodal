@@ -1,5 +1,8 @@
 import { useId, useState, type FormEvent } from 'react';
-import { EDGE_LABEL_MAX_LENGTH } from '../../../shared/domain';
+import {
+  DESCRIPTION_MAX_LENGTH,
+  EDGE_LABEL_MAX_LENGTH,
+} from '../../../shared/domain';
 import type { NodeSummary, RelationTypeInfo } from '../../../shared/model';
 import { Modal } from '../../components/Modal';
 
@@ -8,6 +11,7 @@ export interface RelationFormValue {
   targetId: string;
   relationTypeId: string;
   label: string | null;
+  description: string | null;
 }
 
 export interface RelationDialogProps {
@@ -22,7 +26,7 @@ export interface RelationDialogProps {
   onCancel(): void;
 }
 
-/** Choix de la cible, du type et du libellé d'une relation (§6.8). */
+/** Choix de la cible, du type, du libellé et de la description d'une relation (§6.8). */
 export function RelationDialog({
   title,
   nodes,
@@ -38,6 +42,7 @@ export function RelationDialog({
     target: useId(),
     type: useId(),
     label: useId(),
+    description: useId(),
   };
   const [sourceId, setSourceId] = useState(initial.sourceId);
   const [targetId, setTargetId] = useState(initial.targetId ?? '');
@@ -45,6 +50,7 @@ export function RelationDialog({
     initial.relationTypeId ?? relationTypes[0]?.id ?? '',
   );
   const [label, setLabel] = useState(initial.label ?? '');
+  const [description, setDescription] = useState(initial.description ?? '');
 
   const sorted = nodes.toSorted((a, b) => a.title.localeCompare(b.title));
   const valid = sourceId && targetId && relationTypeId && sourceId !== targetId;
@@ -57,6 +63,7 @@ export function RelationDialog({
       targetId,
       relationTypeId,
       label: label.trim() === '' ? null : label.trim(),
+      description: description.trim() === '' ? null : description.trim(),
     });
   };
 
@@ -111,6 +118,15 @@ export function RelationDialog({
           maxLength={EDGE_LABEL_MAX_LENGTH}
           placeholder="Par défaut : le nom du type"
           onChange={(event) => setLabel(event.target.value)}
+        />
+        <label htmlFor={ids.description}>Description (facultative)</label>
+        <textarea
+          id={ids.description}
+          rows={4}
+          value={description}
+          maxLength={DESCRIPTION_MAX_LENGTH}
+          placeholder="Pourquoi ces deux nœuds sont liés, dans quelles conditions…"
+          onChange={(event) => setDescription(event.target.value)}
         />
         {relationTypes.length === 0 && (
           <p className="warning">

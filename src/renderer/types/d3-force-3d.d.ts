@@ -63,11 +63,21 @@ declare module 'd3-force-3d' {
   >(links?: L[]): LinkForce<N, L>;
 
   export interface ManyBodyForce<N extends SimulationNode> extends Force<N> {
-    strength(strength: number): this;
+    strength(strength: number | ((node: N) => number)): this;
     distanceMax(distance: number): this;
   }
 
   export function forceManyBody<N extends SimulationNode>(): ManyBodyForce<N>;
+
+  export interface CollideForce<N extends SimulationNode> extends Force<N> {
+    radius(radius: number | ((node: N) => number)): this;
+    strength(strength: number): this;
+    iterations(iterations: number): this;
+  }
+
+  export function forceCollide<N extends SimulationNode>(
+    radius?: number,
+  ): CollideForce<N>;
 
   export function forceCenter<N extends SimulationNode>(
     x?: number,

@@ -59,7 +59,7 @@ export function readTheme(): GraphTheme {
 }
 
 const LABEL_FONT_PX = 40;
-const LABEL_MAX_CHARS = 40;
+export const LABEL_MAX_CHARS = 40;
 
 /**
  * Étiquette texte dessinée dans un canevas puis plaquée sur un sprite :
@@ -102,10 +102,14 @@ export function createLabel(
     map: texture,
     transparent: true,
     depthWrite: false,
+    // Toujours lisible : dessinée par-dessus les formes (le placement évite
+    // déjà les chevauchements, voir declutterLabels).
+    depthTest: false,
     sizeAttenuation: false,
     fog: false,
   });
   const sprite = new THREE.Sprite(material);
+  sprite.renderOrder = 5;
   sprite.center.set(0.5, 0);
   sprite.scale.set((options.height * width) / height, options.height, 1);
   return sprite;

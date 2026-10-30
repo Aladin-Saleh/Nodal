@@ -66,6 +66,7 @@ export function RelationList({
               id: current.relation.id,
               relationTypeId: value.relationTypeId,
               label: value.label,
+              description: value.description,
             }),
           )
         : await run(() => client.call('edge:create', value));
@@ -94,7 +95,10 @@ export function RelationList({
         <ul className="relation-list">
           {items.map((relation) => (
             <li key={relation.id}>
-              <span className="relation-type">
+              <span
+                className="relation-type"
+                title={relation.description ?? undefined}
+              >
                 {relation.label ?? relation.relationTypeName}
               </span>
               <button
@@ -167,6 +171,7 @@ export function RelationList({
             targetId: editing.relation.targetId,
             relationTypeId: editing.relation.relationTypeId,
             label: editing.relation.label,
+            description: editing.relation.description,
           }}
           lockEnds
           submitLabel="Enregistrer"

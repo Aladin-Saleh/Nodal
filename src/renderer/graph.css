@@ -721,3 +721,86 @@ kbd {
 .error-boundary p {
   margin: 0;
 }
+
+/* Fiche d'une relation cliquée dans le graphe */
+
+.edge-card {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100% - 20px));
+  max-height: calc(100% - 70px);
+  padding: 10px 12px;
+  overflow: auto;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  box-shadow: var(--shadow-md);
+}
+
+.edge-card p {
+  margin: 0;
+}
+
+.edge-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.edge-card-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.edge-card-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted, #888);
+}
+
+.edge-card-ends {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+/* Extrémités : liens vers les nœuds, à la taille du texte. */
+.edge-card-ends .link-button {
+  padding: 0;
+  font-size: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  text-align: left;
+}
+
+.edge-card-ends .link-button:hover {
+  text-decoration: underline;
+}
+
+.edge-card-arrow {
+  color: var(--accent);
+}
+
+.edge-card-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.edge-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edge-card-actions button {
+  padding: 4px 10px;
+}

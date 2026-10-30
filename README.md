@@ -51,7 +51,18 @@ pièces jointes en BLOB).
   - double-clic dans le vide : nouveau nœud à cet endroit (parent au choix) ;
   - sélection multiple (Ctrl+clic, Ctrl+A) et actions groupées : déplacer
     sous un parent ou à la racine, changer le type, supprimer ;
-  - champ « Parent » pour passer un nœud en racine ou le rattacher à un autre.
+  - champ « Parent » pour passer un nœud en racine ou le rattacher à un autre ;
+  - clic sur une relation (à quelques pixels près du trait, ou sur son
+    libellé) : fiche avec extrémités, type, libellé et description,
+    modification et suppression ; description saisissable à la création et
+    à la modification d'une relation ;
+  - lisibilité des grands graphes : étiquettes placées sans chevauchement,
+    ni sur un nœud plus important (sélection et survol d'abord, puis voisins
+    et résultats de recherche, puis nœuds les plus reliés et les plus
+    proches), les autres au survol ou en zoomant ; disposition qui regroupe
+    chaque branche et écarte les branches entre elles ; repliage d'une
+    branche (« Replier », « Tout replier », « Tout déplier »), le nœud
+    replié indiquant le nombre de descendants masqués.
 - **Lot 4 — Contenus riches** :
   - éditeur CodeMirror 6 pour tous les documents : coloration (Markdown,
     JSON, Java, JS/TS, Python, SQL, Go, YAML, Bash, C/C++), numéros de

@@ -26,6 +26,8 @@ export interface Graph3DViewProps extends GraphSceneCallbacks {
   searchMatches: ReadonlySet<string> | null;
   /** Sélection multiple (Ctrl+clic, Ctrl+A). */
   multiSelection: ReadonlySet<string>;
+  /** Relation dont la fiche est affichée. */
+  selectedEdgeId: string | null;
 }
 
 /** Enveloppe React de la scène 3D ; toutes les données viennent des props. */
@@ -37,6 +39,7 @@ export function Graph3DView({
   selectedDocuments,
   searchMatches,
   multiSelection,
+  selectedEdgeId,
   ...handlers
 }: Graph3DViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -64,6 +67,7 @@ export function Graph3DView({
         onAddDocument: (nodeId) => callbacks.current.onAddDocument(nodeId),
         onToggleSelect: (id) => callbacks.current.onToggleSelect(id),
         onCreateAt: (position) => callbacks.current.onCreateAt(position),
+        onSelectEdge: (id) => callbacks.current.onSelectEdge(id),
       });
     } catch (error) {
       console.error('[graph] rendu 3D indisponible', error);
@@ -105,6 +109,10 @@ export function Graph3DView({
   useEffect(() => {
     sceneRef.current?.setMultiSelection(multiSelection);
   }, [multiSelection]);
+
+  useEffect(() => {
+    sceneRef.current?.setSelectedEdge(selectedEdgeId);
+  }, [selectedEdgeId]);
 
   useImperativeHandle(
     ref,

@@ -24,6 +24,8 @@ import {
   type GraphFilters,
   type GraphScope,
 } from './graph-model';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EdgeCard } from './EdgeCard';
 import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
 
 export interface GraphPanelProps {
@@ -100,6 +102,11 @@ export function GraphPanel({
   );
   const [depth, setDepth] = useState(2);
   const [filters, setFilters] = useState<GraphFilters>(DEFAULT_FILTERS);
+  /** Relation dont la fiche est affichée (clic sur un trait du graphe). */
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [edgeAction, setEdgeAction] = useState<'edit' | 'delete' | null>(null);
+  /** Nœuds repliés : leurs descendants sont masqués. */
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [pendingLink, setPendingLink] = useState<{
     sourceId: string;
     targetId: string;
@@ -111,11 +118,32 @@ export function GraphPanel({
       : { kind: 'all' };
 
   const visible = useMemo(
-    () => visibleGraph(graph, scope, filters),
+    () => visibleGraph(graph, scope, filters, collapsed),
     // `scope` est recalculé à chaque rendu : dépendre de ses composantes.
     // oxlint-disable-next-line react/exhaustive-deps
-    [graph, filters, scope.kind, selectedId, depth],
+    [graph, filters, collapsed, scope.kind, selectedId, depth],
   );
+  const parents = useMemo(
+    () =>
+      new Set(
+        graph.nodes.flatMap((node) => (node.parentId ? [node.parentId] : [])),
+      ),
+    [graph],
+  );
+  const hiddenByCollapse = [
+    ...(visible.hiddenDescendants?.values() ?? []),
+  ].reduce((total, count) => total + count, 0);
+  const canCollapseSelected = !!selectedId && parents.has(selectedId);
+  const selectedCollapsed = !!selectedId && collapsed.has(selectedId);
+  /** Ne garde que les racines dépliées : une vue d'ensemble par branche. */
+  const collapseAll = () =>
+    setCollapsed(
+      new Set(
+        graph.nodes
+          .filter((node) => !node.parentId && parents.has(node.id))
+          .map((node) => node.id),
+      ),
+    );
   const visibleIds = useMemo(
     () => new Set(visible.nodes.map((node) => node.id)),
     [visible],
@@ -151,6 +179,55 @@ export function GraphPanel({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  // Masquée si la relation n'est plus affichée (filtre, repliage, suppression).
+  const selectedEdge = selectedEdgeId
+    ? (visible.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
+    : null;
+  const titleOf = (id: string) =>
+    graph.nodes.find((node) => node.id === id)?.title ?? '?';
+  /** Sélectionner un nœud ferme la fiche de la relation. */
+  const selectNode = (id: string | null) => {
+    setSelectedEdgeId(null);
+    onSelect(id);
+  };
+
+  useEffect(() => {
+    if (!selectedEdgeId) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [role="dialog"]')) return;
+      if (event.key === 'Escape') setSelectedEdgeId(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedEdgeId]);
+
+  const updateEdge = async (value: RelationFormValue) => {
+    if (!selectedEdge) return;
+    setEdgeAction(null);
+    const done = await run(() =>
+      client.call('edge:update', {
+        id: selectedEdge.id,
+        relationTypeId: value.relationTypeId,
+        label: value.label,
+        description: value.description,
+      }),
+    );
+    if (done) onRelationsChanged();
+  };
+
+  const deleteEdge = async () => {
+    if (!selectedEdge) return;
+    setEdgeAction(null);
+    const done = await run(() =>
+      client.call('edge:delete', { id: selectedEdge.id }),
+    );
+    if (done !== undefined) {
+      setSelectedEdgeId(null);
+      onRelationsChanged();
+    }
+  };
 
   const savePositions = async (positions: NodePosition[]) => {
     if (positions.length === 0) return;
@@ -314,6 +391,39 @@ export function GraphPanel({
           {preferences.showGraphHints ? GRAPH_HELP : ''}
         </span>
 
+        <div className="segmented" role="group" aria-label="Repliage">
+          <button
+            type="button"
+            disabled={!canCollapseSelected}
+            title={
+              canCollapseSelected
+                ? selectedCollapsed
+                  ? 'Afficher les descendants du nœud sélectionné'
+                  : 'Masquer les descendants du nœud sélectionné'
+                : 'Sélectionnez un nœud qui a des enfants'
+            }
+            onClick={() =>
+              selectedId && setCollapsed(toggled(collapsed, selectedId))
+            }
+          >
+            {selectedCollapsed ? 'Déplier' : 'Replier'}
+          </button>
+          <button
+            type="button"
+            title="Replier chaque racine : une vue d’ensemble par branche"
+            disabled={parents.size === 0}
+            onClick={collapseAll}
+          >
+            Tout replier
+          </button>
+          <button
+            type="button"
+            disabled={collapsed.size === 0}
+            onClick={() => setCollapsed(new Set())}
+          >
+            Tout déplier
+          </button>
+        </div>
         <button
           type="button"
           className="secondary"
@@ -419,12 +529,28 @@ export function GraphPanel({
             multiSelection={multiSelection}
             onToggleSelect={onToggleSelect}
             onCreateAt={onCreateAt}
-            onSelect={onSelect}
+            onSelect={selectNode}
+            selectedEdgeId={selectedEdge?.id ?? null}
+            onSelectEdge={setSelectedEdgeId}
             onOpen={onOpen}
             onLink={(sourceId, targetId) =>
               setPendingLink({ sourceId, targetId })
             }
             onPositionsChanged={(positions) => void savePositions(positions)}
+          />
+        )}
+        {selectedEdge && (
+          <EdgeCard
+            edge={selectedEdge}
+            relationType={graph.relationTypes.find(
+              (type) => type.id === selectedEdge.relationTypeId,
+            )}
+            sourceTitle={titleOf(selectedEdge.sourceId)}
+            targetTitle={titleOf(selectedEdge.targetId)}
+            onNavigate={selectNode}
+            onEdit={() => setEdgeAction('edit')}
+            onDelete={() => setEdgeAction('delete')}
+            onClose={() => setSelectedEdgeId(null)}
           />
         )}
         <ul className="graph-legend" aria-label="Légende">
@@ -437,10 +563,44 @@ export function GraphPanel({
         </ul>
         <p className="graph-count muted">
           {visible.nodes.length} nœud(s) · {visible.edges.length} relation(s)
+          {hiddenByCollapse > 0 ? ` · ${hiddenByCollapse} replié(s)` : ''}
           {selectedTitle ? ` · « ${selectedTitle} »` : ''}
         </p>
       </div>
 
+      {selectedEdge && edgeAction === 'edit' && (
+        <RelationDialog
+          title="Modifier la relation"
+          nodes={nodes}
+          relationTypes={graph.relationTypes}
+          initial={{
+            sourceId: selectedEdge.sourceId,
+            targetId: selectedEdge.targetId,
+            relationTypeId: selectedEdge.relationTypeId,
+            label: selectedEdge.label,
+            description: selectedEdge.description,
+          }}
+          lockEnds
+          submitLabel="Enregistrer"
+          onSubmit={(value) => void updateEdge(value)}
+          onCancel={() => setEdgeAction(null)}
+        />
+      )}
+      {selectedEdge && edgeAction === 'delete' && (
+        <ConfirmDialog
+          title="Supprimer la relation ?"
+          confirmLabel="Supprimer la relation"
+          danger
+          onConfirm={() => void deleteEdge()}
+          onCancel={() => setEdgeAction(null)}
+        >
+          <p>
+            La relation « {titleOf(selectedEdge.sourceId)} →{' '}
+            {titleOf(selectedEdge.targetId)} » sera supprimée. Les deux nœuds
+            sont conservés.
+          </p>
+        </ConfirmDialog>
+      )}
       {pendingLink && (
         <RelationDialog
           title="Nouvelle relation"
