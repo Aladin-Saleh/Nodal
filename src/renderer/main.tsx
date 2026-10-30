@@ -2,9 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { createNodalClient } from './services/nodal-client';
+import './theme.css';
 import './index.css';
 import './workspace.css';
 import './graph.css';
+import './polish.css';
 
 const container = document.getElementById('root');
 if (!container) {

@@ -19,6 +19,11 @@ const SHORTCUTS: [string, string][] = [
   ['Échap', 'vider la sélection ou la recherche, fermer une fenêtre'],
   ['F2 / Suppr', 'renommer / supprimer le nœud (arborescence)'],
   ['F1', 'cette aide'],
+  ['Ctrl + ,', 'préférences (thème, couleur, densité…)'],
+  [
+    'Ctrl + = / Ctrl + - / Ctrl + 0',
+    'agrandir, réduire, rétablir la taille du texte',
+  ],
 ];
 
 /** Aide intégrée (§7.1) : gestes du graphe et raccourcis clavier. */

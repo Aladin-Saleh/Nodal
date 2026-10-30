@@ -33,6 +33,7 @@ function setup() {
   const client = {
     call,
     onFlushRequest: () => () => undefined,
+    onPreferencesChanged: () => () => undefined,
     onExternalChange: () => () => undefined,
   } as unknown as NodalClient;
   const onResults = vi.fn();

@@ -32,7 +32,10 @@ export function WelcomeScreen({
 
   return (
     <section className="welcome" aria-labelledby="welcome-title">
-      <h1 id="welcome-title">Nodal</h1>
+      <div className="welcome-brand">
+        <span className="brand-mark" aria-hidden="true" />
+        <h1 id="welcome-title">Nodal</h1>
+      </div>
       <p className="muted">
         Base de connaissances techniques sous forme de graphe.
       </p>

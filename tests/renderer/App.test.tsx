@@ -5,6 +5,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +19,10 @@ import type {
   WorkspaceInfo,
 } from '../../src/shared/ipc-contract';
 import type { NodeDetail, NodeSummary } from '../../src/shared/model';
+import {
+  DEFAULT_PREFERENCES,
+  type AppPreferences,
+} from '../../src/shared/preferences';
 
 afterEach(cleanup);
 
@@ -40,6 +45,7 @@ type Handlers = {
 /** Faux backend : un nœud créé apparaît dans `node:list` et `node:get`. */
 function fakeClient(overrides: Handlers = {}) {
   const externalListeners = new Set<() => void>();
+  const preferenceListeners = new Set<(preferences: AppPreferences) => void>();
   const nodes: NodeSummary[] = [];
   const defaults: Handlers = {
     'app:getInfo': () => ({
@@ -52,6 +58,8 @@ function fakeClient(overrides: Handlers = {}) {
       mcpServerPath: 'C:/Nodal/resources/nodal-mcp.cjs',
     }),
     'app:setUnsavedChanges': () => null,
+    'preferences:get': () => DEFAULT_PREFERENCES,
+    'preferences:update': (changes) => ({ ...DEFAULT_PREFERENCES, ...changes }),
     'workspace:getCurrent': () => null,
     'workspace:listRecent': () => [],
     'workspace:create': () => workspace,
@@ -115,6 +123,10 @@ function fakeClient(overrides: Handlers = {}) {
   const client: NodalClient = {
     call: call as unknown as NodalClient['call'],
     onFlushRequest: () => () => undefined,
+    onPreferencesChanged: (listener) => {
+      preferenceListeners.add(listener);
+      return () => preferenceListeners.delete(listener);
+    },
     onExternalChange: (listener) => {
       externalListeners.add(listener);
       return () => externalListeners.delete(listener);
@@ -124,7 +136,11 @@ function fakeClient(overrides: Handlers = {}) {
   const emitExternalChange = () => {
     for (const listener of externalListeners) listener();
   };
-  return { client, call, emitExternalChange };
+  /** Simule un changement de préférences poussé par le main. */
+  const emitPreferences = (preferences: AppPreferences) => {
+    for (const listener of preferenceListeners) listener(preferences);
+  };
+  return { client, call, emitExternalChange, emitPreferences };
 }
 
 describe('App', () => {
@@ -252,5 +268,80 @@ describe('App', () => {
       await screen.findByRole('heading', { name: 'Créer un espace' }),
     ).toBeTruthy();
     expect(call).toHaveBeenCalledWith('workspace:close');
+  });
+});
+
+describe('Préférences', () => {
+  const recentEntry = {
+    id: 'r1',
+    name: 'Base infra',
+    filePath: 'C:\\kb\\infra.nodal',
+    lastOpenedAt: '2026-10-29T12:00:00.000Z',
+    exists: true,
+  };
+
+  it('rouvre le dernier espace au démarrage', async () => {
+    const { client, call } = fakeClient({
+      'workspace:listRecent': () => [recentEntry],
+      'workspace:openRecent': () => workspace,
+    });
+    render(<App client={client} />);
+    expect(
+      await screen.findByRole('button', { name: 'Fermer l’espace' }),
+    ).toBeTruthy();
+    expect(call).toHaveBeenCalledWith('workspace:openRecent', { id: 'r1' });
+  });
+
+  it('reste sur l’accueil si la préférence est désactivée', async () => {
+    const { client, call } = fakeClient({
+      'preferences:get': () => ({
+        ...DEFAULT_PREFERENCES,
+        reopenLastWorkspace: false,
+      }),
+      'workspace:listRecent': () => [recentEntry],
+    });
+    render(<App client={client} />);
+    expect(await screen.findByText('Base infra')).toBeTruthy();
+    expect(call).not.toHaveBeenCalledWith('workspace:openRecent', {
+      id: 'r1',
+    });
+  });
+
+  it('s’ouvrent avec Ctrl+, et s’appliquent aussitôt', async () => {
+    const { client, call } = fakeClient();
+    render(<App client={client} />);
+    await screen.findByText('Nodal v0.1.0');
+    fireEvent.keyDown(window, { key: ',', ctrlKey: true });
+    const dialog = await screen.findByRole('dialog', { name: 'Préférences' });
+
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Vert' }));
+    expect(call).toHaveBeenCalledWith('preferences:update', {
+      accent: 'green',
+    });
+    await waitFor(() =>
+      expect(document.documentElement.dataset.accent).toBe('green'),
+    );
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Compacte' }));
+    await waitFor(() =>
+      expect(document.documentElement.dataset.density).toBe('compact'),
+    );
+    expect(
+      within(dialog)
+        .getByRole('button', { name: 'Compacte' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
+  it('suivent un changement venu du main (raccourci de zoom)', async () => {
+    const { client, emitPreferences } = fakeClient();
+    render(<App client={client} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Préférences' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Préférences' });
+    act(() => emitPreferences({ ...DEFAULT_PREFERENCES, zoom: 125 }));
+    expect(
+      (within(dialog).getByLabelText('Taille du texte') as HTMLSelectElement)
+        .value,
+    ).toBe('125');
   });
 });

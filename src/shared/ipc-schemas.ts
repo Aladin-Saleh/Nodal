@@ -20,6 +20,7 @@ import {
   WORKSPACE_NAME_MAX_LENGTH,
 } from './domain';
 import type { IpcArgs, IpcChannel } from './ipc-contract';
+import { preferencesUpdateSchema } from './preferences';
 
 // Caractères de contrôle C0/C1 : interdits dans un libellé sur une ligne.
 // oxlint-disable-next-line no-control-regex
@@ -228,6 +229,8 @@ const one = <T extends z.ZodType>(schema: T) => z.tuple([schema]);
 export const ipcArgsSchemas = {
   'app:getInfo': noArgs,
   'app:setUnsavedChanges': one(z.boolean()),
+  'preferences:get': noArgs,
+  'preferences:update': one(preferencesUpdateSchema),
 
   'workspace:create': one(createWorkspaceInputSchema),
   'workspace:open': noArgs,

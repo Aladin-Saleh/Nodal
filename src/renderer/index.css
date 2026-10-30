@@ -1,32 +1,4 @@
-:root {
-  --bg: #f7f7f8;
-  --surface: #ffffff;
-  --border: #d9dadf;
-  --text: #1d1e22;
-  --muted: #5d6069;
-  --accent: #3b5bdb;
-  --accent-text: #ffffff;
-  --error-bg: #fdecec;
-  --error-text: #a11d1d;
-  --status-bg: #e9eaee;
-  color-scheme: light dark;
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: 14px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1e1f22;
-    --surface: #2b2d31;
-    --border: #3f4147;
-    --text: #e8e9ec;
-    --muted: #a2a5ad;
-    --accent: #5c7cfa;
-    --error-bg: #4a1f22;
-    --error-text: #ffb3b3;
-    --status-bg: #17181a;
-  }
-}
+/* Base de l'interface. Couleurs et jetons : theme.css. */
 
 * {
   box-sizing: border-box;

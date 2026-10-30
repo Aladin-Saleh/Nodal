@@ -55,6 +55,7 @@ import { McpDialog } from './McpDialog';
 import { LlmExportDialog } from './PortabilityDialogs';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { WorkspaceSettingsDialog } from './WorkspaceSettingsDialog';
+import { usePreferences } from '../../app/preferences';
 
 type DialogState =
   | {
@@ -103,7 +104,11 @@ export function WorkspaceScreen({
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [graph, setGraph] = useState<GraphData | null>(null);
   // La vue Graphe est la vue par défaut à l'ouverture d'un espace.
-  const [view, setView] = useState<ViewMode>('graph');
+  const { preferences } = usePreferences();
+  // Lue une seule fois : changer la préférence ne bascule pas la vue en cours.
+  const [view, setView] = useState<ViewMode>(
+    preferences.startView === 'documents' ? 'documents' : 'graph',
+  );
   const [relationsRevision, setRelationsRevision] = useState(0);
   /** Incrémenté à chaque modification externe appliquée (assistant IA). */
   const [externalRevision, setExternalRevision] = useState(0);

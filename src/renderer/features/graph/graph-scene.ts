@@ -26,6 +26,7 @@ import type {
   NodePosition,
   RelationTypeInfo,
 } from '../../../shared/model';
+import { APPEARANCE_EVENT } from '../../app/preferences';
 import { hasPosition, seedPositions, type VisibleGraph } from './graph-model';
 import {
   createDocumentPage,
@@ -223,6 +224,7 @@ export class GraphScene {
     canvas.addEventListener('dblclick', this.onDoubleClick);
     canvas.addEventListener('pointerleave', this.onPointerLeave);
     this.media.addEventListener('change', this.onThemeChange);
+    window.addEventListener(APPEARANCE_EVENT, this.onThemeChange);
 
     this.observer = new ResizeObserver(() => this.resize());
     this.observer.observe(container);
@@ -561,6 +563,7 @@ export class GraphScene {
     this.simulation.on('tick', null).on('end', null).stop();
     this.observer.disconnect();
     this.media.removeEventListener('change', this.onThemeChange);
+    window.removeEventListener(APPEARANCE_EVENT, this.onThemeChange);
     const canvas = this.renderer.domElement;
     canvas.removeEventListener('pointerdown', this.onPointerDown, {
       capture: true,

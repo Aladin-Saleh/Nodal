@@ -175,7 +175,7 @@ describe('parcours principaux', () => {
   it('retrouve tout après fermeture et réouverture de l’application', async () => {
     await app.close();
     await launch();
-    await page.getByRole('button', { name: /^E2E/ }).click();
+    // Le dernier espace est rouvert au démarrage (préférence par défaut).
     await page.getByRole('treeitem', { name: 'Plateforme' }).waitFor();
 
     await page

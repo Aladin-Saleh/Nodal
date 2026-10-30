@@ -1,25 +1,5 @@
 /* Espace ouvert (lot 2) : disposition §7, arborescence, documents, propriétés. */
 
-:root {
-  --selected: #dfe5ff;
-  --danger: #c92a2a;
-  --warning: #9c6500;
-  --type-concept: #3b5bdb;
-  --type-component: #2f9e44;
-  --type-data: #e8590c;
-  --type-procedure: #9c36b5;
-  --type-resource: #0c8599;
-  --type-generic: #868e96;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --selected: #33395a;
-    --danger: #ff6b6b;
-    --warning: #ffc078;
-  }
-}
-
 button.secondary {
   color: var(--text);
   background: var(--surface);

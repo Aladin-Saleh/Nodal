@@ -12,6 +12,7 @@ import type {
   TagInfo,
 } from '../../../shared/model';
 import { useClient, useRunner } from '../../app/context';
+import { usePreferences } from '../../app/preferences';
 import {
   RelationDialog,
   type RelationFormValue,
@@ -88,6 +89,7 @@ export function GraphPanel({
   onBulkDelete,
   onCreateAt,
 }: GraphPanelProps) {
+  const { preferences } = usePreferences();
   const client = useClient();
   const run = useRunner();
   const view = useRef<Graph3DViewHandle>(null);
@@ -307,8 +309,9 @@ export function GraphPanel({
           </div>
         </details>
 
+        {/* L'élément reste quand l'aide est masquée : il pousse les boutons à droite. */}
         <span className="graph-help muted" title={GRAPH_HELP}>
-          {GRAPH_HELP}
+          {preferences.showGraphHints ? GRAPH_HELP : ''}
         </span>
 
         <button

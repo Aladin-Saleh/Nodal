@@ -127,8 +127,15 @@ pièces jointes en BLOB).
 Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
-`F2` renommer, `Suppr` supprimer, `F1` aide, flèches pour parcourir
-l'arborescence. Le détail est dans le [guide d'utilisation](docs/guide-utilisateur.md).
+`F2` renommer, `Suppr` supprimer, `F1` aide, `Ctrl+,` préférences,
+`Ctrl+=` / `Ctrl+-` / `Ctrl+0` taille du texte, flèches pour parcourir
+l'arborescence.
+
+Préférences de l'application (profil utilisateur, `preferences.json`) :
+thème (système, clair, sombre, appliqué par `nativeTheme`), couleur
+d'accent, densité, taille du texte (zoom de la fenêtre), vue à l'ouverture
+d'un espace, réouverture du dernier espace, aide des gestes du graphe. La
+taille et la position de la fenêtre sont mémorisées (`window-state.json`). Le détail est dans le [guide d'utilisation](docs/guide-utilisateur.md).
 
 ## Stack
 

@@ -5,7 +5,9 @@ import { WelcomeScreen } from '../features/workspace/WelcomeScreen';
 import { WorkspaceScreen } from '../features/workspace/WorkspaceScreen';
 import { describeError, type NodalClient } from '../services/nodal-client';
 import { SaveTracker } from '../services/save-tracker';
+import { PreferencesDialog } from '../features/preferences/PreferencesDialog';
 import { ServicesProvider } from './context';
+import { PreferencesProvider } from './preferences';
 import { ErrorMessage } from './ErrorMessage';
 import { StatusBar } from './StatusBar';
 import { ImportReportDialog } from '../features/workspace/PortabilityDialogs';
@@ -24,6 +26,19 @@ export function App({ client }: AppProps) {
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const [importErrors, setImportErrors] = useState<string[] | null>(null);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+
+  // Ctrl+, : préférences, depuis n'importe quel écran.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+        event.preventDefault();
+        setPreferencesOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const tracker = useMemo(
     () =>
@@ -51,12 +66,23 @@ export function App({ client }: AppProps) {
     Promise.all([
       client.call('app:getInfo'),
       client.call('workspace:getCurrent'),
+      client.call('preferences:get'),
+      client.call('workspace:listRecent'),
     ])
-      .then(([info, current]) => {
+      .then(async ([info, current, preferences, recentList]) => {
         if (cancelled) return;
         setAppInfo(info);
+        const last = recentList[0];
+        const reopened =
+          !current && preferences.reopenLastWorkspace && last?.exists
+            ? await client
+                .call('workspace:openRecent', { id: last.id })
+                // Échec silencieux : l'accueil reste affiché.
+                .catch(() => null)
+            : null;
+        if (cancelled) return;
         // Ne pas écraser un espace ouvert par l'utilisateur entre-temps.
-        setWorkspace((previous) => previous ?? current);
+        setWorkspace((previous) => previous ?? current ?? reopened);
       })
       .catch((err: unknown) => {
         if (!cancelled) reportError(err);
@@ -133,54 +159,67 @@ export function App({ client }: AppProps) {
       reportError={reportError}
       reportInfo={reportInfo}
     >
-      <div className="app">
-        {notice && (
-          <ErrorMessage
-            message={notice.message}
-            kind={notice.kind}
-            onDismiss={() => setNotice(null)}
-          />
-        )}
-        {workspace ? (
-          <WorkspaceScreen
-            key={workspace.id}
-            workspace={workspace}
-            onWorkspaceChanged={setWorkspace}
-            onClose={() => void handleClose()}
-            onDeleted={() => {
-              setWorkspace(null);
-              void refreshRecent();
-            }}
-          />
-        ) : (
-          <main className="app-content">
-            <WelcomeScreen
-              busy={busy}
-              recent={recent}
-              onCreate={(name) =>
-                void openWith(() => client.call('workspace:create', { name }))
-              }
-              onOpen={() => void openWith(() => client.call('workspace:open'))}
-              onImport={() => void handleImport()}
-              onOpenRecent={(id) =>
-                void openWith(() => client.call('workspace:openRecent', { id }))
-              }
-              onRemoveRecent={(id) =>
-                void client
-                  .call('workspace:removeRecent', { id })
-                  .then(refreshRecent, reportError)
-              }
+      <PreferencesProvider client={client} onError={reportError}>
+        <div className="app">
+          {notice && (
+            <ErrorMessage
+              message={notice.message}
+              kind={notice.kind}
+              onDismiss={() => setNotice(null)}
             />
-          </main>
-        )}
-        {importErrors && (
-          <ImportReportDialog
-            errors={importErrors}
-            onClose={() => setImportErrors(null)}
+          )}
+          {workspace ? (
+            <WorkspaceScreen
+              key={workspace.id}
+              workspace={workspace}
+              onWorkspaceChanged={setWorkspace}
+              onClose={() => void handleClose()}
+              onDeleted={() => {
+                setWorkspace(null);
+                void refreshRecent();
+              }}
+            />
+          ) : (
+            <main className="app-content">
+              <WelcomeScreen
+                busy={busy}
+                recent={recent}
+                onCreate={(name) =>
+                  void openWith(() => client.call('workspace:create', { name }))
+                }
+                onOpen={() =>
+                  void openWith(() => client.call('workspace:open'))
+                }
+                onImport={() => void handleImport()}
+                onOpenRecent={(id) =>
+                  void openWith(() =>
+                    client.call('workspace:openRecent', { id }),
+                  )
+                }
+                onRemoveRecent={(id) =>
+                  void client
+                    .call('workspace:removeRecent', { id })
+                    .then(refreshRecent, reportError)
+                }
+              />
+            </main>
+          )}
+          {importErrors && (
+            <ImportReportDialog
+              errors={importErrors}
+              onClose={() => setImportErrors(null)}
+            />
+          )}
+          {preferencesOpen && (
+            <PreferencesDialog onClose={() => setPreferencesOpen(false)} />
+          )}
+          <StatusBar
+            appInfo={appInfo}
+            workspace={workspace}
+            onOpenPreferences={() => setPreferencesOpen(true)}
           />
-        )}
-        <StatusBar appInfo={appInfo} workspace={workspace} />
-      </div>
+        </div>
+      </PreferencesProvider>
     </ServicesProvider>
   );
 }

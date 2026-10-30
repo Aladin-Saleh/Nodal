@@ -1,11 +1,24 @@
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeTheme,
+  session,
+  shell,
+} from 'electron';
 import started from 'electron-squirrel-startup';
 import { IPC_EVENTS, type AppInfo } from '../shared/ipc-contract';
+import {
+  stepZoom,
+  type AppPreferences,
+  type PreferencesUpdate,
+} from '../shared/preferences';
 import { createAppUrlMatcher } from './app-url';
 import { getSqliteVersion } from './database/connection';
 import { createFileDialogs } from './file-dialogs';
 import { registerIpcHandlers } from './ipc/register';
+import { PreferencesStore, WindowStateStore } from './preferences-store';
 import {
   applySessionSecurity,
   createSenderValidator,
@@ -132,10 +145,56 @@ function bootstrap(): void {
     mainWindow.focus();
   });
 
+  // Préférences de l'application : le thème est appliqué avant la création
+  // de la fenêtre (pas de flash de couleur), le zoom à chaque chargement.
+  const userData = app.getPath('userData');
+  const preferences = new PreferencesStore(
+    path.join(userData, 'preferences.json'),
+  );
+  const windowState = new WindowStateStore(
+    path.join(userData, 'window-state.json'),
+  );
+  const applyZoom = (current: AppPreferences) =>
+    mainWindow?.webContents.setZoomFactor(current.zoom / 100);
+  const updatePreferences = (changes: PreferencesUpdate): AppPreferences => {
+    const next = preferences.update(changes);
+    nativeTheme.themeSource = next.theme;
+    applyZoom(next);
+    return next;
+  };
+  nativeTheme.themeSource = preferences.get().theme;
+
+  /** Ctrl+= / Ctrl+- / Ctrl+0 : taille du texte, mémorisée dans les préférences. */
+  const handleZoomShortcut = (event: Electron.Event, input: Electron.Input) => {
+    if (input.type !== 'keyDown' || !(input.control || input.meta)) return;
+    const current = preferences.get().zoom;
+    const zoom =
+      input.key === '+' || input.key === '='
+        ? stepZoom(current, 1)
+        : input.key === '-'
+          ? stepZoom(current, -1)
+          : input.key === '0'
+            ? 100
+            : null;
+    if (zoom === null) return;
+    // Empêche aussi le zoom du menu par défaut, non mémorisé.
+    event.preventDefault();
+    if (zoom === current) return;
+    const next = updatePreferences({ zoom });
+    mainWindow?.webContents.send(IPC_EVENTS.preferencesChanged, next);
+  };
+
   const openWindow = () => {
     forceClose = false;
     unsavedChanges = false;
-    mainWindow = createMainWindow();
+    mainWindow = createMainWindow({
+      state: windowState.get(),
+      onStateChange: (state) => windowState.save(state),
+    });
+    mainWindow.webContents.on('did-finish-load', () =>
+      applyZoom(preferences.get()),
+    );
+    mainWindow.webContents.on('before-input-event', handleZoomShortcut);
     mainWindow.on('close', handleClose);
     mainWindow.on('closed', () => {
       mainWindow = null;
@@ -153,6 +212,8 @@ function bootstrap(): void {
       trash: (filePath) => shell.trashItem(filePath),
       getAppInfo,
       setUnsavedChanges,
+      getPreferences: () => preferences.get(),
+      updatePreferences,
       isTrustedSender: createSenderValidator(getMainWindow, isAppUrl),
     });
     openWindow();

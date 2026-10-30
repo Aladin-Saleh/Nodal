@@ -7,6 +7,7 @@
  */
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
+import type { AppPreferences, PreferencesUpdate } from './preferences';
 import type {
   AssistantChange,
   AttachmentInfo,
@@ -180,6 +181,9 @@ export interface IpcContract {
   'app:getInfo': { args: []; result: AppInfo };
   /** Le renderer signale des modifications pas encore enregistrées. */
   'app:setUnsavedChanges': { args: [boolean]; result: null };
+  /** Préférences de l'application (profil utilisateur). */
+  'preferences:get': { args: []; result: AppPreferences };
+  'preferences:update': { args: [PreferencesUpdate]; result: AppPreferences };
 
   /** `null` si l'utilisateur annule la boîte de dialogue. */
   'workspace:create': {
@@ -286,6 +290,8 @@ export type IpcResultData<C extends IpcChannel> = IpcContract[C]['result'];
 export const IPC_CHANNELS = [
   'app:getInfo',
   'app:setUnsavedChanges',
+  'preferences:get',
+  'preferences:update',
   'workspace:create',
   'workspace:open',
   'workspace:openRecent',
@@ -348,6 +354,8 @@ export const IPC_EVENTS = {
   flushRequest: 'app:flushRequest',
   /** Le fichier de l'espace a été modifié par un autre processus (serveur MCP). */
   externalChange: 'workspace:externalChange',
+  /** Préférences modifiées hors du renderer (raccourci de zoom). */
+  preferencesChanged: 'preferences:changed',
 } as const;
 
 /** Enveloppe de réponse : le main ne laisse jamais remonter d'exception brute. */
@@ -365,4 +373,8 @@ export interface NodalApi {
   onFlushRequest(listener: () => void): () => void;
   /** Abonnement aux modifications externes de l'espace ; retourne le désabonnement. */
   onExternalChange(listener: () => void): () => void;
+  /** Abonnement aux changements de préférences venus du main. */
+  onPreferencesChanged(
+    listener: (preferences: AppPreferences) => void,
+  ): () => void;
 }

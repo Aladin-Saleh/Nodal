@@ -171,7 +171,28 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
   ou de répondre de mémoire.
 
-## 8. Raccourcis clavier
+## 8. Préférences
+
+Les préférences concernent l'application, quel que soit l'espace ouvert. On
+les ouvre avec **Ctrl + ,** ou le bouton **Préférences** de la barre d'état ;
+chaque changement s'applique et s'enregistre aussitôt.
+
+- **Thème** : Système (suit le mode clair ou sombre de Windows), Clair ou
+  Sombre.
+- **Couleur d'accent** : la couleur des boutons principaux, de la sélection et
+  des liens.
+- **Densité** : Confortable, ou Compacte pour afficher plus d'éléments.
+- **Taille du texte** : de 80 % à 150 %, aussi avec Ctrl + = (agrandir),
+  Ctrl + - (réduire) et Ctrl + 0 (rétablir).
+- **Vue à l'ouverture d'un espace** : Graphe ou Documents.
+- **Rouvrir le dernier espace** au démarrage.
+- **Aide des gestes** dans la barre d'outils du graphe, à masquer une fois
+  les gestes connus.
+
+La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
+« Rétablir les valeurs par défaut » remet toutes les préférences à zéro.
+
+## 9. Raccourcis clavier
 
 | Raccourci      | Action                                                 |
 | -------------- | ------------------------------------------------------ |
@@ -184,8 +205,10 @@ Menu **Exporter ▾** et bouton **Paramètres** :
 | F2             | renommer le nœud sélectionné                           |
 | Suppr          | supprimer le nœud sélectionné (arborescence)           |
 | F1             | aide                                                   |
+| Ctrl + ,       | préférences                                            |
+| Ctrl + = / -   | agrandir / réduire le texte (Ctrl + 0 : rétablir)      |
 
-## 9. Dépannage
+## 10. Dépannage
 
 - **« Le fichier de l'espace est verrouillé »** : le fichier est ouvert par un
   autre programme ou une autre fenêtre. Fermez-le puis réessayez.

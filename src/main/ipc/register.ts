@@ -7,6 +7,10 @@ import {
   type IpcChannel,
   type WorkspaceInfo,
 } from '../../shared/ipc-contract';
+import type {
+  AppPreferences,
+  PreferencesUpdate,
+} from '../../shared/preferences';
 import type { FileDialogs } from '../file-dialogs';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
 import { AttachmentService } from '../knowledge/attachment-service';
@@ -46,6 +50,9 @@ export interface IpcDependencies {
   trash(filePath: string): Promise<void>;
   getAppInfo(): AppInfo;
   setUnsavedChanges(unsaved: boolean): void;
+  getPreferences(): AppPreferences;
+  /** Enregistre et applique (thème, zoom) ; retourne les préférences à jour. */
+  updatePreferences(changes: PreferencesUpdate): AppPreferences;
   isTrustedSender: SenderValidator;
 }
 
@@ -90,6 +97,8 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       deps.setUnsavedChanges(unsaved);
       return null;
     },
+    'preferences:get': () => deps.getPreferences(),
+    'preferences:update': (changes) => deps.updatePreferences(changes),
 
     'workspace:create': async ({ name }) => {
       const filePath = await dialogs.pickNewWorkspacePath(name);

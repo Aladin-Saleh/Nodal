@@ -30,6 +30,15 @@ const api: NodalApi = {
     };
   },
 
+  onPreferencesChanged(listener) {
+    const handler = (_event: unknown, preferences: unknown) =>
+      listener(preferences as Parameters<typeof listener>[0]);
+    ipcRenderer.on(IPC_EVENTS.preferencesChanged, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_EVENTS.preferencesChanged, handler);
+    };
+  },
+
   onExternalChange(listener) {
     const handler = () => listener();
     ipcRenderer.on(IPC_EVENTS.externalChange, handler);

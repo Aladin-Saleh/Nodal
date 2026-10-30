@@ -7,6 +7,7 @@ import type { RecentWorkspacesStore } from '../../../src/main/workspace/recent-w
 import type { WorkspaceService } from '../../../src/main/workspace/workspace-service';
 import { NodalError } from '../../../src/shared/errors';
 import type { WorkspaceInfo } from '../../../src/shared/ipc-contract';
+import { DEFAULT_PREFERENCES } from '../../../src/shared/preferences';
 
 const event = {} as IpcMainInvokeEvent;
 const trusted = () => true;
@@ -136,6 +137,8 @@ function setup(pickedPath: string | null, confirmed = true) {
       throw new Error('non utilisé');
     },
     setUnsavedChanges: vi.fn(),
+    getPreferences: () => DEFAULT_PREFERENCES,
+    updatePreferences: vi.fn(),
     isTrustedSender: trusted,
   });
   return { impl, workspaces, dialogs, recent, trash };

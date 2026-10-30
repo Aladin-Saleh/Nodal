@@ -9,6 +9,7 @@ import type {
   IpcResultData,
   NodalApi,
 } from '../../shared/ipc-contract';
+import type { AppPreferences } from '../../shared/preferences';
 
 export interface NodalClient {
   call<C extends IpcChannel>(
@@ -17,6 +18,9 @@ export interface NodalClient {
   ): Promise<IpcResultData<C>>;
   onFlushRequest(listener: () => void): () => void;
   onExternalChange(listener: () => void): () => void;
+  onPreferencesChanged(
+    listener: (preferences: AppPreferences) => void,
+  ): () => void;
 }
 
 export function createNodalClient(api: NodalApi): NodalClient {
@@ -30,6 +34,7 @@ export function createNodalClient(api: NodalApi): NodalClient {
     },
     onFlushRequest: (listener) => api.onFlushRequest(listener),
     onExternalChange: (listener) => api.onExternalChange(listener),
+    onPreferencesChanged: (listener) => api.onPreferencesChanged(listener),
   };
 }
 
