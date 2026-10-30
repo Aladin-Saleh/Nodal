@@ -21,6 +21,8 @@ export const DEFAULT_MAX_ROWS = 300;
 /** Nœuds listés dans les rubriques « hubs » et « recent » de la vue d'ensemble. */
 export const OVERVIEW_LIST_SIZE = 10;
 export const DEFAULT_DOCUMENT_CHARS = 20_000;
+/** Contenu de documents renvoyé par défaut par une recherche (~3 000 tokens). */
+export const DEFAULT_SEARCH_CHARS = 12_000;
 const PATH_SEPARATOR = ' > ';
 
 interface OutlineRow {
@@ -242,29 +244,100 @@ export function tree(
   };
 }
 
+/** Document renvoyé en entier (ou en début, s'il dépasse le budget) par la recherche. */
+export interface FoundDocument {
+  id: string;
+  title: string;
+  path: string;
+  contentType: string;
+  language: string | null;
+  body: string;
+  /** Position où reprendre la lecture si le document est tronqué. */
+  nextOffset: number | null;
+}
+
+/**
+ * Recherche qui suffit le plus souvent à répondre en un appel : résumé des
+ * nœuds trouvés et contenu des documents trouvés, du plus pertinent au moins
+ * pertinent, dans la limite de `maxChars`. Les documents hors budget restent
+ * signalés par un extrait. Si aucun nœud ne contient tous les mots, ceux qui
+ * en contiennent au moins un sont renvoyés (`allTerms: false`), plutôt
+ * qu'une liste vide qui obligerait à relancer.
+ */
 export function search(
   ctx: ReadContext,
-  input: { query: string; limit: number },
+  input: { query: string; limit: number; maxChars: number },
 ) {
-  const hits = new SearchService(() => ctx)
-    .search(input.query)
-    .slice(0, input.limit);
+  const service = new SearchService(() => ctx);
+  let hits = service.search(input.query);
+  const allTerms = hits.length > 0;
+  if (!allTerms) hits = service.search(input.query, { matchAll: false });
+  hits = hits.slice(0, input.limit);
   const outline = loadOutline(ctx);
+  const summaryOf = ctx.db.prepare('SELECT summary FROM node WHERE id = ?');
+  const documents = new DocumentService(() => ctx);
+
+  const found: FoundDocument[] = [];
+  const snippets: {
+    nodeId: string;
+    documentId: string;
+    document: string | null;
+    snippet: string;
+  }[] = [];
+  let used = 0;
+  for (const hit of hits) {
+    for (const match of hit.matches) {
+      // Les correspondances dans le titre ou le résumé sont couvertes par la
+      // colonne summary des nœuds.
+      if (!match.documentId) continue;
+      const doc = documents.get(match.documentId);
+      const remaining = input.maxChars - used;
+      // Un document trop long n'est tronqué que s'il est le premier : sinon
+      // il cède la place aux suivants, plus courts.
+      if (
+        doc.body.length <= remaining ||
+        (found.length === 0 && remaining > 0)
+      ) {
+        const body = doc.body.slice(0, remaining);
+        used += body.length;
+        found.push({
+          id: doc.id,
+          title: doc.title,
+          path: pathOf(outline, doc.nodeId),
+          contentType: doc.contentType,
+          language: doc.language,
+          body,
+          nextOffset: body.length < doc.body.length ? body.length : null,
+        });
+      } else {
+        snippets.push({
+          nodeId: hit.nodeId,
+          documentId: match.documentId,
+          document: match.documentTitle,
+          snippet: markSnippet(match.snippet),
+        });
+      }
+    }
+  }
+
   return {
-    query: input.query,
-    nodeCount: hits.length,
-    // Une ligne par extrait trouvé (jusqu'à trois par nœud).
-    matches: hits.flatMap((hit) =>
-      hit.matches.map((match) => ({
-        nodeId: hit.nodeId,
-        node: hit.nodeTitle,
-        type: hit.nodeType,
+    result: {
+      query: input.query,
+      ...(allTerms ? {} : { allTerms: false }),
+      nodeCount: hits.length,
+      // Le chemin se termine par le titre : pas de colonne title en double.
+      nodes: hits.map((hit) => ({
+        id: hit.nodeId,
         path: pathOf(outline, hit.nodeId),
-        documentId: match.documentId,
-        document: match.documentTitle,
-        snippet: markSnippet(match.snippet),
+        type: hit.nodeType,
+        summary:
+          (summaryOf.get(hit.nodeId) as { summary: string | null } | undefined)
+            ?.summary ?? null,
       })),
-    ),
+      // Documents trouvés mais hors budget : à lire avec nodal_read_document.
+      ...(snippets.length > 0 ? { otherMatches: snippets } : {}),
+    },
+    documents: found,
   };
 }
 

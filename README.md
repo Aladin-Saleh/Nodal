@@ -102,6 +102,11 @@ pièces jointes en BLOB).
     tabulaires), contenu des documents brut, identifiants abrégés (plus
     court préfixe unique d'UUID, 8 caractères au moins ; voir le
     [benchmark](docs/benchmark-tokens-mcp.md)) ;
+  - `nodal_search`, premier appel conseillé, renvoie le résumé des nœuds
+    trouvés et le contenu des documents trouvés (12 000 caractères par
+    défaut, `maxChars`), et se rabat sur « au moins un mot » si aucun nœud
+    ne les contient tous ; il est marqué `anthropic/alwaysLoad` pour que
+    Claude Code le charge sans passer par sa recherche d'outils ;
   - orientation : `nodal_overview` donne les racines (avec leur nombre de
     descendants), les nœuds les plus reliés, l'activité récente et la part
     créée par l'assistant ;

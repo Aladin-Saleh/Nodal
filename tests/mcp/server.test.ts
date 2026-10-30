@@ -231,19 +231,77 @@ describe('serveur MCP', () => {
     await client.close();
   });
 
-  it('recherche sans accents, avec le chemin et les termes marqués', async () => {
+  it('recherche sans accents : résumé des nœuds et contenu des documents', async () => {
     const client = await connect(file);
-    const data = toon(
-      await client.call('nodal_search', { query: 'deploiement' }),
-    );
+    const result = await client.call('nodal_search', { query: 'deploiement' });
+    const data = toon(result);
     expect(data.nodeCount).toBe(1);
-    expect(data.matches[0]).toMatchObject({
+    expect(data.allTerms).toBeUndefined();
+    expect(data.nodes).toEqual([
+      {
+        id: short(ids.api),
+        path: 'API',
+        type: 'component',
+        summary: 'Expose les commandes',
+      },
+    ]);
+    expect(data.otherMatches).toBeUndefined();
+    expect(result.content[1]!.text).toBe(
+      `--- document ${short(ids.notes)} « Notes » (markdown) · API\n` +
+        '# Déploiement\n\nLe déploiement passe par la CI.\n',
+    );
+    await client.close();
+  });
+
+  it('borne le contenu renvoyé par la recherche', async () => {
+    const client = await connect(file);
+    // Le document SQL (500 caractères) est tronqué au budget.
+    const truncated = await client.call('nodal_search', {
+      query: 'select',
+      maxChars: 100,
+    });
+    expect(truncated.content[1]!.text).toContain(
+      `[… tronqué : suite avec nodal_read_document id=${short(ids.query)} offset=100]`,
+    );
+    // Budget nul : extraits seuls, termes marqués.
+    const result = await client.call('nodal_search', {
+      query: 'deploiement',
+      maxChars: 0,
+    });
+    expect(result.content).toHaveLength(1);
+    const data = toon(result);
+    expect(data.otherMatches[0]).toMatchObject({
       nodeId: short(ids.api),
-      path: 'API',
       documentId: short(ids.notes),
       document: 'Notes',
     });
-    expect(data.matches[0].snippet).toContain('**Déploiement**');
+    expect(data.otherMatches[0].snippet).toContain('**Déploiement**');
+    await client.close();
+  });
+
+  it('se rabat sur au moins un mot quand aucun nœud ne les contient tous', async () => {
+    const client = await connect(file);
+    const data = toon(
+      await client.call('nodal_search', { query: 'redis deploiement' }),
+    );
+    expect(data.allTerms).toBe(false);
+    expect(data.nodes.map((node: { path: string }) => node.path)).toEqual(
+      expect.arrayContaining(['API', 'API > Cache > Redis']),
+    );
+    await client.close();
+  });
+
+  it('demande à Claude Code de charger la recherche d’emblée', async () => {
+    const client = await connect(file);
+    const { tools } = (await client.listTools()) as {
+      tools: { name: string; _meta?: Record<string, unknown> }[];
+    };
+    const loadedUpfront = tools
+      // Champ du protocole MCP.
+      // oxlint-disable-next-line no-underscore-dangle
+      .filter((tool) => tool._meta?.['anthropic/alwaysLoad'])
+      .map((tool) => tool.name);
+    expect(loadedUpfront).toEqual(['nodal_search']);
     await client.close();
   });
 

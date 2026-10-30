@@ -21,8 +21,8 @@ export function assistantInstructions(
     '',
     `Avant de répondre à une question sur ce sujet, de parcourir des fichiers ou de répondre de mémoire, consultez d'abord Nodal (serveur MCP \`${SERVER_NAME}\`) :`,
     '',
-    '- `nodal_overview` pour vous orienter : racines, nœuds les plus reliés, activité récente ;',
-    '- `nodal_search` pour trouver les notions par mots-clés, puis `nodal_get_node` et `nodal_read_document` pour le détail.',
+    '- commencez par `nodal_search` : il renvoie le résumé des nœuds et le contenu des documents trouvés, ce qui suffit souvent pour répondre ; pour une question à plusieurs volets, lancez plusieurs recherches en parallèle ;',
+    '- approfondissez au besoin avec `nodal_get_node` et `nodal_read_document` ; `nodal_overview` sert à vous orienter quand la question est vague.',
     '',
     'Ne lisez les fichiers sources que si Nodal ne suffit pas, et dites-le.',
   ];

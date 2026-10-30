@@ -138,6 +138,42 @@ rubriques sont limitées à 10 lignes. Il se paie en général une fois par
 session et doit éviter au LLM d'explorer l'arborescence pour s'orienter ;
 cette économie-là n'a pas été mesurée.
 
+## Coût de bout en bout d'une consultation
+
+Mesures du 30 octobre 2026 dans Claude Code (`claude -p --output-format
+stream-json --verbose`, `--strict-mcp-config` pour que les deux serveurs
+soient chargés de la même façon), sur une question à deux volets : « Quelles
+migrations SQLite existe-t-il dans Nodal, et pourquoi le serveur MCP est-il
+exécuté par Node plutôt que par l'exécutable Electron ? ». Moyennes des runs 2
+et 3 (le premier paie l'écriture du cache) :
+
+| Variante                      | Tours | Entrée (tokens) | Sortie |     Coût |
+| ----------------------------- | ----: | --------------: | -----: | -------: |
+| Sans Nodal (README + sources) |     4 |        ~124 000 | ~1 060 | ~0,072 $ |
+| Nodal 1.1.0                   |     7 |        ~165 700 |   ~845 | ~0,079 $ |
+| Nodal, recherche avec contenu |     3 |         ~68 800 |   ~543 | ~0,025 $ |
+
+Chaque tour renvoie tout le contexte de base (environ 23 000 tokens) : le
+coût suit le nombre de tours bien plus que la taille des réponses. Avec la
+version 1.1.0, une consultation enchaînait `ToolSearch` (Claude Code charge
+les outils MCP à la demande), `nodal_search` pour trouver, puis
+`nodal_read_document` pour lire : 7 tours, plus cher que de lire le README.
+
+D'où trois changements :
+
+- `nodal_search` renvoie le résumé des nœuds trouvés et le contenu des
+  documents trouvés, dans un budget (`maxChars`, 12 000 caractères par
+  défaut) ; les documents hors budget sont cités par un extrait ;
+- `nodal_search` porte `_meta: { "anthropic/alwaysLoad": true }` : Claude Code
+  le charge d'emblée, sans tour `ToolSearch` ;
+- les consignes (serveur, bloc CLAUDE.md) font commencer par `nodal_search`,
+  avec des recherches parallèles pour une question à plusieurs volets, et
+  réservent `nodal_overview` aux questions vagues.
+
+Résultat : deux recherches parallèles puis la réponse, soit −58 % en entrée,
+−36 % en sortie et −69 % de coût par rapport à la 1.1.0, et −66 % de coût par
+rapport à la lecture des fichiers, pour une réponse aussi complète.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

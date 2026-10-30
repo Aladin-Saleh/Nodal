@@ -13,7 +13,9 @@ import { NodalError } from '../shared/errors';
 import {
   DEFAULT_DOCUMENT_CHARS,
   DEFAULT_MAX_ROWS,
+  DEFAULT_SEARCH_CHARS,
   getNode,
+  type FoundDocument,
   neighborhood,
   overview,
   readDocument,
@@ -51,11 +53,13 @@ l'utilisateur a saisi, "assistant" pour ce qu'un assistant IA a ajouté — à
 considérer comme moins sûr tant que l'utilisateur ne l'a pas validé.
 
 Consultez cette base avant de parcourir des fichiers ou de répondre de
-mémoire. Démarche conseillée : nodal_overview pour s'orienter (racines, nœuds
-les plus reliés, activité récente), nodal_search pour trouver des nœuds par
-mots-clés, nodal_get_node pour le détail d'un nœud (documents, enfants,
-relations), nodal_read_document pour lire un document, nodal_tree et
-nodal_neighborhood pour explorer la structure.`;
+mémoire. Commencez par nodal_search : il renvoie le résumé des nœuds trouvés
+et le contenu des documents trouvés, ce qui suffit souvent pour répondre.
+Pour une question à plusieurs volets, lancez plusieurs nodal_search en
+parallèle, dans le même message. Pour approfondir : nodal_get_node (documents,
+enfants, relations d'un nœud), nodal_read_document, nodal_tree et
+nodal_neighborhood. nodal_overview sert à s'orienter quand la question est
+vague.`;
 
 const WRITE_INSTRUCTIONS = `
 
@@ -98,6 +102,22 @@ export interface NodalMcpServerOptions {
   version: string;
   /** N'expose que les outils de lecture. */
   readOnly?: boolean;
+}
+
+/**
+ * Document trouvé par la recherche : une ligne d'en-tête, puis le contenu
+ * brut (hors TOON, pour ne pas l'échapper).
+ */
+function formatFoundDocument(doc: FoundDocument): string {
+  const kind = doc.language
+    ? `${doc.contentType}, ${doc.language}`
+    : doc.contentType;
+  const header = `--- document ${doc.id} « ${doc.title} » (${kind}) · ${doc.path}`;
+  const rest =
+    doc.nextOffset === null
+      ? ''
+      : `\n[… tronqué : suite avec nodal_read_document id=${doc.id} offset=${doc.nextOffset}]`;
+  return `${header}\n${doc.body}${rest}`;
 }
 
 function failure(error: unknown): CallToolResult {
@@ -156,7 +176,8 @@ export function createNodalMcpServer(
     {
       title: 'Vue d’ensemble',
       description:
-        "Nom de l'espace, statistiques, types de relations, tags et nœuds racines. Point de départ recommandé.",
+        "Nom de l'espace, statistiques, types de relations, tags, nœuds racines, nœuds les plus reliés et activité récente. " +
+        'Pour s’orienter quand la question est vague ; sinon, commencer par nodal_search.',
       annotations: READ_ONLY,
     },
     run(overview),
@@ -167,9 +188,12 @@ export function createNodalMcpServer(
     {
       title: 'Recherche plein texte',
       description:
-        'Recherche par mots-clés (préfixes, sans accents) dans les titres, résumés et documents. ' +
-        'Un nœud est retenu si tous les mots y apparaissent. Renvoie une ligne par extrait, ' +
-        'termes trouvés entre **, avec le chemin hiérarchique du nœud.',
+        'Recherche par mots-clés (préfixes, sans accents) dans les titres, résumés et documents, ' +
+        'à utiliser en premier. Renvoie les nœuds trouvés (chemin, résumé) puis le contenu des ' +
+        'documents trouvés, du plus pertinent au moins pertinent, dans la limite de maxChars ; ' +
+        'les autres documents trouvés sont cités par un extrait (otherMatches). Un nœud est retenu ' +
+        's’il contient tous les mots, sinon (allTerms: false) au moins l’un d’eux. ' +
+        'Question à plusieurs volets : plusieurs recherches en parallèle.',
       inputSchema: z.object({
         query: z.string().min(1).max(500).describe('Mots-clés'),
         limit: z
@@ -177,12 +201,39 @@ export function createNodalMcpServer(
           .int()
           .min(1)
           .max(50)
-          .default(20)
+          .default(10)
           .describe('Nombre maximal de nœuds'),
+        maxChars: z
+          .number()
+          .int()
+          .min(0)
+          .max(100_000)
+          .default(DEFAULT_SEARCH_CHARS)
+          .describe(
+            'Contenu de documents renvoyé au plus (0 : extraits seuls)',
+          ),
       }),
       annotations: READ_ONLY,
+      // Chargé d'emblée par Claude Code, sans passer par sa recherche d'outils :
+      // c'est le premier appel de presque toute consultation.
+      _meta: { 'anthropic/alwaysLoad': true },
     },
-    run(search),
+    async (args): Promise<CallToolResult> => {
+      try {
+        const { result, documents } = call(args, 'read', search);
+        return {
+          content: [
+            { type: 'text', text: encodeToon(result) },
+            ...documents.map((doc) => ({
+              type: 'text' as const,
+              text: formatFoundDocument(doc),
+            })),
+          ],
+        };
+      } catch (error) {
+        return failure(error);
+      }
+    },
   );
 
   server.registerTool(

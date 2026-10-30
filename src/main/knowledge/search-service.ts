@@ -41,32 +41,32 @@ export class SearchService {
 
   /**
    * Un nœud est trouvé si chaque mot-clé apparaît dans son titre, son résumé
-   * ou l'un de ses documents (pas forcément au même endroit). Les résultats
-   * sont regroupés par nœud, du plus pertinent au moins pertinent.
+   * ou l'un de ses documents (pas forcément au même endroit), ou, avec
+   * `matchAll: false`, si l'un d'eux y apparaît. Les résultats sont regroupés
+   * par nœud, du plus pertinent au moins pertinent.
    */
-  search(input: string): SearchHit[] {
+  search(input: string, { matchAll = true } = {}): SearchHit[] {
     const terms = searchTerms(input);
     if (terms.length === 0) return [];
     const ctx = this.context();
 
-    const nodesMatching = ctx.db.prepare(
-      `SELECT DISTINCT s.node_id FROM search_index s
-       JOIN node n ON n.id = s.node_id AND n.workspace_id = ?
-       WHERE search_index MATCH ?`,
-    );
-    let candidates = null as Set<string> | null;
-    for (const term of terms) {
-      const ids = new Set(
-        asRows<{ node_id: string }>(
-          nodesMatching.all(ctx.workspaceId, term),
-        ).map((row) => row.node_id),
+    let found = null as Set<string> | null;
+    if (matchAll) {
+      const nodesMatching = ctx.db.prepare(
+        `SELECT DISTINCT s.node_id FROM search_index s
+         JOIN node n ON n.id = s.node_id AND n.workspace_id = ?
+         WHERE search_index MATCH ?`,
       );
-      candidates = candidates
-        ? new Set([...candidates].filter((id) => ids.has(id)))
-        : ids;
-      if (candidates.size === 0) return [];
+      for (const term of terms) {
+        const ids = new Set(
+          asRows<{ node_id: string }>(
+            nodesMatching.all(ctx.workspaceId, term),
+          ).map((row) => row.node_id),
+        );
+        found = found ? new Set([...found].filter((id) => ids.has(id))) : ids;
+        if (found.size === 0) return [];
+      }
     }
-    const found = candidates ?? new Set<string>();
 
     const rows = asRows<Row>(
       ctx.db
@@ -89,7 +89,7 @@ export class SearchService {
 
     const hits = new Map<string, SearchHit>();
     for (const row of rows) {
-      if (!found.has(row.node_id)) continue;
+      if (found && !found.has(row.node_id)) continue;
       let hit = hits.get(row.node_id);
       if (!hit) {
         if (hits.size >= MAX_HITS) continue;
