@@ -37,6 +37,8 @@ export interface NodePropertiesProps {
   onTagsChanged(): void;
   onRelationsChanged(): void;
   onOpenDocument(documentId: string): void;
+  /** Un document du nœud a été réécrit (mention convertie en lien). */
+  onDocumentsChanged(): void;
   /** Document d'un autre nœud (rétroliens « Mentionné dans »). */
   onOpenDocumentOf(documentId: string, nodeId: string): void;
   onAddDocument(): void;
@@ -59,6 +61,7 @@ export function NodeProperties({
   onRelationsChanged,
   onOpenDocument,
   onOpenDocumentOf,
+  onDocumentsChanged,
   onAddDocument,
 }: NodePropertiesProps) {
   const client = useClient();
@@ -205,6 +208,7 @@ export function NodeProperties({
         revision={relationsRevision * 100_000 + documentsRevision}
         onNavigate={onNavigate}
         onRelationsChanged={onRelationsChanged}
+        onDocumentsChanged={onDocumentsChanged}
       />
 
       <section>

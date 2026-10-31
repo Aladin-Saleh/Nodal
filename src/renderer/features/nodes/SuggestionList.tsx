@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { LinkSuggestion } from '../../../shared/model';
-import { useClient, useReportError, useRunner } from '../../app/context';
+import {
+  useClient,
+  useReportError,
+  useRunner,
+  useSaveTracker,
+} from '../../app/context';
 
 export interface SuggestionListProps {
   nodeId: string;
@@ -9,6 +14,8 @@ export interface SuggestionListProps {
   onNavigate(id: string): void;
   /** Une relation a été créée (directement ou par un lien). */
   onRelationsChanged(): void;
+  /** Une mention a été convertie en lien : le document a changé. */
+  onDocumentsChanged(): void;
 }
 
 /**
@@ -22,7 +29,9 @@ export function SuggestionList({
   revision,
   onNavigate,
   onRelationsChanged,
+  onDocumentsChanged,
 }: SuggestionListProps) {
+  const tracker = useSaveTracker();
   const client = useClient();
   const run = useRunner();
   const reportError = useReportError();
@@ -49,11 +58,15 @@ export function SuggestionList({
   if (suggestions.length === 0) return null;
 
   const accept = async (targetId: string, mode: 'relation' | 'link') => {
+    // La conversion lit le document enregistré : la saisie en cours d'abord.
+    if (mode === 'link' && !(await tracker.flushAll())) return;
     const done = await run(() =>
       client.call('suggestion:accept', { sourceId: nodeId, targetId, mode }),
     );
     setReload((count) => count + 1);
-    if (done !== undefined) onRelationsChanged();
+    if (done === undefined) return;
+    onRelationsChanged();
+    if (mode === 'link') onDocumentsChanged();
   };
   const ignore = async (targetId: string) => {
     await run(() =>

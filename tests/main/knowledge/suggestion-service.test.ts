@@ -86,6 +86,17 @@ describe('suggestions de liens', () => {
     expect(first!.snippet).toContain('Publie dans kafka');
   });
 
+  it('montrent un extrait qui ne coupe pas un lien, liens lisibles', () => {
+    const { suggestions, api, doc, documents, redis } = setup();
+    const filler = 'x'.repeat(30);
+    documents.update({
+      id: doc,
+      body: `${filler} [[node:${redis}]] ${filler} kafka.`,
+    });
+    const [kafka] = suggestions.listForNode(api);
+    expect(kafka!.snippet).toBe(`…[[Redis]] ${filler} kafka.`);
+  });
+
   it('disparaissent une fois les nœuds reliés (dans un sens ou l’autre)', () => {
     const { context, suggestions, api, kafka, redis, targets } = setup();
     suggestions.accept({ sourceId: api, targetId: kafka, mode: 'relation' });

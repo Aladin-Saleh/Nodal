@@ -170,10 +170,9 @@ function linkDecorations(source: WikiLinkSource) {
 
 /** Extension pour les documents Markdown. */
 export function wikiLinkExtension(source: WikiLinkSource): Extension {
-  return [
-    EditorState.languageData.of(() => [
-      { autocomplete: completionSource(source) },
-    ]),
-    linkDecorations(source),
-  ];
+  // Une seule source, toujours la même : l'autocomplétion de CodeMirror
+  // suit l'état de chaque source par identité (une source recréée à chaque
+  // appel ne s'ouvrirait jamais).
+  const data = [{ autocomplete: completionSource(source) }];
+  return [EditorState.languageData.of(() => data), linkDecorations(source)];
 }

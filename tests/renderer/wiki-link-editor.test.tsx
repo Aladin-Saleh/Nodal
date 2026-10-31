@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import {
+  autocompletion,
   CompletionContext,
+  completionStatus,
+  currentCompletions,
+  startCompletion,
   type CompletionResult,
 } from '@codemirror/autocomplete';
 import { EditorState } from '@codemirror/state';
@@ -79,6 +83,28 @@ describe('liens [[...]] dans l’éditeur', () => {
     view.destroy();
   });
 
+  it('ouvre réellement la liste dans un éditeur (source stable)', async () => {
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const view = new EditorView({
+      parent,
+      state: EditorState.create({
+        doc: 'Voir [[kaf',
+        selection: { anchor: 'Voir [[kaf'.length },
+        extensions: [autocompletion(), wikiLinkExtension(live)],
+      }),
+    });
+    // L'autocomplétion suit chaque source par identité.
+    const sources = () => view.state.languageDataAt('autocomplete', 5);
+    expect(sources()[0]).toBe(sources()[0]);
+    startCompletion(view);
+    await vi.waitFor(() => expect(completionStatus(view.state)).toBe('active'));
+    expect(currentCompletions(view.state).map((c) => c.label)).toEqual([
+      'Kafka',
+    ]);
+    view.destroy();
+  });
+
   it('affiche le lien par le titre courant, ou le signale cassé', () => {
     const view = editor(
       `A ${formatNodeLink(CACHE)} B ${formatNodeLink(CACHE, 'le cache')} C ${formatNodeLink('99999999-0000-4000-8000-000000000000')}`,
@@ -149,6 +175,7 @@ describe('SuggestionList', () => {
       return null;
     });
     const onRelationsChanged = vi.fn();
+    const onDocumentsChanged = vi.fn();
     render(
       <ServicesProvider
         client={{ call } as unknown as NodalClient}
@@ -161,6 +188,7 @@ describe('SuggestionList', () => {
           revision={0}
           onNavigate={vi.fn()}
           onRelationsChanged={onRelationsChanged}
+          onDocumentsChanged={onDocumentsChanged}
         />
       </ServicesProvider>,
     );
@@ -169,6 +197,8 @@ describe('SuggestionList', () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'En lien [[…]]' }));
     await vi.waitFor(() => expect(onRelationsChanged).toHaveBeenCalled());
+    // Le document a été réécrit : les documents affichés sont rechargés.
+    expect(onDocumentsChanged).toHaveBeenCalled();
     expect(call).toHaveBeenCalledWith('suggestion:accept', {
       sourceId: 'n1',
       targetId: 't1',

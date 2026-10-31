@@ -18,7 +18,11 @@ import { inTransaction } from '../database/transaction';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { DocumentService } from './document-service';
 import { EdgeService } from './edge-service';
-import { linkRelationTypeId } from './link-service';
+import {
+  linkRelationTypeId,
+  readableLinks,
+  workspaceLinkResolver,
+} from './link-service';
 import { asRows } from './rows';
 
 /** Suggestions affichées au plus par nœud. */
@@ -83,6 +87,7 @@ export function suggestionsForNode(
   const docs = documentsOf(ctx, nodeId).filter((doc) => doc.body.trim());
   if (docs.length === 0) return [];
   const remaining = candidates(ctx, nodeId);
+  const resolver = workspaceLinkResolver(ctx);
   const found: (LinkSuggestion & { at: number })[] = [];
   docs.forEach((doc, docIndex) => {
     if (remaining.length === 0) return;
@@ -97,7 +102,9 @@ export function suggestionsForNode(
         targetTitle: candidate.title,
         documentId: doc.id,
         documentTitle: doc.title,
-        snippet: mentionSnippet(doc.body, mention),
+        snippet: mentionSnippet(doc.body, mention, (text) =>
+          readableLinks(text, resolver),
+        ),
         at: docIndex * 1e9 + mention.start,
       });
     }

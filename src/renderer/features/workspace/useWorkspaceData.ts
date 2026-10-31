@@ -151,6 +151,12 @@ export function useWorkspaceData(selectedId: string | null) {
     [],
   );
 
+  /** Un document a été réécrit hors de l'éditeur : réafficher les documents. */
+  const reloadDocuments = useCallback(() => {
+    setExternalRevision((revision) => revision + 1);
+    refreshDetail();
+  }, [refreshDetail]);
+
   return {
     nodes,
     tags,
@@ -163,6 +169,7 @@ export function useWorkspaceData(selectedId: string | null) {
     refreshTags,
     refreshDetail,
     bumpRelations,
+    reloadDocuments,
     positionsSaved,
   };
 }

@@ -128,10 +128,22 @@ export function findTitleMention(
 
 const SNIPPET_RADIUS = 50;
 
-/** Extrait autour d'une mention, sur une ligne. */
-export function mentionSnippet(body: string, mention: TitleMention): string {
-  const from = Math.max(0, mention.start - SNIPPET_RADIUS);
-  const to = Math.min(body.length, mention.end + SNIPPET_RADIUS);
-  const text = body.slice(from, to).replace(/\s+/gu, ' ').trim();
+/**
+ * Extrait autour d'une mention, sur une ligne. Les bornes ne coupent jamais
+ * un lien [[...]] ; `readable` réécrit les liens de l'extrait (titre lisible
+ * plutôt qu'identifiant).
+ */
+export function mentionSnippet(
+  body: string,
+  mention: TitleMention,
+  readable: (text: string) => string = (text) => text,
+): string {
+  let from = Math.max(0, mention.start - SNIPPET_RADIUS);
+  let to = Math.min(body.length, mention.end + SNIPPET_RADIUS);
+  for (const link of parseWikiLinks(body)) {
+    if (from > link.start && from < link.end) from = link.start;
+    if (to > link.start && to < link.end) to = link.end;
+  }
+  const text = readable(body.slice(from, to)).replace(/\s+/gu, ' ').trim();
   return `${from > 0 ? '…' : ''}${text}${to < body.length ? '…' : ''}`;
 }

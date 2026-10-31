@@ -366,6 +366,8 @@ mark {
 .modal.modal-large .modal-body {
   flex: 1;
   min-height: 0;
+  /* Contenu plus haut que la boîte (rapport « Santé ») : il défile, le pied reste visible. */
+  overflow: auto;
 }
 
 .modal.modal-large .document-editor {

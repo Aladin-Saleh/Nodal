@@ -720,6 +720,7 @@ function WorkspaceView({
                     onRelationsChanged={relationsChanged}
                     onOpenDocument={(id) => openDocument(id)}
                     onOpenDocumentOf={openDocument}
+                    onDocumentsChanged={data.reloadDocuments}
                     onAddDocument={() =>
                       openOverlay('addingDocumentFor', detail.id)
                     }
