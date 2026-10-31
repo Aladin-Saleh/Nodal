@@ -92,6 +92,8 @@ const manifestSchema = z.object({
       description: nullableText,
       createdAt: iso,
       updatedAt: iso,
+      /** Relation issue d'un lien [[...]] (absent des exports antérieurs). */
+      fromLink: z.boolean().optional(),
     }),
   ),
 });
@@ -401,8 +403,8 @@ export function writeImport(
     }
 
     const insertEdge = db.prepare(
-      `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at, from_link)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const edge of manifest.edges) {
       insertEdge.run(
@@ -415,6 +417,7 @@ export function writeImport(
         edge.description,
         edge.createdAt,
         edge.updatedAt,
+        edge.fromLink ? 1 : 0,
       );
     }
   });

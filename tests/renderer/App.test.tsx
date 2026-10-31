@@ -81,6 +81,7 @@ function fakeClient(overrides: Handlers = {}) {
       relationTypes: [],
     }),
     'edge:listForNode': () => [],
+    'node:backlinks': () => [],
     'view:getGraph': () => null,
     'graphView:list': () => [],
     'view:saveGraph': () => null,

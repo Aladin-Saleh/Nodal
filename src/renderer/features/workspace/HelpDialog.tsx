@@ -94,9 +94,10 @@ export function HelpDialog({
       <p className="muted">
         Ctrl + P ouvre la palette de commandes : tapez quelques lettres du titre
         d’un nœud (ou de son chemin) pour l’ouvrir, ou le nom d’une action.
-        Documents : écrivez [[Titre d’un nœud]] dans un document Markdown pour
-        créer un lien interne. Le guide complet est fourni avec l’application
-        (docs/guide-utilisateur.md).
+        Documents : tapez [[ dans un document Markdown pour choisir un nœud et
+        créer un lien interne (il suit les renommages et crée une relation « est
+        lié à »). « Mentionné dans » liste les documents qui citent le nœud. Le
+        guide complet est fourni avec l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

@@ -33,6 +33,7 @@ import type {
   GraphViewSettings,
   GraphCamera,
   GraphViewInfo,
+  Backlink,
 } from './model';
 
 export interface AppInfo {
@@ -237,6 +238,8 @@ export interface IpcContract {
   'graphView:setDefault': { args: [{ id: string | null }]; result: null };
 
   'node:list': { args: []; result: NodeSummary[] };
+  /** Documents qui mentionnent ce nœud par un lien [[...]]. */
+  'node:backlinks': { args: [IdInput]; result: Backlink[] };
   'node:get': { args: [IdInput]; result: NodeDetail };
   'node:create': { args: [CreateNodeInput]; result: NodeSummary };
   'node:update': { args: [UpdateNodeInput]; result: NodeSummary };
@@ -343,6 +346,7 @@ export const IPC_CHANNELS = [
   'graphView:delete',
   'graphView:setDefault',
   'node:list',
+  'node:backlinks',
   'node:get',
   'node:create',
   'node:update',

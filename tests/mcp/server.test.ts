@@ -95,6 +95,51 @@ beforeEach(() => {
   ids = { api, cache, redis, other, notes, query };
 });
 
+describe('liens [[...]] et MCP', () => {
+  it('sert les liens lisibles, indique les rétroliens et reconvertit à l’écriture', async () => {
+    const { context } = workspace();
+    new DocumentService(context).update({
+      id: ids.notes,
+      body: `Le [[node:${ids.cache}|cache]] lit [[Redis]] ; [[Fantôme]].`,
+    });
+    const client = await connect(file, false);
+    const read = await client.call('nodal_read_document', { id: ids.notes });
+    // Contenu brut après la ligne TOON d'en-tête.
+    const served = read.content[1]!.text;
+    expect(served).toBe(
+      `Le [[Cache|cache]](${short(ids.cache)}) lit [[Redis]](${short(ids.redis)}) ; [[Fantôme (lien cassé)]].`,
+    );
+    // Rétroliens compacts dans le détail du nœud visé ; absents sinon.
+    const cache = toon(await client.call('nodal_get_node', { id: ids.cache }));
+    expect(cache.mentionedIn).toEqual([
+      { id: short(ids.api), title: 'API', document: 'Notes' },
+    ]);
+    expect(
+      toon(await client.call('nodal_get_node', { id: ids.other })).mentionedIn,
+    ).toBeUndefined();
+
+    // Réécriture du texte servi : les liens redeviennent des liens par id.
+    toon(
+      await client.call('nodal_update_document', {
+        id: ids.notes,
+        body: served,
+        mode: 'replace',
+      }),
+    );
+    expect(new DocumentService(context).get(ids.notes).body).toBe(
+      `Le [[node:${ids.cache}|cache]] lit [[node:${ids.redis}]] ; [[Fantôme (lien cassé)]].`,
+    );
+    // Les relations « est lié à » suivent les liens, écrites par l'assistant.
+    const linked = new EdgeService(context)
+      .listForNode(ids.api)
+      .filter((edge) => edge.fromLink)
+      .map((edge) => edge.otherNodeTitle)
+      .toSorted();
+    expect(linked).toEqual(['Cache', 'Redis']);
+    await client.close();
+  });
+});
+
 describe('nodal_path', () => {
   it('trouve le plus court chemin, hiérarchie comprise si demandé', async () => {
     const client = await connect(file);

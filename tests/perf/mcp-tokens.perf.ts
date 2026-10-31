@@ -8,7 +8,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { inTransaction } from '../../src/main/database/transaction';
+import { DocumentService } from '../../src/main/knowledge/document-service';
 import { createDefaultTokenizer } from '../../src/main/knowledge/llm-export-service';
+import { formatNodeLink } from '../../src/shared/wiki-links';
 import { connect } from '../helpers/mcp-client';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
@@ -157,6 +159,51 @@ describe('tokens des réponses MCP (échelle ×1)', () => {
     // Écrit directement : la sortie console des tests réussis est masquée.
     const lines = measures.map(([label, tokens]) => `${label} : ${tokens}`);
     process.stdout.write(['', related, '', ...lines, ''].join('\n'));
+    await client.close();
+  });
+
+  it('mesure les liens [[...]] servis et les rétroliens', async () => {
+    const { context, service } = workspace();
+    const ids = seedScaleOne(context());
+    const ctx = context();
+    // Le premier service cite trois autres services ; dix services le citent.
+    const docOf = (nodeId: string) =>
+      (
+        ctx.db
+          .prepare('SELECT id FROM document WHERE node_id = ?')
+          .get(nodeId) as { id: string }
+      ).id;
+    const documents = new DocumentService(context);
+    const rawBody = `# Service 0.0
+
+Appelle ${formatNodeLink(ids.components[1]!)}, ${formatNodeLink(ids.components[7]!, 'la file')} et ${formatNodeLink(ids.components[13]!)}.`;
+    documents.update({ id: docOf(ids.components[0]!), body: rawBody });
+    for (let i = 20; i < 30; i++) {
+      documents.update({
+        id: docOf(ids.components[i]!),
+        body: `Dépend de ${formatNodeLink(ids.components[0]!)} pour le cache.`,
+      });
+    }
+    const client = await connect(service.getCurrent()!.filePath);
+    const { count } = await createDefaultTokenizer();
+    const read = await client.call('nodal_read_document', {
+      id: docOf(ids.components[0]!),
+    });
+    const served = read.content[1]!.text;
+    const node = await client.call('nodal_get_node', {
+      id: ids.components[0],
+    });
+    const mentions = node.content[0]!.text.slice(
+      node.content[0]!.text.indexOf('mentionedIn'),
+    );
+    const lines = [
+      `document brut (UUID) : ${count(rawBody)}`,
+      `document servi ([[Titre]](id)) : ${count(served)}`,
+      `rubrique mentionedIn (10 lignes) : ${count(mentions)}`,
+    ];
+    const output = ['', served, '', mentions, '', ...lines, ''];
+    process.stdout.write(output.join('\n'));
+    expect(count(served)).toBeLessThan(count(rawBody));
     await client.close();
   });
 });

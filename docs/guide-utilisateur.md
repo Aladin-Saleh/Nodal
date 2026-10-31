@@ -146,9 +146,28 @@ Un nœud contient une liste ordonnée de documents, chacun d'un seul type :
 **Markdown**, **texte**, **JSON**, **code** (avec langage) ou **diagramme
 Mermaid**. L'enregistrement est automatique.
 
-- **Markdown** : modes _Édition_, _Côte à côte_, _Aperçu_. Écrivez
-  `[[Titre d'un nœud]]` pour créer un lien vers un autre nœud. Les liens web
+- **Markdown** : modes _Édition_, _Côte à côte_, _Aperçu_. Les liens web
   s'ouvrent dans votre navigateur.
+
+### Liens entre nœuds `[[...]]`
+
+- Tapez **`[[`** dans un document Markdown : Nodal propose les nœuds (titre
+  ou chemin, quelques lettres suffisent). Le lien choisi est enregistré par
+  l'identifiant du nœud : il **survit aux renommages** et s'affiche toujours
+  avec le titre actuel, dans l'éditeur comme dans l'aperçu. Il s'efface d'un
+  coup avec Retour arrière.
+- `[[Titre]]` tapé à la main fonctionne aussi (lien par titre, qui se casse
+  si le nœud est renommé). `[[Titre|texte]]` affiche « texte » à la place du
+  titre.
+- Dans l'aperçu, un clic sur le lien ouvre le nœud. Un **lien cassé** (nœud
+  supprimé, titre introuvable) est barré en rouge et n'ouvre rien.
+- Chaque lien crée une relation **« est lié à »** marquée « lien » dans le
+  panneau de droite. Elle suit le lien : retirée quand le lien disparaît du
+  document. Une relation créée à la main n'est jamais touchée ; une relation
+  « lien » que vous modifiez devient une relation ordinaire.
+- **Mentionné dans** (panneau de droite) : les documents qui contiennent un
+  lien vers le nœud affiché, avec un extrait ; un clic ouvre le nœud ou le
+  document.
 - **Code** : coloration selon le langage, numéros de ligne, bouton
   **Copier**. Aucune exécution n'est possible.
 - **JSON** : les erreurs de syntaxe sont signalées sans bloquer la saisie ;

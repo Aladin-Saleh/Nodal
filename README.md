@@ -177,6 +177,14 @@ pièces jointes en BLOB).
     deux nœuds par les relations (option : par la hiérarchie), mis en
     évidence dans le graphe, étapes et type de chaque relation dans le
     panneau droit ; outil MCP `nodal_path(fromId, toId, maxDepth)`.
+- **v1.4 — Liens et qualité de la base** (en cours) :
+  - liens `[[...]]` : autocomplétion à `[[` dans l'éditeur Markdown, lien
+    enregistré par identifiant (`[[node:<uuid>|texte]]`, survit aux
+    renommages) et affiché par titre, `[[Titre|texte]]` accepté, liens
+    cassés signalés ; chaque lien maintient une relation « est lié à »
+    marquée `from_link` (migration 007), jamais une relation manuelle ;
+    panneau « Mentionné dans » ; MCP : `mentionedIn` dans `nodal_get_node`,
+    liens servis `[[Titre]](id)` et reconvertis à l'écriture.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

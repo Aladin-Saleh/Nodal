@@ -16,6 +16,7 @@ import { useAutosave, useClient, useRunner } from '../../app/context';
 import { AttachmentList } from '../attachments/AttachmentList';
 import { RelationList } from '../relations/RelationList';
 import { TagEditor } from '../tags/TagEditor';
+import { BacklinkList } from './BacklinkList';
 import { ParentSelect } from './NodeDialogs';
 import { buildTreeIndex, subtreeIds } from './tree';
 
@@ -33,6 +34,8 @@ export interface NodePropertiesProps {
   onTagsChanged(): void;
   onRelationsChanged(): void;
   onOpenDocument(documentId: string): void;
+  /** Document d'un autre nœud (rétroliens « Mentionné dans »). */
+  onOpenDocumentOf(documentId: string, nodeId: string): void;
   onAddDocument(): void;
 }
 
@@ -51,6 +54,7 @@ export function NodeProperties({
   onTagsChanged,
   onRelationsChanged,
   onOpenDocument,
+  onOpenDocumentOf,
   onAddDocument,
 }: NodePropertiesProps) {
   const client = useClient();
@@ -189,6 +193,16 @@ export function NodeProperties({
           relationTypes={relationTypes}
           onNavigate={onNavigate}
           onChanged={onRelationsChanged}
+        />
+      </section>
+
+      <section>
+        <h3>Mentionné dans</h3>
+        <BacklinkList
+          nodeId={node.id}
+          revision={relationsRevision}
+          onNavigate={onNavigate}
+          onOpenDocument={onOpenDocumentOf}
         />
       </section>
 

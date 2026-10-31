@@ -31,6 +31,9 @@ import {
 } from './apply-tool';
 import { PATH_DEFAULT_DEPTH, PATH_MAX_DEPTH } from '../shared/graph-path';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
+import { renderLinksForLlm, renderResponseLinks } from './links';
+import { workspaceLinkResolver } from '../main/knowledge/link-service';
+import type { LinkResolver } from '../shared/wiki-links';
 import {
   withWorkspace,
   type AccessMode,
@@ -174,7 +177,15 @@ export function createNodalMcpServer(
       options.workspaceFile,
       (ctx) => {
         const result = fn(ctx, resolveIds(args, loadShortIds(ctx)));
-        return shortenIds(result, loadShortIds(ctx)) as R;
+        const ids = loadShortIds(ctx);
+        // Liens [[...]] des documents servis : titre courant + id court.
+        let resolver: LinkResolver | null = null;
+        const readable = renderResponseLinks(result, (text) => {
+          if (!text.includes('[[')) return text;
+          resolver ??= workspaceLinkResolver(ctx);
+          return renderLinksForLlm(text, resolver, ids);
+        });
+        return shortenIds(readable, ids) as R;
       },
       mode,
     );
@@ -254,7 +265,8 @@ export function createNodalMcpServer(
       title: 'Détail d’un nœud',
       description:
         'Un nœud avec son chemin, son résumé, ses tags, ses documents (taille en caractères ; ' +
-        'contenu des documents courts inclus), ses enfants directs, ses relations et ses pièces jointes.',
+        'contenu des documents courts inclus), ses enfants directs, ses relations, ses pièces jointes ' +
+        'et les documents qui le mentionnent (mentionedIn).',
       inputSchema: z.object({ id: id.describe('Identifiant du nœud') }),
       annotations: READ_ONLY,
     },
@@ -447,7 +459,7 @@ export function createNodalMcpServer(
       description:
         'Attache un document à un nœud : markdown (notes, explications), text, json, code ' +
         '(avec language, ex. typescript, python, sql) ou mermaid (diagramme). ' +
-        'Dans un document markdown, [[Titre d’un nœud]] crée un lien interne.',
+        'Dans un document markdown, [[Titre]] ou [[Titre]](id) crée un lien interne et une relation « est lié à ».',
       inputSchema: z.object({
         nodeId: id,
         title: z.string().min(1).max(200),

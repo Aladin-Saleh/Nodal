@@ -12,6 +12,7 @@ import { DocumentService } from '../main/knowledge/document-service';
 import { EdgeService } from '../main/knowledge/edge-service';
 import { NodeService } from '../main/knowledge/node-service';
 import { listRelationTypes } from '../main/knowledge/relation-type-service';
+import { listBacklinks } from '../main/knowledge/link-service';
 import { assistantCreations } from '../main/knowledge/assistant-origin';
 import { asRows } from '../main/knowledge/rows';
 import { SearchService } from '../main/knowledge/search-service';
@@ -544,8 +545,23 @@ export function getNode(ctx: ReadContext, id: string) {
         mimeType: file.mimeType,
         sizeBytes: file.sizeBytes,
       })),
+      // Rétroliens : absent s'il n'y en a pas (aucun token pour rien).
+      ...mentionedIn(ctx, detail.id),
     },
     documents: inline,
+  };
+}
+
+/** Documents qui mentionnent le nœud par un lien [[...]] : nœud et document. */
+function mentionedIn(ctx: ReadContext, nodeId: string) {
+  const mentions = listBacklinks(ctx, nodeId);
+  if (mentions.length === 0) return {};
+  return {
+    mentionedIn: mentions.map((mention) => ({
+      id: mention.nodeId,
+      title: mention.nodeTitle,
+      document: mention.documentTitle,
+    })),
   };
 }
 

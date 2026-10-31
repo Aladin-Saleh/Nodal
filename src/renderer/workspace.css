@@ -787,7 +787,6 @@ kbd.palette-detail {
   font-size: 12px;
 }
 
-
 .path-none {
   color: var(--warning);
 }
@@ -806,4 +805,48 @@ kbd.palette-detail {
 
 .path-link {
   color: var(--accent);
+}
+
+/* Liens [[...]] : éditeur, aperçu, rétroliens */
+
+.markdown-preview a.node-link.broken,
+.cm-node-link.broken {
+  color: var(--error-text);
+  text-decoration: line-through dotted;
+  background: var(--error-bg);
+}
+
+.cm-node-link {
+  padding: 0 4px;
+  color: var(--accent);
+  background: var(--selected);
+  border-radius: 4px;
+}
+
+.link-badge {
+  padding: 0 5px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.backlink-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backlink-source .link-button {
+  padding: 0;
+  font-weight: 600;
+}
+
+.backlink-snippet {
+  margin: 2px 0 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }

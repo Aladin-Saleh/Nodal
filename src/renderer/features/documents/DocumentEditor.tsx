@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   CODE_LANGUAGES,
   CONTENT_TYPE_LABELS,
@@ -12,7 +12,12 @@ import {
   useRunner,
 } from '../../app/context';
 import { CodeEditor } from '../editor/CodeEditor';
+import { useNodeLinks } from '../editor/node-links';
 import { MarkdownPreview, MermaidPreview } from '../editor/previews';
+import {
+  LiveNodeLinks,
+  wikiLinkExtension,
+} from '../editor/wiki-link-extension';
 
 /** Erreur de syntaxe JSON affichée sans bloquer l'édition (§6.6). */
 export function jsonError(body: string): string | null {
@@ -84,12 +89,25 @@ function LoadedDocumentEditor({
   const [mode, setMode] = useState<'edit' | 'split' | 'preview'>('split');
   const [title, setTitle] = useState(document.title);
   const [language, setLanguage] = useState(document.language);
+  // Nœuds lus à la demande par l'éditeur (créé une seule fois).
+  const links = useNodeLinks();
+  const [live] = useState(() => new LiveNodeLinks(links));
+  useEffect(() => live.set(links), [live, links]);
+  const extensions = useMemo(
+    () => (document.contentType === 'markdown' ? wikiLinkExtension(live) : []),
+    [document.contentType, live],
+  );
 
   useAutosave({
     key: `document:${document.id}:body`,
     value: body,
-    save: (value) =>
-      client.call('document:update', { id: document.id, body: value }),
+    save: async (value) => {
+      const saved = await client.call('document:update', {
+        id: document.id,
+        body: value,
+      });
+      if (saved.linksChanged) live.get().onLinksChanged();
+    },
   });
 
   const commitTitle = async () => {
@@ -149,6 +167,7 @@ function LoadedDocumentEditor({
       contentType={document.contentType}
       language={language}
       label={`Contenu du document ${document.title}`}
+      extensions={extensions}
     />
   );
   const preview =

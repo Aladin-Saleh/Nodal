@@ -81,7 +81,8 @@ function seed() {
   });
   documents.update({
     id: md.id,
-    body: '# Titre\n\nTexte exact  \n\n## Détail\n\nSuite.\n',
+    // Le lien crée une relation « est lié à » marquée (from_link), à conserver.
+    body: '# Titre\n\nTexte exact  \n\n## Détail\n\nSuite, voir [[Cache]].\n',
   });
   const sql = documents.create({
     nodeId: cache,
@@ -344,6 +345,27 @@ describe('découpage en fragments', () => {
 });
 
 describe('export LLM', () => {
+  it('écrit les liens [[node:id]] avec le titre du nœud', () => {
+    const { md } = seed();
+    const { context, service } = workspace();
+    const docs = new DocumentService(context);
+    const cache = new NodeService(context)
+      .list()
+      .find((node) => node.title === 'Cache')!.id;
+    docs.update({
+      id: md.id,
+      body: `Voir [[node:${cache}|le cache]] et [[node:${cache}]].`,
+    });
+    const data = buildLlmExport(
+      context(),
+      service.getCurrent()!,
+      { scope: { kind: 'workspace' }, maxTokens: 200 },
+      words,
+    );
+    const body = data.documents.find((doc) => doc.id === md.id)!.body;
+    expect(body).toBe('Voir [[le cache]] et [[Cache]].');
+  });
+
   it('produit un TOON équivalent au JSON (aller-retour) et des fragments reproductibles', async () => {
     seed();
     const { context, service } = workspace();

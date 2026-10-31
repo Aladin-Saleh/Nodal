@@ -18,10 +18,11 @@ interface EdgeRow {
   description: string | null;
   created_at: string;
   updated_at: string;
+  from_link: number;
 }
 
 const EDGE_COLUMNS =
-  'e.id, e.source_node_id, e.target_node_id, e.relation_type_id, e.label, e.description, e.created_at, e.updated_at';
+  'e.id, e.source_node_id, e.target_node_id, e.relation_type_id, e.label, e.description, e.created_at, e.updated_at, e.from_link';
 
 function toEdgeInfo(row: EdgeRow): EdgeInfo {
   return {
@@ -33,6 +34,7 @@ function toEdgeInfo(row: EdgeRow): EdgeInfo {
     description: row.description,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ...(row.from_link === 1 && { fromLink: true }),
   };
 }
 
@@ -186,7 +188,8 @@ export class EdgeService {
     }
     ctx.db
       .prepare(
-        `UPDATE edge SET relation_type_id = ?, label = ?, description = ?, updated_at = ?
+        // Retouchée à la main : elle ne suit plus le lien qui l'a créée.
+        `UPDATE edge SET relation_type_id = ?, label = ?, description = ?, updated_at = ?, from_link = 0
          WHERE id = ?`,
       )
       .run(

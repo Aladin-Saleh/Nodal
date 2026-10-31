@@ -32,6 +32,8 @@ import {
   timestampForPath,
   writeFileDeep,
 } from './export-service';
+import { createLinkResolver } from '../../shared/wiki-links';
+import { readableLinks } from './link-service';
 import { asRows } from './rows';
 
 export const LLM_EXPORT_FORMAT = 'nodal-llm-export';
@@ -229,6 +231,7 @@ export function buildLlmExport(
       )
       .all(workspaceId),
   ).filter((row) => inScope.has(row.node_id));
+  const linkResolver = createLinkResolver(allNodes);
   const documents = asRows<DocumentRow>(
     db
       .prepare(
@@ -237,7 +240,14 @@ export function buildLlmExport(
          WHERE n.workspace_id = ? ORDER BY d.sort_order, d.rowid`,
       )
       .all(workspaceId),
-  ).filter((doc) => inScope.has(doc.node_id));
+  )
+    .filter((doc) => inScope.has(doc.node_id))
+    // Liens [[node:<id>]] : titre lisible plutôt qu'un identifiant.
+    .map((doc) =>
+      doc.content_type === 'markdown' && doc.body.includes('[[')
+        ? { ...doc, body: readableLinks(doc.body, linkResolver) }
+        : doc,
+    );
 
   // Chemins hiérarchiques complets (y compris les ancêtres hors portée).
   const byId = new Map(allNodes.map((node) => [node.id, node]));

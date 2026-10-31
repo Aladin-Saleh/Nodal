@@ -67,6 +67,8 @@ export interface CodeEditorProps {
   language: string | null;
   /** Étiquette accessible de la zone d'édition. */
   label: string;
+  /** Extensions propres au document (liens [[...]] en Markdown), à la création. */
+  extensions?: Extension;
 }
 
 /**
@@ -81,6 +83,7 @@ export function CodeEditor({
   contentType,
   language,
   label,
+  extensions = [],
 }: CodeEditorProps) {
   const container = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -104,6 +107,7 @@ export function CodeEditor({
           themeSlot.current.of(prefersDark() ? oneDark : []),
           wraps ? EditorView.lineWrapping : [],
           EditorView.contentAttributes.of({ 'aria-label': label }),
+          extensions,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
               onChangeRef.current(update.state.doc.toString());

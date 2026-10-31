@@ -27,6 +27,7 @@ import {
 import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
+import { listBacklinks } from '../knowledge/link-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -172,6 +173,10 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
 
     'node:list': () => nodes.list(),
+    'node:backlinks': ({ id }) => {
+      const ctx = context();
+      return listBacklinks(ctx, id);
+    },
     'node:get': ({ id }) => nodes.get(id),
     'node:create': (input) => nodes.create(input),
     'node:update': (input) => nodes.update(input),

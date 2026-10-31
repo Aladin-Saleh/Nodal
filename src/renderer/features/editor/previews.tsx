@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useId,
   useMemo,
@@ -11,13 +9,10 @@ import {
 import {
   createMarkdownRenderer,
   isExternalLink,
-  nodeLinkTitle,
+  nodeLinkId,
+  type MarkdownEnv,
 } from './markdown';
-
-/** Ouverture d'un nœud depuis un lien interne [[Titre]]. */
-export const NodeLinkContext = createContext<(title: string) => void>(
-  () => undefined,
-);
+import { useNodeLinks } from './node-links';
 
 const markdownRenderer = createMarkdownRenderer();
 
@@ -26,17 +21,24 @@ const markdownRenderer = createMarkdownRenderer();
  * désactivé : le contenu de l'utilisateur est toujours échappé.
  */
 export function MarkdownPreview({ source }: { source: string }) {
-  const openNode = useContext(NodeLinkContext);
-  const html = useMemo(() => markdownRenderer.render(source), [source]);
+  const { resolver, open } = useNodeLinks();
+  const html = useMemo(
+    () =>
+      markdownRenderer.render(source, {
+        links: resolver,
+      } satisfies MarkdownEnv),
+    [source, resolver],
+  );
 
   const onClick = (event: MouseEvent<HTMLDivElement>) => {
     const anchor = (event.target as HTMLElement).closest('a');
     if (!anchor) return;
     event.preventDefault();
     const href = anchor.getAttribute('href') ?? '';
-    const title = nodeLinkTitle(href);
-    if (title) openNode(title);
+    const id = nodeLinkId(href);
+    if (id) open(id);
     // Le main ouvre les liens web dans le navigateur du système.
+    // Un lien cassé n'ouvre rien (signalé par son style et son infobulle).
     else if (isExternalLink(href)) window.open(href);
   };
 

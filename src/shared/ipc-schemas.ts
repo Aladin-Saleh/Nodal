@@ -291,6 +291,7 @@ export const ipcArgsSchemas = {
   'graphView:setDefault': one(z.strictObject({ id: idSchema.nullable() })),
 
   'node:list': noArgs,
+  'node:backlinks': one(idInput),
   'node:get': one(idInput),
   'node:create': one(createNodeInputSchema),
   'node:update': one(updateNodeInputSchema),

@@ -108,6 +108,14 @@ export function RelationList({
               >
                 {relation.otherNodeTitle}
               </button>
+              {relation.fromLink && (
+                <span
+                  className="link-badge"
+                  title="Créée par un lien [[…]] d’un document : elle suit le lien"
+                >
+                  lien
+                </span>
+              )}
               <AssistantBadge
                 origin={relation.createdByAssistant}
                 what="Relation créée"

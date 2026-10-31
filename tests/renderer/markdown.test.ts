@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
   createMarkdownRenderer,
+  isBrokenLink,
   isExternalLink,
-  nodeLinkTitle,
+  nodeLinkId,
 } from '../../src/renderer/features/editor/markdown';
+import {
+  createLinkResolver,
+  formatNodeLink,
+} from '../../src/shared/wiki-links';
 
 const md = createMarkdownRenderer();
+const ID = '0f1e2d3c-4b5a-4968-8776-a5b4c3d2e1f0';
+const links = createLinkResolver([
+  { id: ID, title: 'API Commandes' },
+  { id: '11111111-2222-4333-8444-555555555555', title: 'Kafka' },
+]);
+const hrefsOf = (html: string) =>
+  [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]!);
 
 describe('rendu Markdown', () => {
   it('rend titres, listes, tableaux, citations et blocs de code (§6.3)', () => {
@@ -41,13 +53,36 @@ describe('rendu Markdown', () => {
     );
   });
 
-  it('transforme [[Titre]] en lien interne vers un nœud', () => {
-    const html = md.render('Voir [[API Commandes]] et [[Kafka]].');
-    expect(html).toContain('class="node-link"');
-    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(
-      (match) => match[1]!,
+  it('transforme [[Titre]] et [[node:id]] en liens vers le nœud, par identifiant', () => {
+    const html = md.render(
+      `Voir [[api commandes]], ${formatNodeLink(ID)} et [[Kafka|le bus]].`,
+      { links },
     );
-    expect(hrefs.map(nodeLinkTitle)).toEqual(['API Commandes', 'Kafka']);
+    expect(hrefsOf(html).map(nodeLinkId)).toEqual([
+      ID,
+      ID,
+      '11111111-2222-4333-8444-555555555555',
+    ]);
+    // Titre courant du nœud, ou texte donné après « | ».
+    expect(html).toContain('>API Commandes</a>');
+    expect(html).toContain('>le bus</a>');
+  });
+
+  it('signale un lien cassé sans le rendre navigable', () => {
+    const html = md.render(
+      `[[Inconnu]] ${formatNodeLink('99999999-0000-4000-8000-000000000000', 'ancien')}`,
+      { links },
+    );
+    expect(html.match(/node-link broken/g)).toHaveLength(2);
+    expect(hrefsOf(html).every(isBrokenLink)).toBe(true);
+    expect(hrefsOf(html).map(nodeLinkId)).toEqual([null, null]);
+    expect(html).toContain('>Inconnu</a>');
+    expect(html).toContain('>ancien</a>');
+  });
+
+  it('échappe le texte d’un lien', () => {
+    const html = md.render('[[<img src=x onerror=alert(1)>]]', { links });
+    expect(html).not.toContain('<img');
   });
 
   it('ne crée pas de lien interne dans un bloc de code', () => {
@@ -57,7 +92,7 @@ describe('rendu Markdown', () => {
 
 describe('liens', () => {
   it('distingue liens internes et liens web', () => {
-    expect(nodeLinkTitle('https://example.com')).toBeNull();
+    expect(nodeLinkId('https://example.com')).toBeNull();
     expect(isExternalLink('https://example.com')).toBe(true);
     expect(isExternalLink('mailto:a@b.c')).toBe(false);
   });

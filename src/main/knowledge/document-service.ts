@@ -7,6 +7,7 @@ import type {
 import type { DocumentInfo, DocumentSummary } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
+import { syncNodeLinks } from './link-service';
 import {
   DOCUMENT_COLUMNS,
   DOCUMENT_SUMMARY_COLUMNS,
@@ -101,32 +102,50 @@ export class DocumentService {
     return this.get(id);
   }
 
-  /** Le corps est enregistré tel quel, sans normalisation (§6.6). */
+  /**
+   * Le corps est enregistré tel quel, sans normalisation (§6.6). Les
+   * relations issues des liens [[...]] suivent le nouveau texte.
+   */
   update(input: UpdateDocumentInput): DocumentInfo {
     const ctx = this.context();
     const current = getDocumentRow(ctx, input.id);
     assertLanguageAllowed(current.content_type, input.language);
-    ctx.db
-      .prepare(
-        'UPDATE document SET title = ?, body = ?, language = ?, updated_at = ? WHERE id = ?',
-      )
-      .run(
-        input.title ?? current.title,
-        input.body ?? current.body,
-        input.language === undefined ? current.language : input.language,
-        ctx.now(),
-        input.id,
-      );
-    return this.get(input.id);
+    const links = inTransaction(ctx.db, () => {
+      ctx.db
+        .prepare(
+          'UPDATE document SET title = ?, body = ?, language = ?, updated_at = ? WHERE id = ?',
+        )
+        .run(
+          input.title ?? current.title,
+          input.body ?? current.body,
+          input.language === undefined ? current.language : input.language,
+          ctx.now(),
+          input.id,
+        );
+      const body = input.body ?? current.body;
+      if (
+        current.content_type === 'markdown' &&
+        body !== current.body &&
+        (body.includes('[[') || current.body.includes('[['))
+      ) {
+        return syncNodeLinks(ctx, current.node_id);
+      }
+      return { added: 0, removed: 0 };
+    });
+    const updated = this.get(input.id);
+    return links.added + links.removed > 0
+      ? { ...updated, linksChanged: true }
+      : updated;
   }
 
   /** Supprime le document et les pièces jointes qui lui sont rattachées. */
   delete(id: string): void {
     const ctx = this.context();
-    getDocumentRow(ctx, id);
+    const current = getDocumentRow(ctx, id);
     inTransaction(ctx.db, () => {
       ctx.db.prepare('DELETE FROM attachment WHERE document_id = ?').run(id);
       ctx.db.prepare('DELETE FROM document WHERE id = ?').run(id);
+      if (current.body.includes('[[')) syncNodeLinks(ctx, current.node_id);
     });
   }
 

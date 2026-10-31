@@ -32,7 +32,19 @@ import { RelationTypeService } from '../main/knowledge/relation-type-service';
 import { asRow, asRows } from '../main/knowledge/rows';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
+import { canonicalizeLlmLinks } from './links';
+import { loadShortIds } from './short-ids';
 import type { ReadContext } from './workspace-reader';
+
+/** Liens servis `[[Titre]](id)` → liens par identifiant (voir links.ts). */
+function canonicalBody(ctx: ReadContext, body: string): string {
+  if (!body.includes('[[')) return body;
+  const isNode = (id: string) =>
+    ctx.db
+      .prepare('SELECT 1 FROM node WHERE id = ? AND workspace_id = ?')
+      .get(id, ctx.workspaceId) !== undefined;
+  return canonicalizeLlmLinks(body, loadShortIds(ctx), isNode);
+}
 
 /** Contexte d'une écriture : l'espace et le nom de l'assistant appelant. */
 export interface WriteContext extends ReadContext {
@@ -216,7 +228,7 @@ export function addDocument(
   });
   const { body } = check(updateDocumentInputSchema, {
     id: created.id,
-    body: input.body,
+    body: canonicalBody(ctx, input.body),
   });
   documents.update({ id: created.id, body });
   const path = `${pathOf(ctx, input.nodeId)} > ${title}`;
@@ -243,7 +255,8 @@ export function updateDocument(
 ) {
   const before = readDocumentState(ctx, input.id);
   if (!before) throw notFound('Document');
-  let body = input.body;
+  let body =
+    input.body === undefined ? undefined : canonicalBody(ctx, input.body);
   if (body !== undefined && input.mode === 'append' && before.body) {
     const separator = before.body.endsWith('\n') ? '\n' : '\n\n';
     body = `${before.body}${separator}${body}`;

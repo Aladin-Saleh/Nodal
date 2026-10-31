@@ -39,6 +39,7 @@ import {
   type NodeRow,
 } from './rows';
 import { listNodeTags } from './tag-service';
+import { syncNodeLinks } from './link-service';
 
 /** Garde-fou contre une hiérarchie corrompue (cycle introduit hors de l'app). */
 const MAX_DEPTH = 10_000;
@@ -557,6 +558,8 @@ export class NodeService {
         );
       }
     }
+    // Les liens des documents copiés donnent leurs relations à la copie.
+    if (documents.length > 0) syncNodeLinks(ctx, id);
     for (const attachment of attachmentsOf('node_id', source.id)) {
       copyAttachment.run(ctx.newId(), id, null, timestamp, attachment.id);
     }

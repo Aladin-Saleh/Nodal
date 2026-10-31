@@ -48,6 +48,8 @@ export interface DocumentSummary {
 export interface DocumentInfo extends DocumentSummary {
   body: string;
   createdAt: string;
+  /** Après un enregistrement : les relations issues des liens ont changé. */
+  linksChanged?: boolean;
 }
 
 export interface TagInfo {
@@ -171,6 +173,18 @@ export interface EdgeInfo {
   description: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Créée par un lien [[...]] d'un document : suit le lien. */
+  fromLink?: boolean;
+}
+
+/** Document qui mentionne un nœud par un lien [[...]] (« Mentionné dans »). */
+export interface Backlink {
+  nodeId: string;
+  nodeTitle: string;
+  documentId: string;
+  documentTitle: string;
+  /** Texte autour du lien, liens remplacés par leur libellé. */
+  snippet: string;
 }
 
 /** Relation vue depuis un nœud (panneau de propriétés, §7). */

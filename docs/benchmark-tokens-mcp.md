@@ -269,6 +269,26 @@ Sans cet outil, trouver le même chemin demandait plusieurs
 `nodal_neighborhood` (1 215 tokens chacun à profondeur 2, sans garantie de
 couvrir la distance), donc plusieurs tours.
 
+## Liens `[[...]]` et rétroliens (v1.4)
+
+Même méthode (`tests/perf/mcp-tokens.perf.ts`, espace ×1). Un document qui
+contient trois liens, et un nœud cité par dix documents :
+
+| Mesure                                                 | Tokens |
+| ------------------------------------------------------ | -----: |
+| Document tel qu'enregistré (`[[node:<uuid>]]`)         |     92 |
+| Document servi (`[[Titre]](id court)`)                 |     53 |
+| Rubrique `mentionedIn` de `nodal_get_node` (10 lignes) |    165 |
+
+- Les liens sont enregistrés par UUID pour survivre aux renommages ; servis
+  tels quels, ils coûteraient environ 23 tokens chacun et ne diraient rien
+  au LLM. Le serveur les réécrit en `[[Titre]](id court)` : titre courant et
+  identifiant réutilisable, −42 % sur cet exemple. Un document que le LLM
+  réécrit (`mode: replace`) garde ses liens : `[[Titre]](id)` est reconverti
+  en lien par identifiant à l'écriture.
+- `mentionedIn{id,title,document}` n'apparaît que si le nœud est cité (aucun
+  token sinon) ; il évite une recherche pour savoir qui en parle.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

@@ -27,7 +27,8 @@ import {
   shortestPath,
 } from '../../../shared/graph-path';
 import type { Language } from '../documents/DocumentsPanel';
-import { NodeLinkContext } from '../editor/previews';
+import { NodeLinksContext } from '../editor/node-links';
+import { createLinkResolver } from '../../../shared/wiki-links';
 import { NodeProperties } from '../nodes/NodeProperties';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { CenterPane } from './CenterPane';
@@ -391,19 +392,14 @@ function WorkspaceView({
   };
 
   /** Lien interne [[Titre]] : ouvre le nœud correspondant (§6.3). */
-  const openNodeByTitle = (title: string) => {
-    const wanted = title.trim().toLocaleLowerCase();
-    const target = nodes.find(
-      (node) => node.title.toLocaleLowerCase() === wanted,
-    );
-    if (!target) {
-      reportError(
-        new NodalError('NOT_FOUND', `Aucun nœud intitulé « ${title} ».`),
-      );
+  /** Lien interne [[...]] d'un document : ouvre le nœud visé (§6.3). */
+  const openLinkedNode = (id: string) => {
+    if (!index.byId.has(id)) {
+      reportError(new NodalError('NOT_FOUND', 'Ce nœud n’existe plus.'));
       return;
     }
     closeOverlay('editingDocumentId');
-    select(target.id);
+    select(id);
   };
 
   const showSearchResults = (hits: SearchHit[] | null) => {
@@ -536,6 +532,8 @@ function WorkspaceView({
     return pathSteps.filter((step) => masked.has(step.nodeId)).length;
   }, [pathSteps, nodes, hidden, solo]);
 
+  const linkResolver = useMemo(() => createLinkResolver(nodes), [nodes]);
+
   const modalOpen =
     dialog !== null ||
     palette !== null ||
@@ -596,7 +594,14 @@ function WorkspaceView({
   }, [history, paletteNodes, selectedId]);
 
   return (
-    <NodeLinkContext.Provider value={openNodeByTitle}>
+    <NodeLinksContext.Provider
+      value={{
+        nodes: paletteNodes,
+        resolver: linkResolver,
+        open: openLinkedNode,
+        onLinksChanged: relationsChanged,
+      }}
+    >
       <div className="workspace-screen">
         <TopBar
           workspace={workspace}
@@ -700,6 +705,7 @@ function WorkspaceView({
                     onTagsChanged={() => void data.refreshTags()}
                     onRelationsChanged={relationsChanged}
                     onOpenDocument={(id) => openDocument(id)}
+                    onOpenDocumentOf={openDocument}
                     onAddDocument={() =>
                       openOverlay('addingDocumentFor', detail.id)
                     }
@@ -770,6 +776,6 @@ function WorkspaceView({
           />
         )}
       </div>
-    </NodeLinkContext.Provider>
+    </NodeLinksContext.Provider>
   );
 }
