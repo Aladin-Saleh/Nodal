@@ -144,6 +144,13 @@ export function NodeTree({
 
   const onKeyDown = (event: KeyboardEvent) => {
     const current = rows[position];
+    // Flèches avec Alt / Ctrl : raccourcis de l'application (Alt+← : précédent).
+    if (
+      event.key.startsWith('Arrow') &&
+      (event.altKey || event.ctrlKey || event.metaKey)
+    ) {
+      return;
+    }
     switch (event.key) {
       case 'ArrowDown':
         move(rows[Math.min(position + 1, rows.length - 1)]?.node.id);

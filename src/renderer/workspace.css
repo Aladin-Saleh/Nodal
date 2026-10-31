@@ -787,6 +787,23 @@ kbd.palette-detail {
   font-size: 12px;
 }
 
+
 .path-none {
   color: var(--warning);
+}
+
+.path-steps .link-button {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.path-steps .link-button:hover {
+  text-decoration: underline;
+}
+
+.path-link {
+  color: var(--accent);
 }

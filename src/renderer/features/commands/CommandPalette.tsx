@@ -171,7 +171,7 @@ export function CommandPalette({
               >
                 {item.kind === 'node' ? (
                   <>
-                    <span className="palette-kind">Nœud</span>
+                    <span className="palette-kind">Aller à</span>
                     <span className="palette-label">{item.node.title}</span>
                     {item.node.path && (
                       <span className="palette-detail muted">

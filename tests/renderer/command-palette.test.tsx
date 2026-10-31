@@ -40,6 +40,13 @@ describe('correspondance approximative', () => {
     expect(score('mcp srv', 'Serveur MCP')).not.toBeNull();
     expect(score('pcm', 'Serveur MCP')).toBeNull();
     expect(score('kafka', 'Serveur MCP')).toBeNull();
+    expect(score('kfk', 'Kafka')).not.toBeNull();
+  });
+
+  it('refuse une sous-suite trop étalée', () => {
+    const long = 'Nœud Masquer dans le graphe oeil cacher visibilite';
+    expect(score('archi', long)).toBeNull();
+    expect(score('srv', 'Serveur')).not.toBeNull();
   });
 
   it('préfère un début de mot, puis une occurrence contiguë', () => {

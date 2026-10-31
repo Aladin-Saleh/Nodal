@@ -34,18 +34,38 @@ function termScore(term: string, text: string): number | null {
     if (at !== -1) return 80 + term.length;
     return 60 + term.length - Math.min(contiguous, 20) / 10;
   }
-  // Sous-suite : chaque lettre après la précédente.
-  let score = 0;
-  let from = 0;
-  let previous = -2;
-  for (const char of term) {
-    const at = text.indexOf(char, from);
-    if (at === -1) return null;
+  // Sous-suite : chaque lettre après la précédente, dans une fenêtre bornée
+  // (sinon « archi » se trouverait, lettre à lettre, dans n'importe quelle
+  // phrase longue). On essaie chaque départ possible.
+  const maxSpan = term.length * 3;
+  let best: number | null = null;
+  for (
+    let start = text.indexOf(term[0]!);
+    start !== -1;
+    start = text.indexOf(term[0]!, start + 1)
+  ) {
+    const score = subsequenceScore(term, text, start, maxSpan);
+    if (score !== null && (best === null || score > best)) best = score;
+  }
+  return best;
+}
+
+/** Score de la sous-suite commençant à `start`, ou `null` si trop étalée. */
+function subsequenceScore(
+  term: string,
+  text: string,
+  start: number,
+  maxSpan: number,
+): number | null {
+  let score = isBoundary(text, start) ? 2 : 0;
+  let previous = start;
+  for (const char of term.slice(1)) {
+    const at = text.indexOf(char, previous + 1);
+    if (at === -1 || at - start >= maxSpan) return null;
     if (at === previous + 1) score += 3;
     else if (isBoundary(text, at)) score += 2;
-    else score -= Math.min(at - from, 5) / 5;
+    else score -= Math.min(at - previous - 1, 5) / 5;
     previous = at;
-    from = at + 1;
   }
   return score;
 }

@@ -76,6 +76,19 @@ describe('œil de l’arborescence', () => {
     expect(handlers.onToggleHidden).toHaveBeenCalledOnce();
   });
 
+  it('laisse Alt / Ctrl + flèches à l’application (historique)', () => {
+    const handlers = renderTree();
+    const tree = screen.getByRole('tree');
+    const left = fireEvent.keyDown(tree, { key: 'ArrowLeft', altKey: true });
+    fireEvent.keyDown(tree, { key: 'ArrowDown', ctrlKey: true });
+    // Non traité : ni repli, ni déplacement, défaut non empêché.
+    expect(left).toBe(true);
+    expect(handlers.onToggle).not.toHaveBeenCalled();
+    expect(handlers.onSelect).not.toHaveBeenCalled();
+    fireEvent.keyDown(tree, { key: 'ArrowLeft' });
+    expect(handlers.onToggle).toHaveBeenCalledWith('a', false);
+  });
+
   it('reste focalisable sans ajouter d’arrêt de tabulation', () => {
     renderTree();
     const [eye] = screen.getAllByRole('button', {
