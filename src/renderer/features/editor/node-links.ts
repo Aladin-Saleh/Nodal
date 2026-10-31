@@ -22,6 +22,8 @@ export interface NodeLinks {
   open(id: string): void;
   /** Un enregistrement a changé les relations issues des liens. */
   onLinksChanged(): void;
+  /** Un document a été enregistré (suggestions de liens à relire). */
+  onDocumentSaved(): void;
 }
 
 export const NodeLinksContext = createContext<NodeLinks>({
@@ -29,6 +31,7 @@ export const NodeLinksContext = createContext<NodeLinks>({
   resolver: createLinkResolver([]),
   open: () => undefined,
   onLinksChanged: () => undefined,
+  onDocumentSaved: () => undefined,
 });
 
 export const useNodeLinks = () => useContext(NodeLinksContext);

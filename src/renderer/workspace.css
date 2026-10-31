@@ -850,3 +850,37 @@ kbd.palette-detail {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+/* Suggestions de liens (« Relier ? ») */
+
+.suggestions {
+  padding: 10px;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion-list .link-button {
+  padding: 0;
+  font-weight: 600;
+}
+
+.suggestion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.suggestion-actions button {
+  padding: 2px 8px;
+  font-size: 12px;
+}

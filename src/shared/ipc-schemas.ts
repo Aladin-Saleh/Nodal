@@ -292,6 +292,17 @@ export const ipcArgsSchemas = {
 
   'node:list': noArgs,
   'node:backlinks': one(idInput),
+  'suggestion:listForNode': one(idInput),
+  'suggestion:accept': one(
+    z.strictObject({
+      sourceId: idSchema,
+      targetId: idSchema,
+      mode: z.enum(['relation', 'link']),
+    }),
+  ),
+  'suggestion:ignore': one(
+    z.strictObject({ sourceId: idSchema, targetId: idSchema }),
+  ),
   'node:get': one(idInput),
   'node:create': one(createNodeInputSchema),
   'node:update': one(updateNodeInputSchema),

@@ -126,6 +126,8 @@ function WorkspaceView({
   /** Palette de commandes ouverte ; `actionsOnly` : Ctrl+Maj+P. */
   const [palette, setPalette] = useState<{ actionsOnly: boolean } | null>(null);
 
+  /** Incrémenté à chaque document enregistré (suggestions de liens). */
+  const [documentsRevision, setDocumentsRevision] = useState(0);
   /** Demande de focus sur la recherche (Ctrl+F). */
   const [searchFocus, setSearchFocus] = useState(0);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
@@ -600,6 +602,7 @@ function WorkspaceView({
         resolver: linkResolver,
         open: openLinkedNode,
         onLinksChanged: relationsChanged,
+        onDocumentSaved: () => setDocumentsRevision((count) => count + 1),
       }}
     >
       <div className="workspace-screen">
@@ -700,6 +703,7 @@ function WorkspaceView({
                     nodes={nodes}
                     relationTypes={data.graph?.relationTypes ?? []}
                     relationsRevision={data.relationsRevision}
+                    documentsRevision={documentsRevision}
                     onNavigate={select}
                     onNodeChanged={nodeChanged}
                     onTagsChanged={() => void data.refreshTags()}

@@ -7,6 +7,7 @@ import { migration004 } from './migrations/004-assistant-changes';
 import { migration005 } from './migrations/005-assistant-validation';
 import { migration006 } from './migrations/006-graph-views';
 import { migration007 } from './migrations/007-edge-from-link';
+import { migration008 } from './migrations/008-link-suggestion-ignored';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -25,6 +26,7 @@ export const MIGRATIONS: readonly Migration[] = [
   migration005,
   migration006,
   migration007,
+  migration008,
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;

@@ -15,6 +15,7 @@ import {
   wikiLinkExtension,
 } from '../../src/renderer/features/editor/wiki-link-extension';
 import { BacklinkList } from '../../src/renderer/features/nodes/BacklinkList';
+import { SuggestionList } from '../../src/renderer/features/nodes/SuggestionList';
 import type { NodalClient } from '../../src/renderer/services/nodal-client';
 import { SaveTracker } from '../../src/renderer/services/save-tracker';
 import {
@@ -34,6 +35,7 @@ const live = new LiveNodeLinks({
   resolver: createLinkResolver(nodes),
   open: () => undefined,
   onLinksChanged: () => undefined,
+  onDocumentSaved: () => undefined,
 });
 
 function editor(doc: string) {
@@ -128,5 +130,53 @@ describe('BacklinkList', () => {
     expect(onOpenDocument).toHaveBeenCalledWith('d1', 'n1');
     expect(screen.getByText('lit le [[Cache Redis]]')).toBeTruthy();
     expect(call).toHaveBeenCalledWith('node:backlinks', { id: CACHE });
+  });
+});
+
+describe('SuggestionList', () => {
+  it('relie, convertit ou ignore, puis relit la liste', async () => {
+    const suggestion = {
+      targetId: 't1',
+      targetTitle: 'Kafka',
+      documentId: 'd1',
+      documentTitle: 'Notes',
+      snippet: 'publie dans kafka',
+    };
+    let listed = [suggestion];
+    const call = vi.fn(async (channel: string) => {
+      if (channel === 'suggestion:listForNode') return listed;
+      listed = [];
+      return null;
+    });
+    const onRelationsChanged = vi.fn();
+    render(
+      <ServicesProvider
+        client={{ call } as unknown as NodalClient}
+        tracker={new SaveTracker(() => undefined)}
+        reportError={vi.fn()}
+        reportInfo={vi.fn()}
+      >
+        <SuggestionList
+          nodeId="n1"
+          revision={0}
+          onNavigate={vi.fn()}
+          onRelationsChanged={onRelationsChanged}
+        />
+      </ServicesProvider>,
+    );
+    expect(
+      await screen.findByRole('region', { name: 'Relier ?' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'En lien [[…]]' }));
+    await vi.waitFor(() => expect(onRelationsChanged).toHaveBeenCalled());
+    expect(call).toHaveBeenCalledWith('suggestion:accept', {
+      sourceId: 'n1',
+      targetId: 't1',
+      mode: 'link',
+    });
+    // Plus de suggestion : la section disparaît.
+    await vi.waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Relier ?' })).toBeNull(),
+    );
   });
 });

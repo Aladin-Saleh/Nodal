@@ -184,7 +184,11 @@ pièces jointes en BLOB).
     cassés signalés ; chaque lien maintient une relation « est lié à »
     marquée `from_link` (migration 007), jamais une relation manuelle ;
     panneau « Mentionné dans » ; MCP : `mentionedIn` dans `nodal_get_node`,
-    liens servis `[[Titre]](id)` et reconvertis à l'écriture.
+    liens servis `[[Titre]](id)` et reconvertis à l'écriture ;
+  - suggestions « Relier ? » : titre d'un autre nœud cité (mots entiers,
+    sans accents, hors code et liens, titres courts ou génériques ignorés)
+    sans relation existante ; relier, convertir en lien ou ignorer (refus
+    mémorisés, migration 008) ; calcul par nœud, sans scan de la base.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

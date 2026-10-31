@@ -28,6 +28,7 @@ import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
+import { SuggestionService } from '../knowledge/suggestion-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -69,6 +70,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const attachments = new AttachmentService(context);
   const settings = new SettingsService(context);
   const graphViews = new GraphViewService(context);
+  const suggestions = new SuggestionService(context);
   const relationTypes = new RelationTypeService(context);
   const edges = new EdgeService(context);
   const graph = new GraphService(context);
@@ -173,6 +175,15 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
 
     'node:list': () => nodes.list(),
+    'suggestion:listForNode': ({ id }) => suggestions.listForNode(id),
+    'suggestion:accept': (input) => {
+      suggestions.accept(input);
+      return null;
+    },
+    'suggestion:ignore': (input) => {
+      suggestions.ignore(input);
+      return null;
+    },
     'node:backlinks': ({ id }) => {
       const ctx = context();
       return listBacklinks(ctx, id);

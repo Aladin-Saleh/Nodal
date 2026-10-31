@@ -34,6 +34,7 @@ import type {
   GraphCamera,
   GraphViewInfo,
   Backlink,
+  LinkSuggestion,
 } from './model';
 
 export interface AppInfo {
@@ -240,6 +241,16 @@ export interface IpcContract {
   'node:list': { args: []; result: NodeSummary[] };
   /** Documents qui mentionnent ce nœud par un lien [[...]]. */
   'node:backlinks': { args: [IdInput]; result: Backlink[] };
+  /** « Relier ? » : titres d'autres nœuds cités par les documents du nœud. */
+  'suggestion:listForNode': { args: [IdInput]; result: LinkSuggestion[] };
+  'suggestion:accept': {
+    args: [{ sourceId: string; targetId: string; mode: 'relation' | 'link' }];
+    result: null;
+  };
+  'suggestion:ignore': {
+    args: [{ sourceId: string; targetId: string }];
+    result: null;
+  };
   'node:get': { args: [IdInput]; result: NodeDetail };
   'node:create': { args: [CreateNodeInput]; result: NodeSummary };
   'node:update': { args: [UpdateNodeInput]; result: NodeSummary };
@@ -347,6 +358,9 @@ export const IPC_CHANNELS = [
   'graphView:setDefault',
   'node:list',
   'node:backlinks',
+  'suggestion:listForNode',
+  'suggestion:accept',
+  'suggestion:ignore',
   'node:get',
   'node:create',
   'node:update',

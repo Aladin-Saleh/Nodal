@@ -17,6 +17,7 @@ import { AttachmentList } from '../attachments/AttachmentList';
 import { RelationList } from '../relations/RelationList';
 import { TagEditor } from '../tags/TagEditor';
 import { BacklinkList } from './BacklinkList';
+import { SuggestionList } from './SuggestionList';
 import { ParentSelect } from './NodeDialogs';
 import { buildTreeIndex, subtreeIds } from './tree';
 
@@ -27,6 +28,8 @@ export interface NodePropertiesProps {
   relationTypes: readonly RelationTypeInfo[];
   /** Change quand les relations ont été modifiées ailleurs (ex. graphe). */
   relationsRevision: number;
+  /** Change à chaque document enregistré (suggestions de liens). */
+  documentsRevision: number;
   onNavigate(id: string): void;
   /** Les données du nœud ont changé : recharger la fiche. */
   onNodeChanged(): void;
@@ -49,6 +52,7 @@ export function NodeProperties({
   nodes,
   relationTypes,
   relationsRevision,
+  documentsRevision,
   onNavigate,
   onNodeChanged,
   onTagsChanged,
@@ -195,6 +199,13 @@ export function NodeProperties({
           onChanged={onRelationsChanged}
         />
       </section>
+
+      <SuggestionList
+        nodeId={node.id}
+        revision={relationsRevision * 100_000 + documentsRevision}
+        onNavigate={onNavigate}
+        onRelationsChanged={onRelationsChanged}
+      />
 
       <section>
         <h3>Mentionné dans</h3>

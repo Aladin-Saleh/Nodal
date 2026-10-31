@@ -187,6 +187,16 @@ export interface Backlink {
   snippet: string;
 }
 
+/** « Relier ? » : un document du nœud cite le titre d'un autre nœud. */
+export interface LinkSuggestion {
+  targetId: string;
+  targetTitle: string;
+  documentId: string;
+  documentTitle: string;
+  /** Texte autour de la mention. */
+  snippet: string;
+}
+
 /** Relation vue depuis un nœud (panneau de propriétés, §7). */
 /** Élément créé par un assistant IA via MCP (d'après le journal). */
 export interface AssistantOrigin {

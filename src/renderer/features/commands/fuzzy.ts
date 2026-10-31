@@ -4,16 +4,9 @@
  * sans tenir compte de la casse ni des accents. Logique pure, testée.
  */
 
-/** Minuscules sans accents (« Élément » → « element »), même longueur. */
-export function foldText(text: string): string {
-  let result = '';
-  for (const char of text) {
-    // Un caractère décomposé garde sa lettre de base (premier point de code).
-    const base = char.normalize('NFD').replace(/\p{M}/gu, '');
-    result += (base.length === 1 ? base : char).toLowerCase();
-  }
-  return result;
-}
+import { foldText } from '../../../shared/text';
+
+export { foldText };
 
 const isBoundary = (text: string, index: number) =>
   index === 0 || /[\s\-_/.>:()[\]'’"«]/u.test(text[index - 1]!);

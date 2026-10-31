@@ -168,6 +168,16 @@ Mermaid**. L'enregistrement est automatique.
 - **Mentionné dans** (panneau de droite) : les documents qui contiennent un
   lien vers le nœud affiché, avec un extrait ; un clic ouvre le nœud ou le
   document.
+- **Relier ?** (panneau de droite, seulement s'il y a quelque chose) : les
+  documents Markdown ou texte du nœud citent le titre d'un autre nœud
+  (titre exact, en mots entiers, sans tenir compte des accents ni des
+  majuscules, hors code et hors liens) alors qu'aucune relation ne les relie.
+  **Relier** crée une relation « est lié à » ; **En lien [[…]]** transforme
+  la première mention en lien ; **Ignorer** ne propose plus ce nœud ici. Les
+  titres de moins de 4 caractères ou trop courants (« Notes »,
+  « Introduction »…), le parent et les enfants ne sont jamais proposés. Les
+  suggestions sont recalculées pour le nœud affiché, à l'ouverture de son
+  panneau et après chaque enregistrement de ses documents.
 - **Code** : coloration selon le langage, numéros de ligne, bouton
   **Copier**. Aucune exécution n'est possible.
 - **JSON** : les erreurs de syntaxe sont signalées sans bloquer la saisie ;

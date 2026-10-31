@@ -31,7 +31,7 @@ export function workspaceLinkResolver(ctx: ServiceContext): LinkResolver {
   );
 }
 
-function linkRelationTypeId(ctx: ServiceContext): string {
+export function linkRelationTypeId(ctx: ServiceContext): string {
   const found = ctx.db
     .prepare(
       'SELECT id FROM relation_type WHERE workspace_id = ? AND name = ? COLLATE NOCASE',

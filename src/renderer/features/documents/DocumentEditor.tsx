@@ -107,6 +107,7 @@ function LoadedDocumentEditor({
         body: value,
       });
       if (saved.linksChanged) live.get().onLinksChanged();
+      live.get().onDocumentSaved();
     },
   });
 

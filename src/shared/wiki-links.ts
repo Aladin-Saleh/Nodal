@@ -31,7 +31,7 @@ const LINK = /\[\[([^[\]\n|]+)(?:\|([^[\]\n]+))?\]\]/g;
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Plages à ignorer : blocs ``` / ~~~ et code en ligne `…`. */
-function codeRanges(body: string): [number, number][] {
+export function codeRanges(body: string): [number, number][] {
   const ranges: [number, number][] = [];
   const fence = /^(\s{0,3})(`{3,}|~{3,})[^\n]*$/gm;
   let open: { at: number; marker: string } | null = null;
