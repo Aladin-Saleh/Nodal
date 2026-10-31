@@ -29,6 +29,7 @@ const CONTEXT_MENU_ACTIONS = [
   'node.toggleHidden',
   'node.solo',
   'node.center',
+  'node.pathTo',
   'node.validate',
   'node.addDocument',
   'node.move',

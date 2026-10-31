@@ -1,9 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  InMemoryTransport,
-  type JSONRPCMessage,
-} from '@modelcontextprotocol/server';
 import { decode as decodeToon } from '@toon-format/toon';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AssistantChangeService } from '../../src/main/knowledge/assistant-change-service';
@@ -13,67 +9,11 @@ import { GraphService } from '../../src/main/knowledge/graph-service';
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { RelationTypeService } from '../../src/main/knowledge/relation-type-service';
 import { TagService } from '../../src/main/knowledge/tag-service';
-import { createNodalMcpServer } from '../../src/mcp/server';
+import { connect, type ToolResult } from '../helpers/mcp-client';
 import { listFiles } from '../helpers/temp-dir';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
 const workspace = testWorkspaceFixture();
-
-interface ToolResult {
-  content: { type: 'text'; text: string }[];
-  isError?: boolean;
-}
-
-/** Client JSON-RPC minimal relié au serveur en mémoire. */
-async function connect(workspaceFile: string, readOnly = true) {
-  const server = createNodalMcpServer({
-    workspaceFile,
-    version: 'test',
-    readOnly,
-  });
-  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const pending = new Map<number, (message: JSONRPCMessage) => void>();
-  // API du transport MCP : un seul gestionnaire, par affectation.
-  // oxlint-disable-next-line unicorn/prefer-add-event-listener
-  clientSide.onmessage = (message) => {
-    if ('id' in message && typeof message.id === 'number') {
-      pending.get(message.id)?.(message);
-    }
-  };
-  await server.connect(serverSide);
-  await clientSide.start();
-  let nextId = 1;
-  const request = (method: string, params: Record<string, unknown>) => {
-    const id = nextId++;
-    return new Promise<Record<string, unknown>>((resolve, reject) => {
-      pending.set(id, (message) => {
-        if ('error' in message)
-          reject(new Error(JSON.stringify(message.error)));
-        else resolve((message as { result: Record<string, unknown> }).result);
-      });
-      void clientSide.send({ jsonrpc: '2.0', id, method, params });
-    });
-  };
-  const init = await request('initialize', {
-    protocolVersion: '2025-06-18',
-    capabilities: {},
-    clientInfo: { name: 'test', version: '1' },
-  });
-  await clientSide.send({
-    jsonrpc: '2.0',
-    method: 'notifications/initialized',
-  });
-  return {
-    init,
-    listTools: () => request('tools/list', {}),
-    call: async (name: string, args: Record<string, unknown> = {}) =>
-      (await request('tools/call', {
-        name,
-        arguments: args,
-      })) as unknown as ToolResult,
-    close: () => server.close(),
-  };
-}
 
 /** Résultat d'un outil décodé depuis TOON. */
 const toon = (result: ToolResult) => {
@@ -155,6 +95,71 @@ beforeEach(() => {
   ids = { api, cache, redis, other, notes, query };
 });
 
+describe('nodal_path', () => {
+  it('trouve le plus court chemin, hiérarchie comprise si demandé', async () => {
+    const client = await connect(file);
+    const without = toon(
+      await client.call('nodal_path', { fromId: ids.other, toId: ids.api }),
+    );
+    expect(without).toMatchObject({ found: false, to: 'API' });
+    expect(without.note).toContain('includeHierarchy');
+
+    const result = await client.call('nodal_path', {
+      fromId: short(ids.other),
+      toId: ids.api,
+      includeHierarchy: true,
+    });
+    const found = toon(result);
+    expect(found).toMatchObject({ from: 'Isolé', to: 'API', length: 3 });
+    const uses = new RelationTypeService(workspace().context).list()[1]!.name;
+    expect(found.steps).toEqual([
+      { id: short(ids.other), title: 'Isolé', via: '' },
+      { id: short(ids.redis), title: 'Redis', via: `→ ${uses}` },
+      { id: short(ids.cache), title: 'Cache', via: '↑ parent' },
+      { id: short(ids.api), title: 'API', via: '↑ parent' },
+    ]);
+    // Sens inverse : relation remontée, hiérarchie descendue.
+    const back = toon(
+      await client.call('nodal_path', {
+        fromId: ids.api,
+        toId: ids.other,
+        includeHierarchy: true,
+      }),
+    );
+    expect(back.steps.map((step: { via: string }) => step.via)).toEqual([
+      '',
+      '↓ enfant',
+      '↓ enfant',
+      `← ${uses}`,
+    ]);
+    // Trop loin pour maxDepth.
+    expect(
+      toon(
+        await client.call('nodal_path', {
+          fromId: ids.api,
+          toId: ids.other,
+          includeHierarchy: true,
+          maxDepth: 2,
+        }),
+      ),
+    ).toMatchObject({ found: false });
+    // Mesure (docs/benchmark-tokens-mcp.md) : réponse compacte.
+    expect(result.content[0]!.text.length).toBeLessThan(300);
+    await client.close();
+  });
+
+  it('signale un nœud inconnu', async () => {
+    const client = await connect(file);
+    const result = await client.call('nodal_path', {
+      fromId: ids.api,
+      toId: 'inconnu',
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toContain('introuvable');
+    await client.close();
+  });
+});
+
 describe('serveur MCP', () => {
   it('annonce des outils en lecture seule et des instructions', async () => {
     const client = await connect(file);
@@ -166,6 +171,7 @@ describe('serveur MCP', () => {
       'nodal_get_node',
       'nodal_neighborhood',
       'nodal_overview',
+      'nodal_path',
       'nodal_read_document',
       'nodal_search',
       'nodal_tree',

@@ -120,7 +120,8 @@ pièces jointes en BLOB).
   sous Windows.
   - lecture : `nodal_overview`, `nodal_search`, `nodal_get_node`,
     `nodal_read_document` (par tranches), `nodal_tree`,
-    `nodal_neighborhood` ; réponses structurées en TOON (listes
+    `nodal_neighborhood`, `nodal_path` (plus court chemin entre deux
+    nœuds) ; réponses structurées en TOON (listes
     tabulaires), contenu des documents brut, identifiants abrégés (plus
     court préfixe unique d'UUID, 8 caractères au moins ; voir le
     [benchmark](docs/benchmark-tokens-mcp.md)) ;
@@ -171,7 +172,11 @@ pièces jointes en BLOB).
   - vues graphe enregistrées (migration 006, table `graph_view`) : portée,
     niveaux, filtres, masquages / solo, replis et caméra ; créer, mettre à
     jour, renommer, supprimer, vue ouverte avec l'espace ; les réglages
-    existants deviennent la vue « Par défaut ».
+    existants deviennent la vue « Par défaut » ;
+  - « Chemin vers… » (menu contextuel, palette) : plus court chemin entre
+    deux nœuds par les relations (option : par la hiérarchie), mis en
+    évidence dans le graphe, étapes et type de chaque relation dans le
+    panneau droit ; outil MCP `nodal_path(fromId, toId, maxDepth)`.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

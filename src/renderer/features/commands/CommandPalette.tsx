@@ -23,6 +23,9 @@ export interface CommandPaletteProps {
   actionsOnly: boolean;
   onOpenNode(id: string): void;
   onClose(): void;
+  /** Libellé du champ (autre usage que « aller à », ex. choisir une cible). */
+  label?: string;
+  placeholder?: string;
 }
 
 const itemKey = (item: PaletteItem) =>
@@ -41,6 +44,8 @@ export function CommandPalette({
   actionsOnly,
   onOpenNode,
   onClose,
+  label = 'Aller à un nœud ou lancer une action',
+  placeholder,
 }: CommandPaletteProps) {
   const listId = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -119,7 +124,7 @@ export function CommandPalette({
           ref={input}
           type="text"
           role="combobox"
-          aria-label="Aller à un nœud ou lancer une action"
+          aria-label={label}
           aria-expanded={items.length > 0}
           aria-controls={listId}
           aria-autocomplete="list"
@@ -127,9 +132,10 @@ export function CommandPalette({
             items.length > 0 ? `${listId}-${current}` : undefined
           }
           placeholder={
-            onlyActions
+            placeholder ??
+            (onlyActions
               ? 'Action…'
-              : 'Nœud ou action… (« > » pour les actions seules)'
+              : 'Nœud ou action… (« > » pour les actions seules)')
           }
           value={query}
           spellCheck={false}

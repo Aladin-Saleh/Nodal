@@ -18,6 +18,7 @@ import {
   type FoundDocument,
   neighborhood,
   overview,
+  findPath,
   readDocument,
   search,
   tree,
@@ -28,6 +29,7 @@ import {
   operationSchema,
   type Operation,
 } from './apply-tool';
+import { PATH_DEFAULT_DEPTH, PATH_MAX_DEPTH } from '../shared/graph-path';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
 import {
   withWorkspace,
@@ -347,6 +349,33 @@ export function createNodalMcpServer(
       annotations: READ_ONLY,
     },
     run(neighborhood),
+  );
+
+  server.registerTool(
+    'nodal_path',
+    {
+      title: 'Chemin entre deux nœuds',
+      description:
+        'Plus court chemin de fromId à toId par les relations (dans les deux sens), ' +
+        'en option par la hiérarchie : chaque nœud avec le lien qui y mène (→ / ← type, ↑ parent, ↓ enfant).',
+      inputSchema: z.object({
+        fromId: id.describe('Nœud de départ'),
+        toId: id.describe("Nœud d'arrivée"),
+        maxDepth: z
+          .number()
+          .int()
+          .min(1)
+          .max(PATH_MAX_DEPTH)
+          .default(PATH_DEFAULT_DEPTH)
+          .describe('Nombre maximal de liens'),
+        includeHierarchy: z
+          .boolean()
+          .default(false)
+          .describe('Passer aussi par les liens parent-enfant'),
+      }),
+      annotations: READ_ONLY,
+    },
+    run(findPath),
   );
 
   if (options.readOnly) return server;

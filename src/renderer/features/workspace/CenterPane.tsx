@@ -35,6 +35,8 @@ export interface CenterPaneProps {
   onBulkDelete(): void;
   onValidate(ids: string[]): void;
   graphViews: GraphViewsApi;
+  /** Chemin à mettre en évidence dans le graphe. */
+  path: { nodeIds: ReadonlySet<string>; linkIds: ReadonlySet<string> } | null;
 }
 
 /** Zone centrale : graphe, ou documents du nœud sélectionné. */
@@ -62,6 +64,7 @@ export function CenterPane({
   onBulkDelete,
   onValidate,
   graphViews,
+  path,
 }: CenterPaneProps) {
   const { nodes, graph, tags, detail } = data;
   return (
@@ -90,6 +93,7 @@ export function CenterPane({
               onValidate={onValidate}
               onCreateAt={onCreateAt}
               views={graphViews}
+              path={path}
             />
           </ErrorBoundary>
         )

@@ -61,6 +61,8 @@ export interface GraphPanelProps {
   onCreateAt(position: { x: number; y: number; z: number }): void;
   /** Vues enregistrées (sélecteur de la barre du graphe). */
   views: GraphViewsApi;
+  /** Chemin « Chemin vers… » à mettre en évidence. */
+  path?: { nodeIds: ReadonlySet<string>; linkIds: ReadonlySet<string> } | null;
 }
 
 const GRAPH_HELP =
@@ -96,6 +98,7 @@ export function GraphPanel({
   onValidate,
   onCreateAt,
   views,
+  path = null,
 }: GraphPanelProps) {
   const { preferences } = usePreferences();
   const client = useClient();
@@ -643,6 +646,7 @@ export function GraphPanel({
             ref={view}
             centerRequest={centerRequest}
             cameraRequest={cameraRequest}
+            path={path}
             visible={visible}
             relationTypes={graph.relationTypes}
             selectedId={selectedId}

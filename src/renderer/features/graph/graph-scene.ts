@@ -189,6 +189,11 @@ export class GraphScene {
   private relationTypes = new Map<string, RelationTypeInfo>();
   private selectedId: string | null = null;
   private searchMatches: ReadonlySet<string> | null = null;
+  /** Chemin entre deux nœuds (« Chemin vers… ») : nœuds et liens. */
+  private path: {
+    nodeIds: ReadonlySet<string>;
+    linkIds: ReadonlySet<string>;
+  } | null = null;
   private readonly cardsGroup = new THREE.Group();
   private cards: { nodeId: string; items: DocumentCard[] } | null = null;
   private multiSelection: ReadonlySet<string> = new Set();
@@ -406,6 +411,17 @@ export class GraphScene {
   }
 
   /** Nœuds trouvés par la recherche, mis en évidence ; `null` sans recherche. */
+  /** Met en évidence un chemin ; `null` pour l'effacer. */
+  setPath(
+    path: {
+      nodeIds: ReadonlySet<string>;
+      linkIds: ReadonlySet<string>;
+    } | null,
+  ): void {
+    this.path = path;
+    this.applyHighlight();
+  }
+
   setSearchMatches(matches: ReadonlySet<string> | null): void {
     this.searchMatches = matches;
     this.applyHighlight();
@@ -974,11 +990,14 @@ export class GraphScene {
         if (entry.targetId === focus) close.add(entry.sourceId);
       }
     }
-    const matches = this.searchMatches;
+    const path = this.path;
+    // Un chemin affiché l'emporte sur la recherche : ses nœuds restent nets.
+    const matches = path ? path.nodeIds : this.searchMatches;
     // Avec une recherche active, seuls les nœuds trouvés restent nets (§6.9).
     const shown = (id: string) =>
       id === focus ||
       this.multiSelection.has(id) ||
+      !!path?.nodeIds.has(id) ||
       ((!focus || close.has(id)) && (!matches || matches.has(id)));
     const accent = new THREE.Color(this.theme.accent);
     const black = new THREE.Color(0x000000);
@@ -1019,12 +1038,15 @@ export class GraphScene {
     for (const [id, entry] of this.links) {
       const touches =
         !!focus && (entry.sourceId === focus || entry.targetId === focus);
-      // Relation survolée ou sélectionnée : nette, à la couleur d'accent.
-      const pointed = id === this.selectedEdgeId || id === this.hoveredEdgeId;
+      // Relation survolée, sélectionnée ou sur le chemin : nette, en accent.
+      const pointed =
+        id === this.selectedEdgeId ||
+        id === this.hoveredEdgeId ||
+        !!path?.linkIds.has(id);
       const opacity =
         pointed ||
         touches ||
-        (!focus && shown(entry.sourceId) && shown(entry.targetId))
+        (!focus && !path && shown(entry.sourceId) && shown(entry.targetId))
           ? 1
           : FADED_OPACITY;
       const color = pointed ? this.theme.accent : entry.color;

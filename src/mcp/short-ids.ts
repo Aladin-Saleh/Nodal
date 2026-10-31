@@ -36,6 +36,8 @@ const INPUT_ID_KEYS = new Set([
   'parentId',
   'sourceId',
   'targetId',
+  'fromId',
+  'toId',
 ]);
 
 export interface ShortIds {

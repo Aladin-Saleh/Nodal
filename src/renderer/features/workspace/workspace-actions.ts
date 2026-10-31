@@ -16,6 +16,8 @@ export interface WorkspaceCommands {
   toggleSolo(id: string): void;
   showAll(): void;
   center(id: string): void;
+  /** « Chemin vers… » : choisir le nœud d'arrivée depuis ce nœud. */
+  pathFrom(id: string): void;
   move(node: NodeSummary): void;
   duplicate(node: NodeSummary): void;
   validate(id: string): void;
@@ -108,6 +110,14 @@ export function nodeActions(
       group: 'Nœud',
       enabled: on,
       run: () => commands.center(id),
+    },
+    {
+      id: 'node.pathTo',
+      label: 'Chemin vers…',
+      group: 'Nœud',
+      keywords: 'relation lien plus court trajet',
+      enabled: on,
+      run: () => commands.pathFrom(id),
     },
     {
       id: 'node.validate',

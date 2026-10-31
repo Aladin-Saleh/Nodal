@@ -244,6 +244,31 @@ le gain vient des consignes et de réponses plus courtes. Les réponses sont
 aussi complètes qu'avant. Le coût en dollars n'est pas comparé : il dépend
 surtout de l'écriture ou de la relecture du cache entre les runs.
 
+## Nouvel outil : `nodal_path` (v1.4)
+
+Mesure du 31 octobre 2026, réponses réellement servies par `tools/call`,
+tokenizer `o200k_base`, espace « échelle ×1 » (310 nœuds, jusqu'à 400
+relations) reconstruit par `tests/perf/mcp-tokens.perf.ts` (générateur à
+graine fixe ; `npm run test:perf -- mcp-tokens`).
+
+| Appel                                            | Tokens |
+| ------------------------------------------------ | -----: |
+| `nodal_neighborhood` profondeur 2 (référence)    |  1 215 |
+| `nodal_path`, chemin de 4 relations              |    130 |
+| `nodal_path` avec hiérarchie, chemin de 5 liens  |    147 |
+| `nodal_path` sans chemin (message et extrémités) |     38 |
+
+Format : les deux extrémités par leur chemin hiérarchique, `length`, puis
+une table `steps{id,title,via}` où `via` résume le lien en un champ
+(« → utilise », « ← alimente », « ↑ parent », « ↓ enfant ») plutôt qu'en
+trois colonnes (sens, type, nature) : une colonne de moins par ligne et des
+flèches qui se lisent sans légende. Sans chemin : `found: false` et une
+note qui rappelle `includeHierarchy`.
+
+Sans cet outil, trouver le même chemin demandait plusieurs
+`nodal_neighborhood` (1 215 tokens chacun à profondeur 2, sans garantie de
+couvrir la distance), donc plusieurs tours.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

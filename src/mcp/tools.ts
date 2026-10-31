@@ -16,6 +16,12 @@ import { assistantCreations } from '../main/knowledge/assistant-origin';
 import { asRows } from '../main/knowledge/rows';
 import { SearchService } from '../main/knowledge/search-service';
 import { TagService } from '../main/knowledge/tag-service';
+import {
+  PATH_DEFAULT_DEPTH,
+  shortestPath,
+  type PathGraphEdge,
+  type PathLink,
+} from '../shared/graph-path';
 import type { ReadContext } from './workspace-reader';
 
 export const DEFAULT_MAX_ROWS = 300;
@@ -662,5 +668,80 @@ export function neighborhood(
         by: origin(edge.by_assistant),
       })),
     truncated,
+  };
+}
+
+/** Lien d'une étape, compact : sens et type (« → dépend de », « ↑ parent »). */
+function describeLink(link: PathLink, relationNames: Map<string, string>) {
+  if (link.kind !== 'relation') {
+    return link.kind === 'parent' ? '↑ parent' : '↓ enfant';
+  }
+  const name = relationNames.get(link.relationTypeId) ?? '?';
+  return `${link.forward ? '→' : '←'} ${name}`;
+}
+
+/**
+ * Plus court chemin entre deux nœuds par les relations (dans les deux sens)
+ * et, si demandé, par la hiérarchie : une ligne par nœud, avec le lien qui y
+ * mène depuis le précédent.
+ */
+export function findPath(
+  ctx: ReadContext,
+  input: {
+    fromId: string;
+    toId: string;
+    maxDepth?: number;
+    includeHierarchy?: boolean;
+  },
+) {
+  const outline = loadOutline(ctx);
+  for (const id of [input.fromId, input.toId]) {
+    if (!outline.byId.has(id)) throw notFound(`Nœud ${id}`);
+  }
+  const edges = asRows<PathGraphEdge>(
+    ctx.db
+      .prepare(
+        `SELECT id, source_node_id AS sourceId, target_node_id AS targetId,
+           relation_type_id AS relationTypeId
+         FROM edge WHERE workspace_id = ? ORDER BY rowid`,
+      )
+      .all(ctx.workspaceId),
+  );
+  const relationNames = new Map(
+    listRelationTypes(ctx).map((type) => [type.id, type.name]),
+  );
+  const maxDepth = input.maxDepth ?? PATH_DEFAULT_DEPTH;
+  const includeHierarchy = input.includeHierarchy ?? false;
+  const steps = shortestPath(
+    [...outline.byId.values()].map((row) => ({
+      id: row.id,
+      parentId: row.parent_id,
+    })),
+    edges,
+    input.fromId,
+    input.toId,
+    { maxDepth, includeHierarchy },
+  );
+  const ends = {
+    from: pathOf(outline, input.fromId),
+    to: pathOf(outline, input.toId),
+  };
+  if (!steps) {
+    return {
+      ...ends,
+      found: false,
+      note:
+        `Aucun chemin en ${maxDepth} liens au plus` +
+        (includeHierarchy ? '.' : ' (hiérarchie exclue : includeHierarchy).'),
+    };
+  }
+  return {
+    ...ends,
+    length: steps.length - 1,
+    steps: steps.map((step) => ({
+      id: step.nodeId,
+      title: outline.byId.get(step.nodeId)!.title,
+      via: step.via ? describeLink(step.via, relationNames) : '',
+    })),
   };
 }

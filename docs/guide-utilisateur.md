@@ -93,6 +93,15 @@ apparaissent en pointillés.
   masqués · Tout réafficher ». Si vous sélectionnez un nœud masqué (arbre,
   recherche), le graphe le signale et propose **Le réafficher**. Masquer
   n’affecte ni la recherche, ni l’export, ni l’assistant IA.
+- **Chemin vers…** (menu contextuel d’un nœud, ou palette) : choisissez un
+  second nœud ; Nodal cherche le plus court chemin entre les deux par les
+  relations, dans les deux sens. Le chemin ressort dans le graphe et le
+  panneau de droite liste les étapes, avec le type et le sens de chaque
+  relation (« → utilise », « ← dépend de ») ; un clic sur une étape
+  sélectionne le nœud. Cochez **Passer aussi par la hiérarchie** pour
+  emprunter les liens parent / enfant (« ↑ parent », « ↓ enfant »). S’il n’y
+  a aucun chemin en 12 liens au plus, le panneau le dit. **×** ferme le
+  chemin.
 - **Relations** : cliquez sur un trait (ou son libellé) pour ouvrir la fiche
   de la relation : source, type, cible et description. **Modifier** permet
   de changer le type, le libellé et la description ; un clic sur une

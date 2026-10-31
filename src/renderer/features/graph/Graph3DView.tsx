@@ -36,6 +36,11 @@ export interface Graph3DViewProps extends GraphSceneCallbacks {
   selectedEdgeId: string | null;
   /** Recentre la vue sur ce nœud à chaque nouvelle demande. */
   centerRequest?: { id: string; nonce: number } | null;
+  /** Chemin mis en évidence (nœuds et liens), ou `null`. */
+  path?: {
+    nodeIds: ReadonlySet<string>;
+    linkIds: ReadonlySet<string>;
+  } | null;
   /** Caméra d'une vue enregistrée, à appliquer (nouvelle demande : nonce). */
   cameraRequest?: { camera: GraphCamera; nonce: number } | null;
 }
@@ -52,6 +57,7 @@ export function Graph3DView({
   selectedEdgeId,
   centerRequest = null,
   cameraRequest = null,
+  path = null,
   ...handlers
 }: Graph3DViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -133,6 +139,10 @@ export function Graph3DView({
   useEffect(() => {
     if (cameraRequest) sceneRef.current?.setCamera(cameraRequest.camera);
   }, [cameraRequest]);
+
+  useEffect(() => {
+    sceneRef.current?.setPath(path);
+  }, [path]);
 
   useImperativeHandle(
     ref,

@@ -19,6 +19,13 @@ import { usePreferences } from '../../app/preferences';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { actionForKey, type PaletteNode } from '../commands/actions';
 import { CommandPalette } from '../commands/CommandPalette';
+import { maskedNodeIds } from '../graph/graph-model';
+import { PathPanel } from '../graph/PathPanel';
+import {
+  PATH_MAX_DEPTH,
+  pathLinkIds,
+  shortestPath,
+} from '../../../shared/graph-path';
 import type { Language } from '../documents/DocumentsPanel';
 import { NodeLinkContext } from '../editor/previews';
 import { NodeProperties } from '../nodes/NodeProperties';
@@ -107,6 +114,14 @@ function WorkspaceView({
   );
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
   const [exporting, setExporting] = useState(false);
+  /** « Chemin vers… » : extrémités du chemin affiché. */
+  const [pathQuery, setPathQuery] = useState<{
+    fromId: string;
+    toId: string;
+    includeHierarchy: boolean;
+  } | null>(null);
+  /** Choix du nœud d'arrivée en cours, depuis ce nœud. */
+  const [pathPickFrom, setPathPickFrom] = useState<string | null>(null);
   /** Palette de commandes ouverte ; `actionsOnly` : Ctrl+Maj+P. */
   const [palette, setPalette] = useState<{ actionsOnly: boolean } | null>(null);
 
@@ -418,6 +433,7 @@ function WorkspaceView({
     toggleSolo: (id) => dispatch({ type: 'toggleSolo', id }),
     showAll: () => dispatch({ type: 'showAll' }),
     center,
+    pathFrom: setPathPickFrom,
     move: (node) => setDialog({ kind: 'move', nodes: [node], bulk: false }),
     duplicate: (node) => setDialog({ kind: 'duplicate', node }),
     validate: (id) => void validate([id]),
@@ -478,9 +494,52 @@ function WorkspaceView({
     [nodes, index],
   );
 
+  // --- Chemin entre deux nœuds ----------------------------------------------
+
+  const graph = data.graph;
+  // Un nœud supprimé depuis ferme le chemin.
+  const activePath =
+    pathQuery &&
+    index.byId.has(pathQuery.fromId) &&
+    index.byId.has(pathQuery.toId)
+      ? pathQuery
+      : null;
+  const pathSteps = useMemo(
+    () =>
+      activePath && graph
+        ? shortestPath(
+            graph.nodes,
+            graph.edges,
+            activePath.fromId,
+            activePath.toId,
+            {
+              includeHierarchy: activePath.includeHierarchy,
+              maxDepth: PATH_MAX_DEPTH,
+            },
+          )
+        : null,
+    [activePath, graph],
+  );
+  const pathHighlight = useMemo(
+    () =>
+      pathSteps
+        ? {
+            nodeIds: new Set(pathSteps.map((step) => step.nodeId)),
+            linkIds: new Set(pathLinkIds(pathSteps)),
+          }
+        : null,
+    [pathSteps],
+  );
+  const pathHiddenCount = useMemo(() => {
+    if (!pathSteps) return 0;
+    const masked = maskedNodeIds(nodes, { hidden, solo });
+    return pathSteps.filter((step) => masked.has(step.nodeId)).length;
+  }, [pathSteps, nodes, hidden, solo]);
+
   const modalOpen =
     dialog !== null ||
     palette !== null ||
+    pathPickFrom !== null ||
     overlays.editingDocumentId !== null ||
     overlays.addingDocumentFor !== null;
   // Lu par l'écouteur clavier, installé une seule fois.
@@ -551,7 +610,7 @@ function WorkspaceView({
           actions={actions}
         />
 
-        <div className={detail ? 'panes' : 'panes no-properties'}>
+        <div className={detail || activePath ? 'panes' : 'panes no-properties'}>
           <TreePane
             index={index}
             searchMatches={searchMatches}
@@ -604,27 +663,50 @@ function WorkspaceView({
             onBulkDelete={() => void askBulkDelete()}
             onValidate={(ids) => void validate(ids)}
             graphViews={graphViews}
+            path={pathHighlight}
           />
 
-          {detail && (
-            <ErrorBoundary area="les propriétés du nœud">
-              <NodeProperties
-                key={`${detail.id}:${data.externalRevision}`}
-                node={detail}
-                allTags={data.tags}
-                nodes={nodes}
-                relationTypes={data.graph?.relationTypes ?? []}
-                relationsRevision={data.relationsRevision}
-                onNavigate={select}
-                onNodeChanged={nodeChanged}
-                onTagsChanged={() => void data.refreshTags()}
-                onRelationsChanged={relationsChanged}
-                onOpenDocument={(id) => openDocument(id)}
-                onAddDocument={() =>
-                  openOverlay('addingDocumentFor', detail.id)
-                }
-              />
-            </ErrorBoundary>
+          {(detail || activePath) && (
+            <div className="right-pane">
+              {activePath && (
+                <PathPanel
+                  fromTitle={index.byId.get(activePath.fromId)?.title ?? ''}
+                  toTitle={index.byId.get(activePath.toId)?.title ?? ''}
+                  steps={pathSteps}
+                  maxDepth={PATH_MAX_DEPTH}
+                  includeHierarchy={activePath.includeHierarchy}
+                  onIncludeHierarchyChange={(includeHierarchy) =>
+                    setPathQuery({ ...activePath, includeHierarchy })
+                  }
+                  titleOf={(id) => index.byId.get(id)?.title ?? ''}
+                  edges={graph?.edges ?? []}
+                  relationTypes={graph?.relationTypes ?? []}
+                  hiddenCount={pathHiddenCount}
+                  onSelect={(id) => select(id)}
+                  onClose={() => setPathQuery(null)}
+                />
+              )}
+              {detail && (
+                <ErrorBoundary area="les propriétés du nœud">
+                  <NodeProperties
+                    key={`${detail.id}:${data.externalRevision}`}
+                    node={detail}
+                    allTags={data.tags}
+                    nodes={nodes}
+                    relationTypes={data.graph?.relationTypes ?? []}
+                    relationsRevision={data.relationsRevision}
+                    onNavigate={select}
+                    onNodeChanged={nodeChanged}
+                    onTagsChanged={() => void data.refreshTags()}
+                    onRelationsChanged={relationsChanged}
+                    onOpenDocument={(id) => openDocument(id)}
+                    onAddDocument={() =>
+                      openOverlay('addingDocumentFor', detail.id)
+                    }
+                  />
+                </ErrorBoundary>
+              )}
+            </div>
           )}
         </div>
 
@@ -658,6 +740,25 @@ function WorkspaceView({
           }
           actions={actions}
         />
+        {pathPickFrom !== null && (
+          <CommandPalette
+            actions={[]}
+            nodes={paletteNodes.filter((node) => node.id !== pathPickFrom)}
+            recentNodes={recentNodes.filter((node) => node.id !== pathPickFrom)}
+            actionsOnly={false}
+            label={`Chemin depuis « ${index.byId.get(pathPickFrom)?.title ?? ''} » vers…`}
+            placeholder="Nœud d’arrivée…"
+            onOpenNode={(toId) => {
+              setPathQuery((current) => ({
+                fromId: pathPickFrom,
+                toId,
+                includeHierarchy: current?.includeHierarchy ?? false,
+              }));
+              setView('graph');
+            }}
+            onClose={() => setPathPickFrom(null)}
+          />
+        )}
         {palette && (
           <CommandPalette
             actions={actions}

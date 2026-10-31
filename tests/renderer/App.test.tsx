@@ -342,6 +342,47 @@ describe('App', () => {
     );
   });
 
+  it('« Chemin vers… » : choix de la cible, panneau, fermeture', async () => {
+    const { client } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+    });
+    render(<App client={client} />);
+    for (const title of ['Kafka', 'Zookeeper']) {
+      fireEvent.click(await screen.findByRole('button', { name: '+ Racine' }));
+      const dialog = screen.getByRole('dialog', {
+        name: 'Nouveau nœud racine',
+      });
+      fireEvent.change(within(dialog).getByLabelText('Titre'), {
+        target: { value: title },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+      await within(await screen.findByRole('tree')).findByText(title);
+    }
+    // Menu contextuel de « Kafka » → Chemin vers…
+    fireEvent.contextMenu(within(screen.getByRole('tree')).getByText('Kafka'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Chemin vers…' }));
+    const picker = screen.getByRole('combobox', {
+      name: 'Chemin depuis « Kafka » vers…',
+    });
+    fireEvent.change(picker, { target: { value: 'zoo' } });
+    // Le nœud de départ n'est pas proposé.
+    expect(
+      within(
+        screen.getByRole('listbox', { name: 'Propositions' }),
+      ).getAllByRole('option'),
+    ).toHaveLength(1);
+    fireEvent.keyDown(picker, { key: 'Enter' });
+
+    const panel = await screen.findByRole('region', { name: 'Chemin' });
+    expect(within(panel).getByRole('status').textContent).toContain(
+      'Aucun chemin entre « Kafka » et « Zookeeper »',
+    );
+    fireEvent.click(
+      within(panel).getByRole('button', { name: 'Fermer le chemin' }),
+    );
+    expect(screen.queryByRole('region', { name: 'Chemin' })).toBeNull();
+  });
+
   it('revient à l’accueil après fermeture de l’espace', async () => {
     const { client, call } = fakeClient({
       'workspace:getCurrent': () => workspace,
