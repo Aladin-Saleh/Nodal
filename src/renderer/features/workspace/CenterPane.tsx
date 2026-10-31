@@ -1,4 +1,3 @@
-import type { RefObject } from 'react';
 import type { NodeType } from '../../../shared/domain';
 import type { NodeSummary } from '../../../shared/model';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
@@ -15,7 +14,9 @@ export interface CenterPaneProps {
   data: WorkspaceData;
   selected: NodeSummary | null;
   searchMatches: ReadonlySet<string> | null;
-  titleInput: RefObject<HTMLInputElement | null>;
+  /** Nœud dont le titre doit recevoir le focus (renommer). */
+  renamingId: string | null;
+  onRenameFocused(): void;
   onSelect(id: string | null): void;
   /** Double-clic sur un nœud du graphe : sa fiche documentaire. */
   onOpenNode(id: string): void;
@@ -41,7 +42,8 @@ export function CenterPane({
   data,
   selected,
   searchMatches,
-  titleInput,
+  renamingId,
+  onRenameFocused,
   onSelect,
   onOpenNode,
   onRelationsChanged,
@@ -92,7 +94,8 @@ export function CenterPane({
           <NodeHeader
             key={`${detail.id}:${detail.title}`}
             node={detail}
-            titleInput={titleInput}
+            focusTitle={renamingId === detail.id}
+            onTitleFocused={onRenameFocused}
             onNavigate={onSelect}
             onRename={onRename}
             onMove={() => onMove(selected)}

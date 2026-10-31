@@ -142,6 +142,21 @@ ouverte par Nodal : utilisez **⤓** pour en enregistrer une copie.
 
 ## 6. Recherche
 
+### Palette de commandes
+
+**Ctrl + P** ouvre la palette : tapez quelques lettres du titre d'un nœud, ou
+de son chemin (« archi serv » trouve « Architecture › Serveur MCP »), puis
+Entrée pour l'ouvrir. Les lettres n'ont pas besoin de se suivre et les accents
+sont ignorés. La palette propose aussi les actions de l'application (créer un
+nœud, masquer le nœud courant, basculer graphe / documents, exporter, ouvrir
+les préférences…), avec leur raccourci.
+
+**Ctrl + Maj + P** (ou « > » en début de saisie) ne propose que les actions.
+Flèches haut / bas, Page préc. / suiv. pour choisir, Entrée pour valider,
+Échap pour fermer.
+
+### Recherche plein texte
+
 Barre **Rechercher** en haut (Ctrl + F). La recherche porte sur les titres,
 résumés et contenus des documents, **code compris**, sans tenir compte des
 accents ni des majuscules. Avec plusieurs mots, un nœud est trouvé s'il les
@@ -237,6 +252,8 @@ La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 
 | Raccourci      | Action                                                 |
 | -------------- | ------------------------------------------------------ |
+| Ctrl + P       | palette de commandes (nœuds et actions)                |
+| Ctrl + Maj + P | palette de commandes, actions seules                   |
 | Ctrl + N       | nouveau sous-nœud du nœud sélectionné                  |
 | Ctrl + Maj + N | nouveau nœud racine                                    |
 | Ctrl + F       | rechercher                                             |

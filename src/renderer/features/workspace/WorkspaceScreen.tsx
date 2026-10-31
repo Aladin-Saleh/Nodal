@@ -17,6 +17,8 @@ import {
 } from '../../app/context';
 import { usePreferences } from '../../app/preferences';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
+import { actionForKey, type PaletteNode } from '../commands/actions';
+import { CommandPalette } from '../commands/CommandPalette';
 import type { Language } from '../documents/DocumentsPanel';
 import { NodeLinkContext } from '../editor/previews';
 import { NodeProperties } from '../nodes/NodeProperties';
@@ -26,6 +28,12 @@ import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
 import { useWorkspaceData } from './useWorkspaceData';
+import {
+  nodeActions,
+  workspaceActions,
+  type WorkspaceActionState,
+  type WorkspaceCommands,
+} from './workspace-actions';
 import {
   ViewStateProvider,
   useViewDispatch,
@@ -43,6 +51,7 @@ export interface WorkspaceScreenProps {
   onWorkspaceChanged(workspace: WorkspaceInfo): void;
   onClose(): void;
   onDeleted(): void;
+  onOpenPreferences(): void;
 }
 
 /**
@@ -64,13 +73,18 @@ function WorkspaceView({
   onWorkspaceChanged,
   onClose,
   onDeleted,
+  onOpenPreferences,
 }: WorkspaceScreenProps) {
   const client = useClient();
   const run = useRunner();
   const reportError = useReportError();
   const reportInfo = useReportInfo();
   const tracker = useSaveTracker();
-  const { selectedId, multiSelection } = useViewState();
+  const {
+    selectedId,
+    multiSelection,
+    graph: { hidden, solo },
+  } = useViewState();
   const dispatch = useViewDispatch();
   const data = useWorkspaceData(selectedId);
   const { nodes, detail } = data;
@@ -91,23 +105,13 @@ function WorkspaceView({
   );
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
   const [exporting, setExporting] = useState(false);
+  /** Palette de commandes ouverte ; `actionsOnly` : Ctrl+Maj+P. */
+  const [palette, setPalette] = useState<{ actionsOnly: boolean } | null>(null);
 
-  // F1 : aide, depuis n'importe où dans l'espace.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'F1') {
-        event.preventDefault();
-        setOverlays((current) => ({ ...current, help: true }));
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
-
-  const searchInput = useRef<HTMLInputElement>(null);
-  const titleInput = useRef<HTMLInputElement>(null);
+  /** Demande de focus sur la recherche (Ctrl+F). */
+  const [searchFocus, setSearchFocus] = useState(0);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
-  const renaming = useRef<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   /** Demande de centrage dans le graphe (même nœud : nouvelle demande). */
   const [centerRequest, setCenterRequest] = useState<{
     id: string;
@@ -308,20 +312,10 @@ function WorkspaceView({
 
   /** Renommer (F2, menu contextuel) : titre de la fiche, en vue Documents. */
   const rename = (id: string) => {
-    renaming.current = id;
+    setRenamingId(id);
     select(id);
     setView('documents');
-    // Fiche déjà affichée : focus immédiat ; sinon, à son affichage (effet).
-    if (detail?.id === id && view === 'documents') focusTitle();
   };
-  const focusTitle = () => {
-    renaming.current = null;
-    titleInput.current?.focus();
-    titleInput.current?.select();
-  };
-  useEffect(() => {
-    if (renaming.current && renaming.current === detail?.id) focusTitle();
-  });
 
   // --- Documents depuis le graphe ou la recherche --------------------------
 
@@ -402,56 +396,114 @@ function WorkspaceView({
     expand(hits.flatMap((hit) => ancestorIds(index, hit.nodeId)));
   };
 
-  // --- Raccourcis clavier (§7.1) -------------------------------------------
+  /** Sélectionne le nœud et le centre dans la vue graphe. */
+  const center = (id: string) => {
+    select(id);
+    setView('graph');
+    setCenterRequest((current) => ({
+      id,
+      nonce: (current?.nonce ?? 0) + 1,
+    }));
+  };
+
+  // --- Actions : palette, menus, raccourcis clavier (§7.1) -----------------
+
+  const commands: WorkspaceCommands = {
+    newNode: (parentId) => setDialog({ kind: 'new', parentId }),
+    rename,
+    addDocument: (id) => openOverlay('addingDocumentFor', id),
+    toggleHidden: (id) => dispatch({ type: 'toggleHidden', id }),
+    toggleSolo: (id) => dispatch({ type: 'toggleSolo', id }),
+    showAll: () => dispatch({ type: 'showAll' }),
+    center,
+    move: (node) => setDialog({ kind: 'move', nodes: [node], bulk: false }),
+    duplicate: (node) => setDialog({ kind: 'duplicate', node }),
+    validate: (id) => void validate([id]),
+    delete: (id) => void askDelete(id),
+    setView,
+    focusSearch: () => setSearchFocus((count) => count + 1),
+    openPalette: (actionsOnly) => setPalette({ actionsOnly }),
+    save: () => void tracker.flushAll(),
+    tags: () => setDialog({ kind: 'tags' }),
+    relationTypes: () => setDialog({ kind: 'relationTypes' }),
+    exportPortable: () => void exportWorkspace(),
+    exportLlm: () => openOverlay('llmExport', true),
+    connectAssistant: () => openOverlay('mcp', true),
+    activity: () => openOverlay('activity', true),
+    settings: () => setDialog({ kind: 'settings' }),
+    preferences: onOpenPreferences,
+    help: () => openOverlay('help', true),
+    close: onClose,
+  };
+  const actionState: WorkspaceActionState = {
+    view,
+    exporting,
+    hidden,
+    solo,
+    masking: hidden.size > 0 || solo !== null,
+  };
+  const actions = [
+    ...nodeActions(selected, actionState, commands),
+    ...workspaceActions(actionState, commands),
+  ];
+  const actionsForNode = (id: string) =>
+    nodeActions(index.byId.get(id) ?? null, actionState, commands);
+
+  const paletteNodes = useMemo<PaletteNode[]>(
+    () =>
+      nodes.map((node) => ({
+        id: node.id,
+        title: node.title,
+        path: ancestorIds(index, node.id)
+          .toReversed()
+          .map((id) => index.byId.get(id)?.title ?? '')
+          .join(' › '),
+      })),
+    [nodes, index],
+  );
 
   const modalOpen =
     dialog !== null ||
+    palette !== null ||
     overlays.editingDocumentId !== null ||
     overlays.addingDocumentFor !== null;
+  // Lu par l'écouteur clavier, installé une seule fois.
+  const shortcuts = useRef({ actions, modalOpen });
+  useEffect(() => {
+    shortcuts.current = { actions, modalOpen };
+  });
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || modalOpen) return;
-      const key = event.key.toLowerCase();
-      if (key === 'n') {
-        event.preventDefault();
-        setDialog({
-          kind: 'new',
-          parentId: event.shiftKey ? null : (selectedId ?? null),
-        });
-      } else if (key === 's') {
-        event.preventDefault();
-        void tracker.flushAll();
-      } else if (key === 'f' || key === 'k') {
-        event.preventDefault();
-        searchInput.current?.focus();
-        searchInput.current?.select();
-      }
+      if (event.defaultPrevented) return;
+      const { actions: current, modalOpen: blocked } = shortcuts.current;
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        Boolean(target?.isContentEditable);
+      const action = actionForKey(current, event, typing);
+      // Une fenêtre ouverte garde le clavier, sauf pour l'aide (F1).
+      if (!action || (blocked && action.id !== 'app.help')) return;
+      event.preventDefault();
+      action.run();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [modalOpen, selectedId, tracker]);
+  }, []);
 
   return (
     <NodeLinkContext.Provider value={openNodeByTitle}>
       <div className="workspace-screen">
         <TopBar
           workspace={workspace}
-          searchInput={searchInput}
+          searchFocus={searchFocus}
           onSearchResults={showSearchResults}
           onSelectNode={(id) => select(id)}
           onOpenDocument={openDocument}
           view={view}
           onViewChange={setView}
           exporting={exporting}
-          onTags={() => setDialog({ kind: 'tags' })}
-          onRelationTypes={() => setDialog({ kind: 'relationTypes' })}
-          onExport={() => void exportWorkspace()}
-          onLlmExport={() => openOverlay('llmExport', true)}
-          onConnectAssistant={() => openOverlay('mcp', true)}
-          onActivity={() => openOverlay('activity', true)}
-          onSettings={() => setDialog({ kind: 'settings' })}
-          onHelp={() => openOverlay('help', true)}
-          onClose={onClose}
+          actions={actions}
         />
 
         <div className={detail ? 'panes' : 'panes no-properties'}>
@@ -467,16 +519,7 @@ function WorkspaceView({
               const node = index.byId.get(id);
               if (node) void moveTo(node, move.parentId, move.index);
             }}
-            onAddDocument={(id) => openOverlay('addingDocumentFor', id)}
-            onValidate={(id) => void validate([id])}
-            onCenter={(id) => {
-              select(id);
-              setView('graph');
-              setCenterRequest((current) => ({
-                id,
-                nonce: (current?.nonce ?? 0) + 1,
-              }));
-            }}
+            actionsForNode={actionsForNode}
           />
 
           <CenterPane
@@ -485,7 +528,8 @@ function WorkspaceView({
             data={data}
             selected={selected}
             searchMatches={searchMatches}
-            titleInput={titleInput}
+            renamingId={renamingId}
+            onRenameFocused={() => setRenamingId(null)}
             onSelect={select}
             onOpenNode={(id) => {
               select(id);
@@ -566,7 +610,17 @@ function WorkspaceView({
           onCreateDocument={(nodeId, title, contentType, language) =>
             void createDocument(nodeId, title, contentType, language)
           }
+          actions={actions}
         />
+        {palette && (
+          <CommandPalette
+            actions={actions}
+            nodes={paletteNodes}
+            actionsOnly={palette.actionsOnly}
+            onOpenNode={(id) => select(id)}
+            onClose={() => setPalette(null)}
+          />
+        )}
       </div>
     </NodeLinkContext.Provider>
   );

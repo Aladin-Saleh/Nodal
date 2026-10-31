@@ -5,7 +5,6 @@ import {
   useState,
   type KeyboardEvent,
   type ReactNode,
-  type Ref,
 } from 'react';
 import {
   NODE_TYPE_LABELS,
@@ -39,7 +38,8 @@ export function renderSnippet(snippet: string): ReactNode[] {
 }
 
 export interface SearchBoxProps {
-  inputRef?: Ref<HTMLInputElement>;
+  /** Donne le focus au champ (texte sélectionné) quand la valeur change. */
+  focusRequest?: number;
   /** Résultats courants ; `null` quand la recherche est vide. */
   onResults(hits: SearchHit[] | null): void;
   onSelectNode(nodeId: string): void;
@@ -48,7 +48,7 @@ export interface SearchBoxProps {
 
 /** Recherche par mots-clés dans les nœuds et leurs documents (§6.9). */
 export function SearchBox({
-  inputRef,
+  focusRequest = 0,
   onResults,
   onSelectNode,
   onOpenDocument,
@@ -61,6 +61,12 @@ export function SearchBox({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const request = useRef(0);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (focusRequest === 0) return;
+    field.current?.focus();
+    field.current?.select();
+  }, [focusRequest]);
   const onResultsRef = useRef(onResults);
   useEffect(() => {
     onResultsRef.current = onResults;
@@ -123,7 +129,7 @@ export function SearchBox({
   return (
     <div className="search-box">
       <input
-        ref={inputRef}
+        ref={field}
         type="search"
         role="combobox"
         aria-label="Rechercher dans l’espace"

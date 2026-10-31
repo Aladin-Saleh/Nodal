@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ContextMenu } from '../../components/ContextMenu';
+import type { AppAction } from '../commands/actions';
 import { maskedNodeIds } from '../graph/graph-model';
 import { NodeTree } from '../nodes/NodeTree';
 import { siblingsOf, type DropMove, type TreeIndex } from '../nodes/tree';
@@ -17,12 +18,23 @@ export interface TreePaneProps {
   onRename(id: string): void;
   /** Glisser-déposer : nouveau parent et rang. */
   onMove(id: string, move: DropMove): void;
-  onAddDocument(id: string): void;
-  /** Valide un nœud ajouté par l'IA. */
-  onValidate(id: string): void;
-  /** Sélectionne le nœud et le centre dans la vue graphe. */
-  onCenter(id: string): void;
+  /** Actions du nœud (registre commun) : menu contextuel. */
+  actionsForNode(id: string): AppAction[];
 }
+
+/** Actions du menu contextuel, dans cet ordre (les inactives sont omises). */
+const CONTEXT_MENU_ACTIONS = [
+  'node.newChild',
+  'node.rename',
+  'node.toggleHidden',
+  'node.solo',
+  'node.center',
+  'node.validate',
+  'node.addDocument',
+  'node.move',
+  'node.duplicate',
+  'node.delete',
+];
 
 /** Remet le focus sur la ligne d'un nœud (après le menu contextuel). */
 function focusRow(id: string) {
@@ -41,9 +53,7 @@ export function TreePane({
   onDelete,
   onRename,
   onMove,
-  onAddDocument,
-  onValidate,
-  onCenter,
+  actionsForNode,
 }: TreePaneProps) {
   const [menu, setMenu] = useState<{
     id: string;
@@ -138,37 +148,20 @@ export function TreePane({
             setMenu(null);
             focusRow(menu.id);
           }}
-          items={[
-            { label: 'Nouveau sous-nœud', onSelect: () => onNew(menu.id) },
-            { label: 'Renommer', onSelect: () => onRename(menu.id) },
-            {
-              label: hidden.has(menu.id)
-                ? 'Afficher dans le graphe'
-                : 'Masquer dans le graphe',
-              onSelect: () => dispatch({ type: 'toggleHidden', id: menu.id }),
-            },
-            {
-              label: 'Centrer dans le graphe',
-              onSelect: () => onCenter(menu.id),
-            },
-            ...(index.byId.get(menu.id)?.assistantPending
+          items={CONTEXT_MENU_ACTIONS.flatMap((actionId) => {
+            const action = actionsForNode(menu.id).find(
+              (candidate) => candidate.id === actionId,
+            );
+            return action?.enabled
               ? [
                   {
-                    label: 'Valider (ajouté par l’IA)',
-                    onSelect: () => onValidate(menu.id),
+                    label: action.label,
+                    danger: action.id === 'node.delete',
+                    onSelect: action.run,
                   },
                 ]
-              : []),
-            {
-              label: 'Ajouter un document',
-              onSelect: () => onAddDocument(menu.id),
-            },
-            {
-              label: 'Supprimer…',
-              danger: true,
-              onSelect: () => onDelete(menu.id),
-            },
-          ]}
+              : [];
+          })}
         />
       )}
     </nav>

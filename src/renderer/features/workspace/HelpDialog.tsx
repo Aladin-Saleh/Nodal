@@ -1,4 +1,5 @@
 import { Modal } from '../../components/Modal';
+import { shortcutLabel, type AppAction } from '../commands/actions';
 
 const GRAPH_GESTURES: [string, string][] = [
   ['Clic sur un nœud', 'sélectionner, zoomer et afficher ses documents'],
@@ -18,25 +19,37 @@ const TREE_GESTURES: [string, string][] = [
   ['Alt + clic sur l’œil', 'n’afficher que cette branche (ou en sortir)'],
 ];
 
-const SHORTCUTS: [string, string][] = [
-  ['Ctrl + N', 'nouveau sous-nœud du nœud sélectionné'],
-  ['Ctrl + Maj + N', 'nouveau nœud racine'],
-  ['Ctrl + F', 'rechercher'],
-  ['Ctrl + S', 'enregistrer immédiatement'],
+/** Touches propres à un panneau, hors du registre des actions. */
+const CONTEXT_KEYS: [string, string][] = [
   ['Échap', 'vider la sélection ou la recherche, fermer une fenêtre'],
   ['F2 / Suppr', 'renommer / supprimer le nœud (arborescence)'],
   ['H', 'masquer / afficher le nœud dans le graphe (arborescence)'],
   ['Menu, Maj + F10', 'menu contextuel du nœud (arborescence)'],
-  ['F1', 'cette aide'],
-  ['Ctrl + ,', 'préférences (thème, couleur, densité…)'],
   [
     'Ctrl + = / Ctrl + - / Ctrl + 0',
     'agrandir, réduire, rétablir la taille du texte',
   ],
 ];
 
+/** Raccourcis du registre des actions, puis touches propres aux panneaux. */
+export function shortcutList(
+  actions: readonly AppAction[],
+): [string, string][] {
+  const fromActions = actions.flatMap((action): [string, string][] => {
+    const keys = shortcutLabel(action);
+    return keys ? [[keys, action.label]] : [];
+  });
+  return [...fromActions, ...CONTEXT_KEYS];
+}
+
 /** Aide intégrée (§7.1) : gestes du graphe et raccourcis clavier. */
-export function HelpDialog({ onClose }: { onClose(): void }) {
+export function HelpDialog({
+  actions,
+  onClose,
+}: {
+  actions: readonly AppAction[];
+  onClose(): void;
+}) {
   return (
     <Modal
       title="Aide"
@@ -67,7 +80,7 @@ export function HelpDialog({ onClose }: { onClose(): void }) {
       </dl>
       <h3>Clavier</h3>
       <dl className="help-list">
-        {SHORTCUTS.map(([keys, effect]) => (
+        {shortcutList(actions).map(([keys, effect]) => (
           <div key={keys}>
             <dt>
               <kbd>{keys}</kbd>
@@ -77,6 +90,8 @@ export function HelpDialog({ onClose }: { onClose(): void }) {
         ))}
       </dl>
       <p className="muted">
+        Ctrl + P ouvre la palette de commandes : tapez quelques lettres du titre
+        d’un nœud (ou de son chemin) pour l’ouvrir, ou le nom d’une action.
         Documents : écrivez [[Titre d’un nœud]] dans un document Markdown pour
         créer un lien interne. Le guide complet est fourni avec l’application
         (docs/guide-utilisateur.md).

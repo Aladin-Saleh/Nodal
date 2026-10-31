@@ -1,28 +1,23 @@
-import type { MouseEvent, RefObject } from 'react';
+import type { MouseEvent } from 'react';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type { SearchHit } from '../../../shared/model';
+import { actionById, shortcutLabel, type AppAction } from '../commands/actions';
 import { SearchBox } from '../search/SearchBox';
 
 export type ViewMode = 'documents' | 'graph';
 
 export interface TopBarProps {
   workspace: WorkspaceInfo;
-  searchInput: RefObject<HTMLInputElement | null>;
+  /** Demande de focus sur la recherche (Ctrl+F) : incrémentée à chaque fois. */
+  searchFocus: number;
   onSearchResults(hits: SearchHit[] | null): void;
   onSelectNode(id: string): void;
   onOpenDocument(documentId: string, nodeId?: string): void;
   view: ViewMode;
   onViewChange(view: ViewMode): void;
   exporting: boolean;
-  onTags(): void;
-  onRelationTypes(): void;
-  onExport(): void;
-  onLlmExport(): void;
-  onConnectAssistant(): void;
-  onActivity(): void;
-  onSettings(): void;
-  onHelp(): void;
-  onClose(): void;
+  /** Registre des actions : boutons et menu Exporter. */
+  actions: readonly AppAction[];
 }
 
 /** Ferme le menu déroulant qui contient l'élément cliqué. */
@@ -32,30 +27,59 @@ const closeMenu = (event: MouseEvent<HTMLElement>) =>
 /** En-tête de l'espace : nom, recherche, choix de la vue et actions. */
 export function TopBar({
   workspace,
-  searchInput,
+  searchFocus,
   onSearchResults,
   onSelectNode,
   onOpenDocument,
   view,
   onViewChange,
   exporting,
-  onTags,
-  onRelationTypes,
-  onExport,
-  onLlmExport,
-  onConnectAssistant,
-  onActivity,
-  onSettings,
-  onHelp,
-  onClose,
+  actions,
 }: TopBarProps) {
+  /** Bouton d'une action du registre (libellé court possible). */
+  const button = (id: string, label?: string, extra: object = {}) => {
+    const action = actionById(actions, id);
+    if (!action) return null;
+    const shortcut = shortcutLabel(action);
+    return (
+      <button
+        type="button"
+        className="secondary"
+        disabled={!action.enabled}
+        title={shortcut ? `${action.label} (${shortcut})` : undefined}
+        onClick={action.run}
+        {...extra}
+      >
+        {label ?? action.label}
+      </button>
+    );
+  };
+  /** Élément du menu Exporter : ferme le menu puis lance l'action. */
+  const menuItem = (id: string) => {
+    const action = actionById(actions, id);
+    if (!action) return null;
+    return (
+      <button
+        type="button"
+        role="menuitem"
+        className="secondary"
+        disabled={!action.enabled}
+        onClick={(event) => {
+          closeMenu(event);
+          action.run();
+        }}
+      >
+        {action.label}
+      </button>
+    );
+  };
   return (
     <header className="top-bar">
       <h1 className="workspace-name" title={workspace.filePath}>
         {workspace.name}
       </h1>
       <SearchBox
-        inputRef={searchInput}
+        focusRequest={searchFocus}
         onResults={onSearchResults}
         onSelectNode={onSelectNode}
         onOpenDocument={onOpenDocument}
@@ -77,12 +101,8 @@ export function TopBar({
         </button>
       </div>
       <div className="top-actions">
-        <button type="button" className="secondary" onClick={onTags}>
-          Tags
-        </button>
-        <button type="button" className="secondary" onClick={onRelationTypes}>
-          Types de relations
-        </button>
+        {button('workspace.tags')}
+        {button('workspace.relationTypes')}
         <details className="export-menu">
           <summary
             className={exporting ? 'disabled' : undefined}
@@ -91,66 +111,15 @@ export function TopBar({
             {exporting ? 'Export…' : 'Exporter ▾'}
           </summary>
           <div className="export-menu-panel" role="menu">
-            <button
-              type="button"
-              role="menuitem"
-              className="secondary"
-              disabled={exporting}
-              onClick={(event) => {
-                closeMenu(event);
-                onExport();
-              }}
-            >
-              Export portable (dossier + manifest)
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="secondary"
-              disabled={exporting}
-              onClick={(event) => {
-                closeMenu(event);
-                onLlmExport();
-              }}
-            >
-              Export pour LLM (TOON, fragments)…
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="secondary"
-              onClick={(event) => {
-                closeMenu(event);
-                onConnectAssistant();
-              }}
-            >
-              Connecter un assistant IA (MCP)…
-            </button>
+            {menuItem('workspace.export')}
+            {menuItem('workspace.exportLlm')}
+            {menuItem('workspace.mcp')}
           </div>
         </details>
-        <button
-          type="button"
-          className="secondary"
-          title="Modifications faites par un assistant IA (MCP)"
-          onClick={onActivity}
-        >
-          Activité IA
-        </button>
-        <button type="button" className="secondary" onClick={onSettings}>
-          Paramètres
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="Aide (F1)"
-          title="Aide (F1)"
-          onClick={onHelp}
-        >
-          ?
-        </button>
-        <button type="button" className="secondary" onClick={onClose}>
-          Fermer l’espace
-        </button>
+        {button('workspace.activity')}
+        {button('workspace.settings', 'Paramètres')}
+        {button('app.help', '?', { 'aria-label': 'Aide (F1)' })}
+        {button('workspace.close')}
       </div>
     </header>
   );

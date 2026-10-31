@@ -1,11 +1,13 @@
-import { useId, useState, type RefObject } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { NODE_TYPE_LABELS, TITLE_MAX_LENGTH } from '../../../shared/domain';
 import type { NodeDetail } from '../../../shared/model';
 import { AssistantBadge } from '../workspace/AssistantBadge';
 
 export interface NodeHeaderProps {
   node: NodeDetail;
-  titleInput: RefObject<HTMLInputElement | null>;
+  /** Renommer (F2, menu, palette) : le titre reçoit le focus, sélectionné. */
+  focusTitle?: boolean;
+  onTitleFocused?(): void;
   onNavigate(id: string): void;
   /** Retourne `true` si le renommage a réussi. */
   onRename(title: string): Promise<boolean>;
@@ -19,7 +21,8 @@ export interface NodeHeaderProps {
 /** Chemin hiérarchique (§6.2), titre éditable et actions du nœud courant. */
 export function NodeHeader({
   node,
-  titleInput,
+  focusTitle = false,
+  onTitleFocused,
   onNavigate,
   onRename,
   onMove,
@@ -29,6 +32,17 @@ export function NodeHeader({
 }: NodeHeaderProps) {
   const titleId = useId();
   const [title, setTitle] = useState(node.title);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const focused = useRef(onTitleFocused);
+  useEffect(() => {
+    focused.current = onTitleFocused;
+  });
+  useEffect(() => {
+    if (!focusTitle) return;
+    titleInput.current?.focus();
+    titleInput.current?.select();
+    focused.current?.();
+  }, [focusTitle]);
 
   const commit = async () => {
     const trimmed = title.trim();

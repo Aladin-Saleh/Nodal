@@ -174,6 +174,7 @@ export function App({ client }: AppProps) {
               workspace={workspace}
               onWorkspaceChanged={setWorkspace}
               onClose={() => void handleClose()}
+              onOpenPreferences={() => setPreferencesOpen(true)}
               onDeleted={() => {
                 setWorkspace(null);
                 void refreshRecent();

@@ -1,0 +1,294 @@
+/**
+ * Actions d'un espace ouvert, décrites une fois pour la palette de commandes,
+ * les menus (barre supérieure, menu contextuel de l'arbre), les raccourcis
+ * clavier et l'aide. Les effets sont fournis par l'écran d'espace.
+ */
+import type { NodeSummary } from '../../../shared/model';
+import type { AppAction } from '../commands/actions';
+import type { ViewMode } from './TopBar';
+
+/** Ce que l'écran d'espace sait faire ; chaque action en appelle un. */
+export interface WorkspaceCommands {
+  newNode(parentId: string | null): void;
+  rename(id: string): void;
+  addDocument(id: string): void;
+  toggleHidden(id: string): void;
+  toggleSolo(id: string): void;
+  showAll(): void;
+  center(id: string): void;
+  move(node: NodeSummary): void;
+  duplicate(node: NodeSummary): void;
+  validate(id: string): void;
+  delete(id: string): void;
+  setView(view: ViewMode): void;
+  focusSearch(): void;
+  openPalette(actionsOnly: boolean): void;
+  save(): void;
+  tags(): void;
+  relationTypes(): void;
+  exportPortable(): void;
+  exportLlm(): void;
+  connectAssistant(): void;
+  activity(): void;
+  settings(): void;
+  preferences(): void;
+  help(): void;
+  close(): void;
+}
+
+export interface WorkspaceActionState {
+  view: ViewMode;
+  exporting: boolean;
+  hidden: ReadonlySet<string>;
+  solo: string | null;
+  /** Un nœud est masqué ou une branche est seule affichée. */
+  masking: boolean;
+}
+
+/**
+ * Actions portant sur un nœud : le nœud sélectionné (palette, raccourcis) ou
+ * celui du menu contextuel. Sans nœud, elles sont inactives.
+ */
+export function nodeActions(
+  node: NodeSummary | null,
+  state: WorkspaceActionState,
+  commands: WorkspaceCommands,
+): AppAction[] {
+  const on = node !== null;
+  const id = node?.id ?? '';
+  return [
+    {
+      id: 'node.newChild',
+      label: 'Nouveau sous-nœud',
+      group: 'Nœud',
+      shortcuts: [{ key: 'n', ctrl: true }],
+      enabled: true,
+      // Sans nœud sélectionné, Ctrl+N crée une racine (comme avant).
+      run: () => commands.newNode(node?.id ?? null),
+    },
+    {
+      id: 'node.rename',
+      label: 'Renommer',
+      group: 'Nœud',
+      enabled: on,
+      run: () => commands.rename(id),
+    },
+    {
+      id: 'node.toggleHidden',
+      label: state.hidden.has(id)
+        ? 'Afficher dans le graphe'
+        : 'Masquer dans le graphe',
+      group: 'Nœud',
+      keywords: 'oeil cacher visibilite',
+      enabled: on,
+      run: () => commands.toggleHidden(id),
+    },
+    {
+      id: 'node.solo',
+      label:
+        state.solo === id
+          ? 'Quitter « cette branche seule »'
+          : 'Afficher cette branche seule',
+      group: 'Nœud',
+      keywords: 'solo oeil isoler',
+      enabled: on,
+      run: () => commands.toggleSolo(id),
+    },
+    {
+      id: 'node.center',
+      label: 'Centrer dans le graphe',
+      group: 'Nœud',
+      enabled: on,
+      run: () => commands.center(id),
+    },
+    {
+      id: 'node.validate',
+      label: 'Valider (ajouté par l’IA)',
+      group: 'Nœud',
+      keywords: 'assistant ia relecture',
+      enabled: Boolean(node?.assistantPending),
+      run: () => commands.validate(id),
+    },
+    {
+      id: 'node.addDocument',
+      label: 'Ajouter un document',
+      group: 'Nœud',
+      enabled: on,
+      run: () => commands.addDocument(id),
+    },
+    {
+      id: 'node.move',
+      label: 'Déplacer vers…',
+      group: 'Nœud',
+      enabled: on,
+      run: () => node && commands.move(node),
+    },
+    {
+      id: 'node.duplicate',
+      label: 'Dupliquer…',
+      group: 'Nœud',
+      keywords: 'copier',
+      enabled: on,
+      run: () => node && commands.duplicate(node),
+    },
+    {
+      id: 'node.delete',
+      label: 'Supprimer…',
+      group: 'Nœud',
+      enabled: on,
+      run: () => commands.delete(id),
+    },
+  ];
+}
+
+/** Actions de l'espace et de l'application, indépendantes d'un nœud. */
+export function workspaceActions(
+  state: WorkspaceActionState,
+  commands: WorkspaceCommands,
+): AppAction[] {
+  return [
+    {
+      id: 'node.newRoot',
+      label: 'Nouveau nœud racine',
+      group: 'Nœud',
+      shortcuts: [{ key: 'n', ctrl: true, shift: true }],
+      keywords: 'creer ajouter',
+      enabled: true,
+      run: () => commands.newNode(null),
+    },
+    {
+      id: 'view.toggle',
+      label:
+        state.view === 'graph'
+          ? 'Basculer vers les documents'
+          : 'Basculer vers le graphe',
+      group: 'Vue',
+      keywords: 'graphe documents vue',
+      enabled: true,
+      run: () =>
+        commands.setView(state.view === 'graph' ? 'documents' : 'graph'),
+    },
+    {
+      id: 'view.showAll',
+      label: 'Tout réafficher dans le graphe',
+      group: 'Vue',
+      keywords: 'oeil masques solo',
+      enabled: state.masking,
+      run: commands.showAll,
+    },
+    {
+      id: 'view.search',
+      label: 'Rechercher dans les documents',
+      group: 'Vue',
+      shortcuts: [
+        { key: 'f', ctrl: true },
+        { key: 'k', ctrl: true },
+      ],
+      enabled: true,
+      run: commands.focusSearch,
+    },
+    {
+      id: 'app.palette',
+      label: 'Palette de commandes',
+      group: 'Application',
+      shortcuts: [{ key: 'p', ctrl: true }],
+      enabled: true,
+      run: () => commands.openPalette(false),
+    },
+    {
+      id: 'app.paletteActions',
+      label: 'Palette : actions seules',
+      group: 'Application',
+      shortcuts: [{ key: 'p', ctrl: true, shift: true }],
+      enabled: true,
+      run: () => commands.openPalette(true),
+    },
+    {
+      id: 'workspace.save',
+      label: 'Enregistrer maintenant',
+      group: 'Espace',
+      shortcuts: [{ key: 's', ctrl: true }],
+      enabled: true,
+      run: commands.save,
+    },
+    {
+      id: 'workspace.tags',
+      label: 'Tags',
+      group: 'Espace',
+      keywords: 'gerer etiquettes',
+      enabled: true,
+      run: commands.tags,
+    },
+    {
+      id: 'workspace.relationTypes',
+      label: 'Types de relations',
+      group: 'Espace',
+      enabled: true,
+      run: commands.relationTypes,
+    },
+    {
+      id: 'workspace.export',
+      label: 'Export portable (dossier + manifest)',
+      group: 'Espace',
+      keywords: 'exporter sauvegarde',
+      enabled: !state.exporting,
+      run: commands.exportPortable,
+    },
+    {
+      id: 'workspace.exportLlm',
+      label: 'Export pour LLM (TOON, fragments)…',
+      group: 'Espace',
+      keywords: 'exporter ia',
+      enabled: !state.exporting,
+      run: commands.exportLlm,
+    },
+    {
+      id: 'workspace.mcp',
+      label: 'Connecter un assistant IA (MCP)…',
+      group: 'Espace',
+      keywords: 'claude serveur',
+      enabled: true,
+      run: commands.connectAssistant,
+    },
+    {
+      id: 'workspace.activity',
+      label: 'Activité IA',
+      group: 'Espace',
+      keywords: 'assistant journal annuler',
+      enabled: true,
+      run: commands.activity,
+    },
+    {
+      id: 'workspace.settings',
+      label: 'Paramètres de l’espace',
+      group: 'Espace',
+      enabled: true,
+      run: commands.settings,
+    },
+    {
+      id: 'workspace.close',
+      label: 'Fermer l’espace',
+      group: 'Espace',
+      enabled: true,
+      run: commands.close,
+    },
+    {
+      id: 'app.preferences',
+      label: 'Préférences',
+      group: 'Application',
+      keywords: 'theme couleur densite apparence',
+      // Ctrl+, est géré par l'application (aussi hors d'un espace).
+      hint: 'Ctrl + ,',
+      enabled: true,
+      run: commands.preferences,
+    },
+    {
+      id: 'app.help',
+      label: 'Aide',
+      group: 'Application',
+      shortcuts: [{ key: 'F1' }],
+      enabled: true,
+      run: commands.help,
+    },
+  ];
+}

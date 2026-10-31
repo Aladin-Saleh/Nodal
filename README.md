@@ -158,7 +158,14 @@ pièces jointes en BLOB).
     (MCP)… », avec un bloc de consignes CLAUDE.md / AGENTS.md pour que
     l'assistant consulte Nodal avant de parcourir les fichiers.
 
-Raccourcis : `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
+- **v1.4 — Navigation** (en cours) :
+  - palette de commandes (`Ctrl+P`, `Ctrl+Maj+P` pour les actions seules) :
+    nœuds par titre et chemin (correspondance approximative, sans accents)
+    et actions de l'application ; un registre d'actions unique alimente la
+    palette, la barre supérieure, le menu contextuel de l'arbre, les
+    raccourcis et l'aide.
+
+Raccourcis : `Ctrl+P` palette de commandes, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
 `F2` renommer, `Suppr` supprimer, `F1` aide, `Ctrl+,` préférences,

@@ -259,6 +259,50 @@ describe('App', () => {
     ).toBeTruthy();
   });
 
+  it('Ctrl+P ouvre un nœud ; Ctrl+Maj+P lance une action', async () => {
+    const { client, call } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+    });
+    render(<App client={client} />);
+    // Deux nœuds, créés par le faux backend.
+    for (const title of ['Kafka', 'Zookeeper']) {
+      fireEvent.click(await screen.findByRole('button', { name: '+ Racine' }));
+      const dialog = screen.getByRole('dialog', {
+        name: 'Nouveau nœud racine',
+      });
+      fireEvent.change(within(dialog).getByLabelText('Titre'), {
+        target: { value: title },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+      await within(await screen.findByRole('tree')).findByText(title);
+    }
+
+    fireEvent.keyDown(document.body, { key: 'p', ctrlKey: true });
+    const input = screen.getByRole('combobox', {
+      name: 'Aller à un nœud ou lancer une action',
+    });
+    fireEvent.change(input, { target: { value: 'kfk' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(
+      screen.queryByRole('dialog', { name: 'Palette de commandes' }),
+    ).toBeNull();
+    await waitFor(() =>
+      expect(call).toHaveBeenLastCalledWith('node:get', { id: 'n1' }),
+    );
+
+    fireEvent.keyDown(document.body, {
+      key: 'P',
+      ctrlKey: true,
+      shiftKey: true,
+    });
+    const actions = screen.getByRole('combobox', {
+      name: 'Aller à un nœud ou lancer une action',
+    });
+    fireEvent.change(actions, { target: { value: '>aide' } });
+    fireEvent.keyDown(actions, { key: 'Enter' });
+    expect(await screen.findByRole('dialog', { name: 'Aide' })).toBeTruthy();
+  });
+
   it('revient à l’accueil après fermeture de l’espace', async () => {
     const { client, call } = fakeClient({
       'workspace:getCurrent': () => workspace,

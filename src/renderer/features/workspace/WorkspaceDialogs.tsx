@@ -20,6 +20,7 @@ import type { TreeIndex } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
 import { AssistantActivityDialog } from './AssistantActivityDialog';
+import type { AppAction } from '../commands/actions';
 import { HelpDialog } from './HelpDialog';
 import { McpDialog } from './McpDialog';
 import { LlmExportDialog } from './PortabilityDialogs';
@@ -89,6 +90,8 @@ export interface WorkspaceDialogsProps {
     contentType: ContentType,
     language: Language | null,
   ): void;
+  /** Registre des actions : raccourcis listés dans l'aide. */
+  actions: readonly AppAction[];
 }
 
 /** Dialogues et fenêtres de l'espace ouvert. */
@@ -112,11 +115,14 @@ export function WorkspaceDialogs({
   onBulkDelete,
   onExportForLlm,
   onCreateDocument,
+  actions,
 }: WorkspaceDialogsProps) {
   const relationTypes = data.graph?.relationTypes ?? [];
   return (
     <>
-      {overlays.help && <HelpDialog onClose={() => onCloseOverlay('help')} />}
+      {overlays.help && (
+        <HelpDialog actions={actions} onClose={() => onCloseOverlay('help')} />
+      )}
       {overlays.llmExport && (
         <LlmExportDialog
           selected={selected}
