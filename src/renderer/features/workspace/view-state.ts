@@ -5,6 +5,7 @@
  */
 import type { GraphViewSettings } from '../../../shared/model';
 import { DEFAULT_FILTERS, type GraphFilters } from '../graph/graph-model';
+import { EMPTY_HISTORY, step, visit, type NavHistory } from './nav-history';
 
 export type GraphScopeKind = 'all' | 'neighborhood';
 
@@ -28,6 +29,8 @@ export interface ViewState {
   expanded: ReadonlySet<string>;
   multiSelection: ReadonlySet<string>;
   graph: GraphViewState;
+  /** Précédent / Suivant : nœuds ouverts, quel que soit le moyen. */
+  history: NavHistory;
 }
 
 export const DEFAULT_GRAPH_VIEW: GraphViewState = {
@@ -44,11 +47,22 @@ export const INITIAL_VIEW_STATE: ViewState = {
   expanded: new Set(),
   multiSelection: new Set(),
   graph: DEFAULT_GRAPH_VIEW,
+  history: EMPTY_HISTORY,
 };
 
 export type ViewAction =
   /** `reveal` : ancêtres à déplier pour que le nœud soit visible dans l'arbre. */
   | { type: 'select'; id: string | null; reveal?: readonly string[] }
+  /**
+   * Précédent (-1) / Suivant (1) dans l'historique, en sautant les nœuds
+   * qui n'existent plus. `reveal` : ancêtres de chaque nœud, à déplier.
+   */
+  | {
+      type: 'navigate';
+      direction: -1 | 1;
+      exists(id: string): boolean;
+      reveal(id: string): readonly string[];
+    }
   | { type: 'setExpanded'; id: string; open: boolean }
   | { type: 'expand'; ids: readonly string[] }
   | { type: 'setMultiSelection'; ids: ReadonlySet<string> }
@@ -153,6 +167,19 @@ export function viewReducer(
       return {
         ...withTreeFolding(state, opened, [], options),
         selectedId: action.id,
+        history:
+          action.id === null ? state.history : visit(state.history, action.id),
+      };
+    }
+    case 'navigate': {
+      const history = step(state.history, action.direction, action.exists);
+      if (!history) return state;
+      const id = history.entries[history.index]!;
+      const opened = action.reveal(id).filter((a) => !state.expanded.has(a));
+      return {
+        ...withTreeFolding(state, opened, [], options),
+        selectedId: id,
+        history,
       };
     }
     case 'setExpanded':

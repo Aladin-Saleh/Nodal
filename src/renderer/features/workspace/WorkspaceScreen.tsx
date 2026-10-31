@@ -27,6 +27,7 @@ import { CenterPane } from './CenterPane';
 import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
+import { canStep } from './nav-history';
 import { useWorkspaceData } from './useWorkspaceData';
 import {
   nodeActions,
@@ -84,6 +85,7 @@ function WorkspaceView({
     selectedId,
     multiSelection,
     graph: { hidden, solo },
+    history,
   } = useViewState();
   const dispatch = useViewDispatch();
   const data = useWorkspaceData(selectedId);
@@ -421,6 +423,13 @@ function WorkspaceView({
     validate: (id) => void validate([id]),
     delete: (id) => void askDelete(id),
     setView,
+    navigate: (direction) =>
+      dispatch({
+        type: 'navigate',
+        direction,
+        exists: (id) => index.byId.has(id),
+        reveal: (id) => ancestorIds(index, id),
+      }),
     focusSearch: () => setSearchFocus((count) => count + 1),
     openPalette: (actionsOnly) => setPalette({ actionsOnly }),
     save: () => void tracker.flushAll(),
@@ -441,6 +450,8 @@ function WorkspaceView({
     hidden,
     solo,
     masking: hidden.size > 0 || solo !== null,
+    canGoBack: canStep(history, -1, (id) => index.byId.has(id)),
+    canGoForward: canStep(history, 1, (id) => index.byId.has(id)),
   };
   const actions = [
     ...nodeActions(selected, actionState, commands),
@@ -487,9 +498,38 @@ function WorkspaceView({
       event.preventDefault();
       action.run();
     };
+    // Boutons 4 / 5 de la souris : précédent / suivant.
+    const onMouseUp = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      const { actions: current, modalOpen: blocked } = shortcuts.current;
+      if (blocked) return;
+      event.preventDefault();
+      const id = event.button === 3 ? 'nav.back' : 'nav.forward';
+      const action = current.find((candidate) => candidate.id === id);
+      if (action?.enabled) action.run();
+    };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
   }, []);
+
+  /** Derniers nœuds ouverts (palette sans requête), du plus récent. */
+  const recentNodes = useMemo(() => {
+    const byId = new Map(paletteNodes.map((node) => [node.id, node]));
+    const seen = new Set(selectedId ? [selectedId] : []);
+    const result: PaletteNode[] = [];
+    for (const id of history.entries.toReversed()) {
+      const node = byId.get(id);
+      if (!node || seen.has(id)) continue;
+      seen.add(id);
+      result.push(node);
+      if (result.length === 8) break;
+    }
+    return result;
+  }, [history, paletteNodes, selectedId]);
 
   return (
     <NodeLinkContext.Provider value={openNodeByTitle}>
@@ -616,6 +656,7 @@ function WorkspaceView({
           <CommandPalette
             actions={actions}
             nodes={paletteNodes}
+            recentNodes={recentNodes}
             actionsOnly={palette.actionsOnly}
             onOpenNode={(id) => select(id)}
             onClose={() => setPalette(null)}

@@ -22,6 +22,7 @@ const TREE_GESTURES: [string, string][] = [
 /** Touches propres à un panneau, hors du registre des actions. */
 const CONTEXT_KEYS: [string, string][] = [
   ['Échap', 'vider la sélection ou la recherche, fermer une fenêtre'],
+  ['Boutons 4 / 5 de la souris', 'nœud précédent / suivant'],
   ['F2 / Suppr', 'renommer / supprimer le nœud (arborescence)'],
   ['H', 'masquer / afficher le nœud dans le graphe (arborescence)'],
   ['Menu, Maj + F10', 'menu contextuel du nœud (arborescence)'],

@@ -716,3 +716,16 @@ kbd.palette-detail {
 .palette-empty {
   margin: 0 16px 14px;
 }
+
+/* Historique de navigation (barre supérieure) */
+
+.nav-buttons {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.nav-buttons button {
+  min-width: 30px;
+  padding-inline: 6px;
+}

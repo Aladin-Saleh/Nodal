@@ -153,7 +153,16 @@ les préférences…), avec leur raccourci.
 
 **Ctrl + Maj + P** (ou « > » en début de saisie) ne propose que les actions.
 Flèches haut / bas, Page préc. / suiv. pour choisir, Entrée pour valider,
-Échap pour fermer.
+Échap pour fermer. Sans rien taper, la palette propose les derniers nœuds
+ouverts.
+
+### Précédent / suivant
+
+Nodal mémorise les nœuds ouverts, quel que soit le moyen (arbre, graphe,
+recherche, palette, lien). Revenez en arrière avec **Alt + ←**, le bouton
+**←** de la barre supérieure ou le bouton « précédent » de la souris, et
+repartez en avant avec **Alt + →**, **→** ou le bouton « suivant ». Les nœuds
+supprimés depuis sont sautés ; les 100 derniers nœuds sont gardés.
 
 ### Recherche plein texte
 
@@ -254,6 +263,7 @@ La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 | -------------- | ------------------------------------------------------ |
 | Ctrl + P       | palette de commandes (nœuds et actions)                |
 | Ctrl + Maj + P | palette de commandes, actions seules                   |
+| Alt + ← / →    | nœud précédent / suivant (aussi boutons de la souris)  |
 | Ctrl + N       | nouveau sous-nœud du nœud sélectionné                  |
 | Ctrl + Maj + N | nouveau nœud racine                                    |
 | Ctrl + F       | rechercher                                             |

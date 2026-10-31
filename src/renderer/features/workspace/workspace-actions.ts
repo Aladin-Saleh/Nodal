@@ -21,6 +21,8 @@ export interface WorkspaceCommands {
   validate(id: string): void;
   delete(id: string): void;
   setView(view: ViewMode): void;
+  /** Historique de navigation : précédent (-1) ou suivant (1). */
+  navigate(direction: -1 | 1): void;
   focusSearch(): void;
   openPalette(actionsOnly: boolean): void;
   save(): void;
@@ -43,6 +45,8 @@ export interface WorkspaceActionState {
   solo: string | null;
   /** Un nœud est masqué ou une branche est seule affichée. */
   masking: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
 }
 
 /**
@@ -147,6 +151,24 @@ export function workspaceActions(
   commands: WorkspaceCommands,
 ): AppAction[] {
   return [
+    {
+      id: 'nav.back',
+      label: 'Nœud précédent',
+      group: 'Vue',
+      shortcuts: [{ key: 'ArrowLeft', alt: true }],
+      keywords: 'historique retour arriere',
+      enabled: state.canGoBack,
+      run: () => commands.navigate(-1),
+    },
+    {
+      id: 'nav.forward',
+      label: 'Nœud suivant',
+      group: 'Vue',
+      shortcuts: [{ key: 'ArrowRight', alt: true }],
+      keywords: 'historique avancer',
+      enabled: state.canGoForward,
+      run: () => commands.navigate(1),
+    },
     {
       id: 'node.newRoot',
       label: 'Nouveau nœud racine',

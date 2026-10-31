@@ -155,6 +155,8 @@ describe('actions de l’espace', () => {
     hidden: new Set(['a']),
     solo: null,
     masking: true,
+    canGoBack: false,
+    canGoForward: true,
   };
   const node: NodeSummary = {
     id: 'a',

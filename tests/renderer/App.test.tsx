@@ -303,6 +303,44 @@ describe('App', () => {
     expect(await screen.findByRole('dialog', { name: 'Aide' })).toBeTruthy();
   });
 
+  it('Alt+← / Alt+→ et les boutons de la souris parcourent l’historique', async () => {
+    const { client, call } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+    });
+    render(<App client={client} />);
+    for (const title of ['Kafka', 'Zookeeper']) {
+      fireEvent.click(await screen.findByRole('button', { name: '+ Racine' }));
+      const dialog = screen.getByRole('dialog', {
+        name: 'Nouveau nœud racine',
+      });
+      fireEvent.change(within(dialog).getByLabelText('Titre'), {
+        target: { value: title },
+      });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+      await within(await screen.findByRole('tree')).findByText(title);
+    }
+    const back = screen.getByRole('button', { name: 'Nœud précédent' });
+    const forward = screen.getByRole('button', { name: 'Nœud suivant' });
+    expect((forward as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() =>
+      expect(call).toHaveBeenLastCalledWith('node:get', { id: 'n2' }),
+    );
+
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft', altKey: true });
+    await waitFor(() =>
+      expect(call).toHaveBeenLastCalledWith('node:get', { id: 'n1' }),
+    );
+    expect((back as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.mouseUp(document.body, { button: 4 });
+    await waitFor(() =>
+      expect(call).toHaveBeenLastCalledWith('node:get', { id: 'n2' }),
+    );
+    fireEvent.click(back);
+    await waitFor(() =>
+      expect(call).toHaveBeenLastCalledWith('node:get', { id: 'n1' }),
+    );
+  });
+
   it('revient à l’accueil après fermeture de l’espace', async () => {
     const { client, call } = fakeClient({
       'workspace:getCurrent': () => workspace,

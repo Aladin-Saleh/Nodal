@@ -75,6 +75,10 @@ export function TopBar({
   };
   return (
     <header className="top-bar">
+      <div className="nav-buttons" role="group" aria-label="Historique">
+        {button('nav.back', '←', { 'aria-label': 'Nœud précédent' })}
+        {button('nav.forward', '→', { 'aria-label': 'Nœud suivant' })}
+      </div>
       <h1 className="workspace-name" title={workspace.filePath}>
         {workspace.name}
       </h1>

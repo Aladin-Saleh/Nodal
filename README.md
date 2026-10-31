@@ -163,9 +163,14 @@ pièces jointes en BLOB).
     nœuds par titre et chemin (correspondance approximative, sans accents)
     et actions de l'application ; un registre d'actions unique alimente la
     palette, la barre supérieure, le menu contextuel de l'arbre, les
-    raccourcis et l'aide.
+    raccourcis et l'aide ;
+  - historique de navigation : précédent / suivant (`Alt+←` / `Alt+→`,
+    boutons 4 / 5 de la souris, deux boutons dans la barre supérieure) sur
+    les nœuds ouverts par n'importe quel moyen ; pile de 100, nœuds
+    supprimés sautés.
 
-Raccourcis : `Ctrl+P` palette de commandes, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
+Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
+précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
 `Ctrl+S` enregistrer immédiatement, `Ctrl+F` rechercher, `Ctrl+A` tout
 sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
 `F2` renommer, `Suppr` supprimer, `F1` aide, `Ctrl+,` préférences,
