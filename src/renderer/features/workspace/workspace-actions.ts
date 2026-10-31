@@ -36,6 +36,8 @@ export interface WorkspaceCommands {
   exportLlm(): void;
   connectAssistant(): void;
   activity(): void;
+  /** Santé de la base (`gaps` : sujets à documenter). */
+  health(focus: 'all' | 'gaps'): void;
   settings(): void;
   preferences(): void;
   help(): void;
@@ -301,6 +303,22 @@ export function workspaceActions(
       keywords: 'assistant journal annuler',
       enabled: true,
       run: commands.activity,
+    },
+    {
+      id: 'workspace.health',
+      label: 'Santé de la base…',
+      group: 'Espace',
+      keywords: 'qualite verifier resume orphelin doublon casse',
+      enabled: true,
+      run: () => commands.health('all'),
+    },
+    {
+      id: 'workspace.gaps',
+      label: 'Sujets à documenter…',
+      group: 'Espace',
+      keywords: 'lacunes recherches sans resultat ia',
+      enabled: true,
+      run: () => commands.health('gaps'),
     },
     {
       id: 'workspace.settings',

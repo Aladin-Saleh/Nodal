@@ -187,6 +187,53 @@ export interface Backlink {
   snippet: string;
 }
 
+/** Vérifications du rapport « Santé de la base ». */
+export type HealthCheckId =
+  | 'noSummary'
+  | 'emptyDocument'
+  | 'orphan'
+  | 'brokenLink'
+  | 'duplicate'
+  | 'assistantPending'
+  | 'stale';
+
+/** Une ligne du rapport : un nœud (et, selon le cas, un document ou un autre nœud). */
+export interface HealthIssue {
+  check: HealthCheckId;
+  nodeId: string;
+  title: string;
+  documentId?: string;
+  documentTitle?: string;
+  /** Doublon probable : l'autre nœud. */
+  otherNodeId?: string;
+  /** Précision : cible d'un lien cassé, titre du doublon… */
+  detail?: string;
+}
+
+export interface HealthReport {
+  checks: {
+    id: HealthCheckId;
+    label: string;
+    /** Nombre exact ; `issues` est plafonné. */
+    count: number;
+    issues: HealthIssue[];
+  }[];
+  /** Sujets à documenter encore ouverts, les plus demandés d'abord. */
+  gaps: SearchGap[];
+}
+
+/** Recherche d'un assistant IA restée sans résultat. */
+export interface SearchGap {
+  /** Requête normalisée (identifiant). */
+  key: string;
+  /** Dernière forme saisie. */
+  query: string;
+  count: number;
+  firstAt: string;
+  lastAt: string;
+  status: 'open' | 'done' | 'ignored';
+}
+
 /** « Relier ? » : un document du nœud cite le titre d'un autre nœud. */
 export interface LinkSuggestion {
   targetId: string;

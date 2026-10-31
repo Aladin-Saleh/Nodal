@@ -884,3 +884,64 @@ kbd.palette-detail {
   padding: 2px 8px;
   font-size: 12px;
 }
+
+/* Santé de la base */
+
+.health-report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.health-check h3 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 4px;
+}
+
+.health-check > p {
+  margin: 0 0 6px;
+}
+
+.badge.warn {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.health-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.health-list li:hover {
+  background: var(--hover);
+}
+
+.health-title {
+  font-weight: 600;
+}
+
+.health-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.health-actions button {
+  padding: 2px 8px;
+  font-size: 12px;
+}

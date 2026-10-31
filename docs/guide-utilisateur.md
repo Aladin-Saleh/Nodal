@@ -224,6 +224,25 @@ Les nœuds trouvés ressortent dans le graphe et l'arborescence. Un clic sur un
 résultat sélectionne le nœud ; un clic sur un extrait de document ouvre ce
 document. Échap efface la recherche.
 
+### Santé de la base
+
+Bouton **Santé** (en haut de l'espace) ou palette « Santé de la base… » :
+un rapport, calculé à la demande, de ce qui mérite attention, avec le nombre
+de cas et, pour chacun, l'action qui permet de corriger :
+
+- **nœuds sans résumé** et **documents vides** → Ouvrir ;
+- **nœuds isolés** : ni relation ni enfant (les racines ne comptent pas) ;
+- **liens `[[…]]` cassés** → Ouvrir le document ;
+- **doublons probables** : titres identiques aux accents, à la casse, à la
+  ponctuation ou au pluriel près, ou à une lettre près (pas à un chiffre
+  près : « Étape 1 » et « Étape 2 » ne sont pas des doublons) → Ouvrir l'un
+  ou l'autre ;
+- **ajouts de l'IA à relire** → Valider ;
+- **sujets à documenter** (voir ci-dessous) → Créer un nœud, Ignorer.
+
+Les listes sont limitées à 50 lignes par vérification ; **Actualiser**
+relance l'analyse.
+
 ## 7. Sauvegarde, export et import
 
 Menu **Exporter ▾** et bouton **Paramètres** :
@@ -276,6 +295,13 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   (y compris pour l’assistant) ; l’entrée reste dans « Activité IA »
   (« validée le … ») et peut toujours être annulée. Le filtre « Ajouté par
   l’IA, non validé » du graphe montre ce qui reste à relire.
+- **Sujets à documenter** : quand une recherche de l'assistant ne trouve
+  rien, Nodal note la requête (seulement la requête, sa date et le nombre de
+  fois ; jamais en lecture seule). Bouton **Santé** en haut de l'espace, ou
+  palette « Sujets à documenter… » : **Créer un nœud** propose un nouveau
+  nœud à ce titre (le sujet quitte la liste une fois le nœud créé),
+  **Ignorer** l'écarte. L'assistant voit aussi cette liste (outil
+  `nodal_health`) quand vous lui demandez d'enrichir la base.
 - **Consulter Nodal d'abord** : la fenêtre « Connecter un assistant IA »
   fournit un bloc de consignes à coller dans le fichier d'instructions de
   votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou

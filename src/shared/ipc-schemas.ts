@@ -293,6 +293,13 @@ export const ipcArgsSchemas = {
   'node:list': noArgs,
   'node:backlinks': one(idInput),
   'suggestion:listForNode': one(idInput),
+  'health:report': noArgs,
+  'gap:setStatus': one(
+    z.strictObject({
+      key: z.string().min(1).max(500),
+      status: z.enum(['done', 'ignored']),
+    }),
+  ),
   'suggestion:accept': one(
     z.strictObject({
       sourceId: idSchema,

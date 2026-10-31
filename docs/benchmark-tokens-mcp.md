@@ -289,6 +289,27 @@ contient trois liens, et un nœud cité par dix documents :
 - `mentionedIn{id,title,document}` n'apparaît que si le nœud est cité (aucun
   token sinon) ; il évite une recherche pour savoir qui en parle.
 
+## `nodal_health` et consignes (v1.4)
+
+Même méthode, espace ×1 (250 nœuds sans résumé, quelques nœuds isolés, deux
+recherches sans résultat notées) :
+
+| Mesure                                             | Tokens |
+| -------------------------------------------------- | -----: |
+| `nodal_health`, 10 lignes au plus par vérification |    627 |
+| Consignes du serveur (écriture), avant             |    283 |
+| Consignes du serveur (écriture), après             |    299 |
+
+- Une seule table `issues{check,id,path,detail}` pour toutes les
+  vérifications (une colonne `check` plutôt qu'une table par vérification :
+  un en-tête au lieu de six) ; les compteurs restent exacts au-dessus.
+- Les consignes ne gagnent qu'une parenthèse (« nodal_health : lacunes et
+  sujets à documenter »), +16 tokens à chaque tour : le mode d'emploi est
+  dans la description de l'outil, chargée seulement quand il sert.
+- Première mesure : 784 tokens, dont une longue liste de faux doublons
+  (« Élément 0.0.1 » / « Élément 0.0.2 », à un chiffre près). La tolérance
+  d'une lettre exclut désormais les chiffres.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

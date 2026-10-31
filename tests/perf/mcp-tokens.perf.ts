@@ -206,4 +206,28 @@ Appelle ${formatNodeLink(ids.components[1]!)}, ${formatNodeLink(ids.components[7
     expect(count(served)).toBeLessThan(count(rawBody));
     await client.close();
   });
+
+  it('mesure nodal_health et les consignes', async () => {
+    const { context, service } = workspace();
+    seedScaleOne(context());
+    const client = await connect(service.getCurrent()!.filePath, false);
+    const { count } = await createDefaultTokenizer();
+    for (const query of [
+      'rollback canari',
+      'quota disque',
+      'rollback canari',
+    ]) {
+      await client.call('nodal_search', { query });
+    }
+    const health = await client.call('nodal_health', {});
+    const instructions = String(client.init.instructions);
+    expect(health.isError).toBeFalsy();
+    const lines = [
+      `nodal_health (limit 10) : ${count(health.content[0]!.text)}`,
+      `consignes du serveur (écriture) : ${count(instructions)}`,
+    ];
+    const output = ['', health.content[0]!.text.slice(0, 700), '', ...lines];
+    process.stdout.write(output.join('\n'));
+    await client.close();
+  });
 });

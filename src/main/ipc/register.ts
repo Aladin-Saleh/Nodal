@@ -29,6 +29,7 @@ import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
 import { SuggestionService } from '../knowledge/suggestion-service';
+import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -176,6 +177,11 @@ export function createImplementations(deps: IpcDependencies): Implementations {
 
     'node:list': () => nodes.list(),
     'suggestion:listForNode': ({ id }) => suggestions.listForNode(id),
+    'health:report': () => healthReport(context()),
+    'gap:setStatus': ({ key, status }) => {
+      setSearchGapStatus(context(), key, status);
+      return null;
+    },
     'suggestion:accept': (input) => {
       suggestions.accept(input);
       return null;

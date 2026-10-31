@@ -15,6 +15,10 @@ import {
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { SearchService } from '../../src/main/knowledge/search-service';
 import { inTransaction } from '../../src/main/database/transaction';
+import { healthReport } from '../../src/main/knowledge/health-service';
+import { listBacklinks } from '../../src/main/knowledge/link-service';
+import { suggestionsForNode } from '../../src/main/knowledge/suggestion-service';
+import { formatNodeLink } from '../../src/shared/wiki-links';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
 const NODES = 3000;
@@ -150,6 +154,26 @@ describe(`échelle : ${NODES} nœuds, ${NODES * DOCS_PER_NODE} documents, ${EDGE
     results['renommage d’un nœud (index FTS compris)'] = median(10, () => {
       nodes.update({ id: ids[42]!, title: `Composant renommé ${n++}` });
     });
+    // v1.4 : liens [[...]] (synchronisation des relations), suggestions,
+    // rétroliens et santé de la base.
+    results['enregistrement d’un document avec 5 liens [[…]]'] = median(
+      20,
+      () => {
+        const links = [1, 2, 3, 4, 5]
+          .map((k) => formatNodeLink(ids[(n + k * 97) % NODES]!))
+          .join(' ');
+        documents.update({ id: doc.id, body: `${links} ${n++}` });
+      },
+    );
+    results['suggestions « Relier ? » d’un nœud'] = median(10, () =>
+      suggestionsForNode(ctx, ids[1500]!),
+    );
+    results['rétroliens d’un nœud'] = median(10, () =>
+      listBacklinks(ctx, ids[1600]!),
+    );
+    results['rapport « Santé de la base »'] = median(3, () =>
+      healthReport(ctx),
+    );
     const exportStart = performance.now();
     await exportWorkspace(ctx, service.getCurrent()!, dir, {
       name: 'Nodal',
@@ -179,11 +203,11 @@ describe(`échelle : ${NODES} nœuds, ${NODES * DOCS_PER_NODE} documents, ${EDGE
     results['export LLM (tokenizer o200k_base)'] =
       performance.now() - realStart;
 
-    console.table(
-      Object.fromEntries(
-        Object.entries(results).map(([k, v]) => [k, `${v.toFixed(1)} ms`]),
-      ),
+    // Écrit directement : la sortie console des tests réussis est masquée.
+    const table = Object.entries(results).map(
+      ([label, ms]) => `${label} : ${ms.toFixed(1)} ms`,
     );
+    process.stdout.write(['', ...table, ''].join('\n'));
     void path;
 
     // Seuils : une interaction ne doit pas bloquer de façon perceptible.
@@ -196,5 +220,9 @@ describe(`échelle : ${NODES} nœuds, ${NODES * DOCS_PER_NODE} documents, ${EDGE
       results['enregistrement automatique d’un document (index FTS compris)']!,
     ).toBeLessThan(30);
     expect(results['fiche d’un nœud']!).toBeLessThan(30);
+    expect(
+      results['enregistrement d’un document avec 5 liens [[…]]']!,
+    ).toBeLessThan(50);
+    expect(results['suggestions « Relier ? » d’un nœud']!).toBeLessThan(100);
   }, 120_000);
 });

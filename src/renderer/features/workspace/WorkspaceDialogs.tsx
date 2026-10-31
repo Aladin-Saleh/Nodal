@@ -31,6 +31,9 @@ export type DialogState =
   | {
       kind: 'new';
       parentId: string | null;
+      /** Titre proposé (sujet à documenter) et lacune à marquer traitée. */
+      initialTitle?: string;
+      gapKey?: string;
       /** Double-clic dans le graphe : position 3D et choix du parent. */
       position?: { x: number; y: number; z: number };
     }
@@ -45,6 +48,8 @@ export type DialogState =
 /** Fenêtres secondaires ouvertes en dehors des dialogues de nœud. */
 export interface Overlays {
   help: boolean;
+  /** Santé de la base, ouverte sur tout ou sur les sujets à documenter. */
+  health: 'all' | 'gaps' | null;
   llmExport: boolean;
   mcp: boolean;
   activity: boolean;
@@ -54,6 +59,7 @@ export interface Overlays {
 
 export const NO_OVERLAYS: Overlays = {
   help: false,
+  health: null,
   llmExport: false,
   mcp: false,
   activity: false,
@@ -194,6 +200,7 @@ export function WorkspaceDialogs({
           parentChoice={
             dialog.position ? { index, parentId: dialog.parentId } : undefined
           }
+          initialTitle={dialog.initialTitle}
           onSubmit={onCreateNode}
           onCancel={onCloseDialog}
         />

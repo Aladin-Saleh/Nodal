@@ -56,6 +56,7 @@ describe('createNodalDatabase', () => {
         'node',
         'node_tag',
         'relation_type',
+        'search_gap',
         'search_index',
         'tag',
         'workspace',

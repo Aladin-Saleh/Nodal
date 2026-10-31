@@ -121,6 +121,7 @@ export function TopBar({
           </div>
         </details>
         {button('workspace.activity')}
+        {button('workspace.health', 'Santé')}
         {button('workspace.settings', 'Paramètres')}
         {button('app.help', '?', { 'aria-label': 'Aide (F1)' })}
         {button('workspace.close')}

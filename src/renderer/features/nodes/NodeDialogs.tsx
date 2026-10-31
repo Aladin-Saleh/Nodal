@@ -17,10 +17,13 @@ import { subtreeIds, visibleRows, type TreeIndex } from './tree';
 export function NewNodeDialog({
   parentTitle,
   parentChoice,
+  initialTitle = '',
   onSubmit,
   onCancel,
 }: {
   parentTitle: string | null;
+  /** Titre proposé (ex. sujet à documenter). */
+  initialTitle?: string;
   /** Si fourni, le parent se choisit dans la boîte (racine par défaut). */
   parentChoice?: { index: TreeIndex; parentId: string | null };
   onSubmit(title: string, nodeType: NodeType, parentId: string | null): void;
@@ -29,7 +32,7 @@ export function NewNodeDialog({
   const titleId = useId();
   const typeId = useId();
   const parentFieldId = useId();
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initialTitle);
   const [nodeType, setNodeType] = useState<NodeType>('concept');
   const [chosenParent, setChosenParent] = useState(
     parentChoice?.parentId ?? '',

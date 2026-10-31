@@ -13,6 +13,7 @@ import { EdgeService } from '../main/knowledge/edge-service';
 import { NodeService } from '../main/knowledge/node-service';
 import { listRelationTypes } from '../main/knowledge/relation-type-service';
 import { listBacklinks } from '../main/knowledge/link-service';
+import { healthReport } from '../main/knowledge/health-service';
 import { assistantCreations } from '../main/knowledge/assistant-origin';
 import { asRows } from '../main/knowledge/rows';
 import { SearchService } from '../main/knowledge/search-service';
@@ -549,6 +550,39 @@ export function getNode(ctx: ReadContext, id: string) {
       ...mentionedIn(ctx, detail.id),
     },
     documents: inline,
+  };
+}
+
+/** Lignes par vérification renvoyées par défaut par nodal_health. */
+export const HEALTH_MCP_LIMIT = 10;
+
+/**
+ * Santé de la base pour un assistant : compteurs, une seule table de
+ * problèmes (colonne check) et les sujets à documenter.
+ */
+export function health(ctx: ReadContext, input: { limit?: number }) {
+  const report = healthReport(ctx, input.limit ?? HEALTH_MCP_LIMIT);
+  const outline = loadOutline(ctx);
+  return {
+    counts: Object.fromEntries(
+      report.checks.map((check) => [check.id, check.count]),
+    ),
+    issues: report.checks.flatMap((check) =>
+      check.issues.map((item) => ({
+        check: item.check,
+        id: item.nodeId,
+        path: pathOf(outline, item.nodeId),
+        detail:
+          item.documentTitle && item.detail
+            ? `${item.documentTitle} : ${item.detail}`
+            : (item.documentTitle ?? item.detail ?? ''),
+      })),
+    ),
+    gaps: report.gaps.map((gap) => ({
+      query: gap.query,
+      count: gap.count,
+      lastAt: gap.lastAt.slice(0, 10),
+    })),
   };
 }
 

@@ -385,6 +385,60 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: 'Chemin' })).toBeNull();
   });
 
+  it('crée un nœud depuis un sujet à documenter, puis le marque traité', async () => {
+    const { client, call } = fakeClient({
+      'workspace:getCurrent': () => workspace,
+      'health:report': () => ({
+        checks: [],
+        gaps: [
+          {
+            key: 'rollback',
+            query: 'Rollback',
+            count: 2,
+            firstAt: '2026-10-30T10:00:00.000Z',
+            lastAt: '2026-10-31T10:00:00.000Z',
+            status: 'open' as const,
+          },
+        ],
+      }),
+      'gap:setStatus': () => null,
+    });
+    render(<App client={client} />);
+    await screen.findByRole('button', { name: '+ Racine' });
+    fireEvent.keyDown(document.body, {
+      key: 'P',
+      ctrlKey: true,
+      shiftKey: true,
+    });
+    const palette = screen.getByRole('combobox', {
+      name: 'Aller à un nœud ou lancer une action',
+    });
+    fireEvent.change(palette, { target: { value: '>sujets' } });
+    fireEvent.keyDown(palette, { key: 'Enter' });
+    const gaps = await screen.findByRole('region', {
+      name: 'Sujets à documenter',
+    });
+    fireEvent.click(
+      within(gaps).getByRole('button', { name: 'Créer un nœud' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Nouveau nœud racine' });
+    expect(
+      (within(dialog).getByLabelText('Titre') as HTMLInputElement).value,
+    ).toBe('Rollback');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('gap:setStatus', {
+        key: 'rollback',
+        status: 'done',
+      }),
+    );
+    expect(call).toHaveBeenCalledWith('node:create', {
+      parentId: null,
+      title: 'Rollback',
+      nodeType: 'concept',
+    });
+  });
+
   it('revient à l’accueil après fermeture de l’espace', async () => {
     const { client, call } = fakeClient({
       'workspace:getCurrent': () => workspace,

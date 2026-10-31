@@ -188,7 +188,12 @@ pièces jointes en BLOB).
   - suggestions « Relier ? » : titre d'un autre nœud cité (mots entiers,
     sans accents, hors code et liens, titres courts ou génériques ignorés)
     sans relation existante ; relier, convertir en lien ou ignorer (refus
-    mémorisés, migration 008) ; calcul par nœud, sans scan de la base.
+    mémorisés, migration 008) ; calcul par nœud, sans scan de la base ;
+  - santé de la base (bouton « Santé », palette) : nœuds sans résumé,
+    documents vides, nœuds isolés, liens cassés, doublons probables,
+    ajouts de l'IA à relire, chacun avec son action ; sujets à documenter :
+    recherches MCP sans résultat (requête, date, nombre ; migration 009),
+    à transformer en nœud ou à ignorer ; outil MCP `nodal_health`.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

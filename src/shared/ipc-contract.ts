@@ -35,6 +35,7 @@ import type {
   GraphViewInfo,
   Backlink,
   LinkSuggestion,
+  HealthReport,
 } from './model';
 
 export interface AppInfo {
@@ -241,6 +242,13 @@ export interface IpcContract {
   'node:list': { args: []; result: NodeSummary[] };
   /** Documents qui mentionnent ce nœud par un lien [[...]]. */
   'node:backlinks': { args: [IdInput]; result: Backlink[] };
+  /** Rapport « Santé de la base » et sujets à documenter. */
+  'health:report': { args: []; result: HealthReport };
+  /** Sujet à documenter traité (`done`) ou écarté (`ignored`). */
+  'gap:setStatus': {
+    args: [{ key: string; status: 'done' | 'ignored' }];
+    result: null;
+  };
   /** « Relier ? » : titres d'autres nœuds cités par les documents du nœud. */
   'suggestion:listForNode': { args: [IdInput]; result: LinkSuggestion[] };
   'suggestion:accept': {
@@ -359,6 +367,8 @@ export const IPC_CHANNELS = [
   'node:list',
   'node:backlinks',
   'suggestion:listForNode',
+  'health:report',
+  'gap:setStatus',
   'suggestion:accept',
   'suggestion:ignore',
   'node:get',

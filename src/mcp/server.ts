@@ -19,6 +19,8 @@ import {
   neighborhood,
   overview,
   findPath,
+  health,
+  HEALTH_MCP_LIMIT,
   readDocument,
   search,
   tree,
@@ -32,6 +34,7 @@ import {
 import { PATH_DEFAULT_DEPTH, PATH_MAX_DEPTH } from '../shared/graph-path';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
 import { renderLinksForLlm, renderResponseLinks } from './links';
+import { recordSearchGap } from '../main/knowledge/health-service';
 import { workspaceLinkResolver } from '../main/knowledge/link-service';
 import type { LinkResolver } from '../shared/wiki-links';
 import {
@@ -67,7 +70,8 @@ nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.`;
 
 const WRITE_INSTRUCTIONS = `
 
-Enrichissez la base avec ce qui est durable : complétez le nœud existant
+Enrichissez la base avec ce qui est durable (nodal_health : lacunes et
+sujets à documenter) : complétez le nœud existant
 (cherchez d'abord) plutôt que d'en créer un ; résumé d'une ou deux phrases,
 détail dans des documents, relations avec les types existants. Plusieurs
 écritures : nodal_apply (un appel, une transaction). Rien n'est supprimé ;
@@ -190,6 +194,24 @@ export function createNodalMcpServer(
       mode,
     );
 
+  /**
+   * Recherche sans résultat : notée dans « Sujets à documenter » (requête,
+   * date, nombre de fois ; rien d'autre). Jamais en lecture seule ; un échec
+   * (fichier verrouillé…) n'empêche pas de répondre.
+   */
+  const noteSearchGap = (query: string) => {
+    if (options.readOnly) return;
+    try {
+      withWorkspace(
+        options.workspaceFile,
+        (ctx) => recordSearchGap(ctx, query),
+        'write',
+      );
+    } catch {
+      // Journal facultatif.
+    }
+  };
+
   /** Exécute une lecture et encode son résultat en TOON. */
   const run =
     <A>(read: (ctx: ReadContext, args: A) => unknown) =>
@@ -252,7 +274,9 @@ export function createNodalMcpServer(
     },
     async (args): Promise<CallToolResult> => {
       try {
-        return withDocuments(call(args, 'read', search));
+        const found = call(args, 'read', search);
+        if (found.result.nodeCount === 0) noteSearchGap(args.query);
+        return withDocuments(found);
       } catch (error) {
         return failure(error);
       }
@@ -361,6 +385,28 @@ export function createNodalMcpServer(
       annotations: READ_ONLY,
     },
     run(neighborhood),
+  );
+
+  server.registerTool(
+    'nodal_health',
+    {
+      title: 'Santé de la base',
+      description:
+        'Ce qui manque ou cloche dans la base : compteurs, puis une table issues (nœuds sans résumé, ' +
+        'documents vides, nœuds isolés, liens [[…]] cassés, doublons probables, ajouts de l’IA à relire) ' +
+        'et gaps, les recherches restées sans résultat (sujets à documenter). Pour entretenir ou enrichir la base.',
+      inputSchema: z.object({
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(100)
+          .default(HEALTH_MCP_LIMIT)
+          .describe('Lignes au plus par vérification'),
+      }),
+      annotations: READ_ONLY,
+    },
+    run(health),
   );
 
   server.registerTool(

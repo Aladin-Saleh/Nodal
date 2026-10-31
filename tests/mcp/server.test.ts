@@ -140,6 +140,42 @@ describe('liens [[...]] et MCP', () => {
   });
 });
 
+const gaps = () =>
+  workspace().context().db.prepare('SELECT query, count FROM search_gap').all();
+
+describe('nodal_health et sujets à documenter', () => {
+  it('note une recherche sans résultat, pas en lecture seule', async () => {
+    const readOnly = await connect(file);
+    toon(await readOnly.call('nodal_search', { query: 'zzzintrouvable' }));
+    await readOnly.close();
+    expect(gaps()).toEqual([]);
+
+    const client = await connect(file, false);
+    toon(await client.call('nodal_search', { query: 'zzzintrouvable' }));
+    toon(await client.call('nodal_search', { query: 'ZZZintrouvable' }));
+    // Une recherche fructueuse n'est pas notée.
+    toon(await client.call('nodal_search', { query: 'déploiement' }));
+    expect(gaps()).toEqual([{ query: 'ZZZintrouvable', count: 2 }]);
+
+    const result = await client.call('nodal_health', { limit: 2 });
+    const report = toon(result);
+    expect(report.counts).toMatchObject({ noSummary: 3, brokenLink: 0 });
+    expect(report.issues).toHaveLength(
+      Object.values(report.counts as Record<string, number>).reduce(
+        (sum, count) => sum + Math.min(count, 2),
+        0,
+      ),
+    );
+    expect(report.issues[0]).toMatchObject({ check: 'noSummary' });
+    expect(report.gaps).toEqual([
+      { query: 'ZZZintrouvable', count: 2, lastAt: expect.any(String) },
+    ]);
+    // Mesure (docs/benchmark-tokens-mcp.md) : réponse compacte.
+    expect(result.content[0]!.text.length).toBeLessThan(900);
+    await client.close();
+  });
+});
+
 describe('nodal_path', () => {
   it('trouve le plus court chemin, hiérarchie comprise si demandé', async () => {
     const client = await connect(file);
@@ -214,6 +250,7 @@ describe('serveur MCP', () => {
     };
     expect(tools.map((tool) => tool.name).toSorted()).toEqual([
       'nodal_get_node',
+      'nodal_health',
       'nodal_neighborhood',
       'nodal_overview',
       'nodal_path',

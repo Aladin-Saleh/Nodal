@@ -32,6 +32,7 @@ import { createLinkResolver } from '../../../shared/wiki-links';
 import { NodeProperties } from '../nodes/NodeProperties';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { CenterPane } from './CenterPane';
+import { HealthDialog } from './HealthDialog';
 import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
@@ -177,11 +178,18 @@ function WorkspaceView({
     if (dialog?.kind !== 'new') return;
     const { position } = dialog;
     const parentId = position ? chosenParentId : dialog.parentId;
+    const { gapKey } = dialog;
     setDialog(null);
     const created = await run(() =>
       client.call('node:create', { parentId, title, nodeType }),
     );
     if (!created) return;
+    if (gapKey) {
+      // Sujet à documenter traité : il quitte la liste.
+      await run(() =>
+        client.call('gap:setStatus', { key: gapKey, status: 'done' }),
+      );
+    }
     if (position) {
       // Le nœud apparaît là où l'on a double-cliqué.
       await run(() =>
@@ -457,6 +465,7 @@ function WorkspaceView({
     exportLlm: () => openOverlay('llmExport', true),
     connectAssistant: () => openOverlay('mcp', true),
     activity: () => openOverlay('activity', true),
+    health: (focus) => openOverlay('health', focus),
     settings: () => setDialog({ kind: 'settings' }),
     preferences: onOpenPreferences,
     help: () => openOverlay('help', true),
@@ -540,6 +549,7 @@ function WorkspaceView({
     dialog !== null ||
     palette !== null ||
     pathPickFrom !== null ||
+    overlays.health !== null ||
     overlays.editingDocumentId !== null ||
     overlays.addingDocumentFor !== null;
   // Lu par l'écouteur clavier, installé une seule fois.
@@ -750,6 +760,30 @@ function WorkspaceView({
           }
           actions={actions}
         />
+        {overlays.health && (
+          <HealthDialog
+            focus={overlays.health}
+            onClose={() => closeOverlay('health')}
+            onOpenNode={(id) => {
+              closeOverlay('health');
+              select(id);
+            }}
+            onOpenDocument={(documentId, nodeId) => {
+              closeOverlay('health');
+              openDocument(documentId, nodeId);
+            }}
+            onValidate={(ids) => void validate(ids)}
+            onCreateFromGap={(gap) => {
+              closeOverlay('health');
+              setDialog({
+                kind: 'new',
+                parentId: null,
+                initialTitle: gap.query,
+                gapKey: gap.key,
+              });
+            }}
+          />
+        )}
         {pathPickFrom !== null && (
           <CommandPalette
             actions={[]}
