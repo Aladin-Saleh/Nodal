@@ -74,6 +74,17 @@ apparaissent en pointillés.
 - **Réglages conservés** : la portée, les filtres, les nœuds repliés et les
   nœuds masqués sont retrouvés à la réouverture de l’espace (affichage
   seulement : rien n’est modifié dans les données ni dans les exports).
+- **Vues enregistrées** : le sélecteur à gauche de la barre du graphe
+  applique une vue nommée : portée, niveaux, filtres, nœuds masqués / seuls,
+  nœuds repliés et position de la caméra. Le menu **Vues ▾** permet
+  d’**enregistrer comme nouvelle vue**, de **mettre à jour** la vue active
+  (« modifiée » s’affiche quand les réglages ont changé depuis), de la
+  **renommer**, de la **supprimer** et de choisir la vue **ouverte avec
+  l’espace** (★). Sans vue par défaut, l’espace rouvre sur les réglages de
+  la dernière session. Les réglages d’avant la version 1.4 sont devenus la
+  vue « Par défaut ». Les vues sont aussi dans la palette (Ctrl + P, « Vue :
+  … »). Elles restent propres au fichier .nodal et ne sont pas incluses dans
+  l’export portable.
 - **L’œil** (arborescence) : au survol d’une ligne, l’œil **masque** le nœud
   dans le graphe, avec ses descendants et leurs relations (la ligne est
   grisée, l’œil reste barré). **Alt + clic** sur l’œil n’affiche que cette

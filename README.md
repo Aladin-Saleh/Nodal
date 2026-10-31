@@ -167,7 +167,11 @@ pièces jointes en BLOB).
   - historique de navigation : précédent / suivant (`Alt+←` / `Alt+→`,
     boutons 4 / 5 de la souris, deux boutons dans la barre supérieure) sur
     les nœuds ouverts par n'importe quel moyen ; pile de 100, nœuds
-    supprimés sautés.
+    supprimés sautés ;
+  - vues graphe enregistrées (migration 006, table `graph_view`) : portée,
+    niveaux, filtres, masquages / solo, replis et caméra ; créer, mettre à
+    jour, renommer, supprimer, vue ouverte avec l'espace ; les réglages
+    existants deviennent la vue « Par défaut ».
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

@@ -21,6 +21,8 @@ export interface WorkspaceCommands {
   validate(id: string): void;
   delete(id: string): void;
   setView(view: ViewMode): void;
+  /** Applique une vue graphe enregistrée (et affiche le graphe). */
+  applyView(id: string): void;
   /** Historique de navigation : précédent (-1) ou suivant (1). */
   navigate(direction: -1 | 1): void;
   focusSearch(): void;
@@ -47,6 +49,8 @@ export interface WorkspaceActionState {
   masking: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  /** Vues graphe enregistrées : une action « Vue : … » chacune. */
+  savedViews: readonly { id: string; name: string }[];
 }
 
 /**
@@ -190,6 +194,14 @@ export function workspaceActions(
       run: () =>
         commands.setView(state.view === 'graph' ? 'documents' : 'graph'),
     },
+    ...state.savedViews.map((saved): AppAction => ({
+      id: `view.apply:${saved.id}`,
+      label: `Vue : ${saved.name}`,
+      group: 'Vue',
+      keywords: 'graphe enregistree appliquer',
+      enabled: true,
+      run: () => commands.applyView(saved.id),
+    })),
     {
       id: 'view.showAll',
       label: 'Tout réafficher dans le graphe',

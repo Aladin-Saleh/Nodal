@@ -5,6 +5,7 @@ import { DocumentsPanel } from '../documents/DocumentsPanel';
 import { GraphPanel } from '../graph/GraphPanel';
 import { NodeHeader } from '../nodes/NodeHeader';
 import type { ViewMode } from './TopBar';
+import type { GraphViewsApi } from './useGraphViewPersistence';
 import type { WorkspaceData } from './useWorkspaceData';
 
 export interface CenterPaneProps {
@@ -33,6 +34,7 @@ export interface CenterPaneProps {
   onBulkSetType(nodeType: NodeType): void;
   onBulkDelete(): void;
   onValidate(ids: string[]): void;
+  graphViews: GraphViewsApi;
 }
 
 /** Zone centrale : graphe, ou documents du nœud sélectionné. */
@@ -59,6 +61,7 @@ export function CenterPane({
   onBulkSetType,
   onBulkDelete,
   onValidate,
+  graphViews,
 }: CenterPaneProps) {
   const { nodes, graph, tags, detail } = data;
   return (
@@ -86,6 +89,7 @@ export function CenterPane({
               onBulkDelete={onBulkDelete}
               onValidate={onValidate}
               onCreateAt={onCreateAt}
+              views={graphViews}
             />
           </ErrorBoundary>
         )

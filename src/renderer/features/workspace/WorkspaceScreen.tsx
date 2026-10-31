@@ -90,7 +90,7 @@ function WorkspaceView({
   const dispatch = useViewDispatch();
   const data = useWorkspaceData(selectedId);
   const { nodes, detail } = data;
-  useGraphViewPersistence(data.graph);
+  const graphViews = useGraphViewPersistence(data.graph);
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [overlays, setOverlays] = useState<Overlays>(NO_OVERLAYS);
@@ -423,6 +423,10 @@ function WorkspaceView({
     validate: (id) => void validate([id]),
     delete: (id) => void askDelete(id),
     setView,
+    applyView: (id) => {
+      graphViews.apply(id);
+      setView('graph');
+    },
     navigate: (direction) =>
       dispatch({
         type: 'navigate',
@@ -452,6 +456,7 @@ function WorkspaceView({
     masking: hidden.size > 0 || solo !== null,
     canGoBack: canStep(history, -1, (id) => index.byId.has(id)),
     canGoForward: canStep(history, 1, (id) => index.byId.has(id)),
+    savedViews: graphViews.views,
   };
   const actions = [
     ...nodeActions(selected, actionState, commands),
@@ -598,6 +603,7 @@ function WorkspaceView({
             onBulkSetType={(nodeType) => void bulkSetType(nodeType)}
             onBulkDelete={() => void askBulkDelete()}
             onValidate={(ids) => void validate(ids)}
+            graphViews={graphViews}
           />
 
           {detail && (

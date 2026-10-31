@@ -14,6 +14,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { NodeType } from '../../../shared/domain';
 import type {
   DocumentSummary,
+  GraphCamera,
   GraphNode,
   NodePosition,
   RelationTypeInfo,
@@ -164,6 +165,8 @@ function distanceToSegment(
       : Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / lengthSq));
   return Math.hypot(x - (a.x + t * dx), y - (a.y + t * dy));
 }
+
+const round1 = (value: number) => Math.round(value * 10) / 10;
 
 /** Incrémente un compteur par identifiant. */
 const bump = (counts: Map<string, number>, id: string) =>
@@ -583,6 +586,50 @@ export class GraphScene {
     // Brouillard léger : indice de profondeur sans masquer le fond du graphe.
     fog.near = distance;
     fog.far = distance + radius * 6;
+    this.markDirty();
+  }
+
+  /** Caméra courante (vue enregistrée), arrondie au dixième (`round1`). */
+  getCamera(): GraphCamera {
+    const end = this.flight;
+    const position = end?.toPosition ?? this.camera.position;
+    const target = end?.toTarget ?? this.controls.target;
+    return {
+      position: [round1(position.x), round1(position.y), round1(position.z)],
+      target: [round1(target.x), round1(target.y), round1(target.z)],
+    };
+  }
+
+  /**
+   * Place la caméra (vue enregistrée), en vol animé sauf à la première
+   * image ; annule le cadrage automatique en attente.
+   */
+  setCamera(camera: GraphCamera): void {
+    const position = new THREE.Vector3(...camera.position);
+    const target = new THREE.Vector3(...camera.target);
+    const distance = Math.max(position.distanceTo(target), 1);
+    const animate = !this.fitPending;
+    this.fitPending = false;
+    if (animate) {
+      this.flight = {
+        fromPosition: this.camera.position.clone(),
+        fromTarget: this.controls.target.clone(),
+        toPosition: position,
+        toTarget: target,
+        start: performance.now(),
+      };
+    } else {
+      this.flight = null;
+      this.camera.position.copy(position);
+      this.controls.target.copy(target);
+    }
+    // Profondeur et brouillard comme après un cadrage, à cette distance.
+    this.camera.near = Math.max(distance / 200, 0.5);
+    this.camera.far = Math.max(distance * 20, this.camera.far);
+    this.camera.updateProjectionMatrix();
+    const fog = this.scene.fog as THREE.Fog;
+    fog.near = distance;
+    fog.far = distance * 7;
     this.markDirty();
   }
 

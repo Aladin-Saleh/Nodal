@@ -10,6 +10,7 @@ const GRAPH_GESTURES: [string, string][] = [
   ['Ctrl + clic, Ctrl + A', 'sélection multiple, puis actions groupées'],
   ['Glisser dans le vide / clic droit', 'pivoter / déplacer la vue'],
   ['Molette, ⤢', 'zoomer, recadrer'],
+  ['Sélecteur de vue, Vues ▾', 'appliquer ou enregistrer une vue nommée'],
 ];
 
 const TREE_GESTURES: [string, string][] = [

@@ -90,6 +90,17 @@ function renderPanel(
       onBulkDelete={vi.fn()}
       onValidate={overrides.onValidate ?? vi.fn()}
       onCreateAt={vi.fn()}
+      views={{
+        views: [],
+        active: null,
+        modified: false,
+        apply: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        rename: vi.fn(),
+        remove: vi.fn(),
+        setDefault: vi.fn(),
+      }}
     />,
     { wrapper },
   );

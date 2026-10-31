@@ -5,7 +5,11 @@ import {
   useState,
   type Ref,
 } from 'react';
-import type { DocumentSummary, RelationTypeInfo } from '../../../shared/model';
+import type {
+  DocumentSummary,
+  GraphCamera,
+  RelationTypeInfo,
+} from '../../../shared/model';
 import type { VisibleGraph } from './graph-model';
 import { GraphScene, type GraphSceneCallbacks } from './graph-scene';
 
@@ -13,6 +17,8 @@ export interface Graph3DViewHandle {
   fit(): void;
   zoom(factor: number): void;
   relayout(): void;
+  /** Caméra courante ; `null` si le rendu 3D est indisponible. */
+  getCamera(): GraphCamera | null;
 }
 
 export interface Graph3DViewProps extends GraphSceneCallbacks {
@@ -30,6 +36,8 @@ export interface Graph3DViewProps extends GraphSceneCallbacks {
   selectedEdgeId: string | null;
   /** Recentre la vue sur ce nœud à chaque nouvelle demande. */
   centerRequest?: { id: string; nonce: number } | null;
+  /** Caméra d'une vue enregistrée, à appliquer (nouvelle demande : nonce). */
+  cameraRequest?: { camera: GraphCamera; nonce: number } | null;
 }
 
 /** Enveloppe React de la scène 3D ; toutes les données viennent des props. */
@@ -43,6 +51,7 @@ export function Graph3DView({
   multiSelection,
   selectedEdgeId,
   centerRequest = null,
+  cameraRequest = null,
   ...handlers
 }: Graph3DViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -121,12 +130,17 @@ export function Graph3DView({
     if (centerRequest) sceneRef.current?.setSelection(centerRequest.id);
   }, [centerRequest]);
 
+  useEffect(() => {
+    if (cameraRequest) sceneRef.current?.setCamera(cameraRequest.camera);
+  }, [cameraRequest]);
+
   useImperativeHandle(
     ref,
     () => ({
       fit: () => sceneRef.current?.fit(),
       zoom: (factor) => sceneRef.current?.zoom(factor),
       relayout: () => sceneRef.current?.relayout(),
+      getCamera: () => sceneRef.current?.getCamera() ?? null,
     }),
     [],
   );

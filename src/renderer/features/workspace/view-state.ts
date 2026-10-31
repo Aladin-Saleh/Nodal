@@ -3,7 +3,7 @@
  * sélection multiple et réglages du graphe (portée, filtres, replis). Logique
  * pure (reducer), sans React : voir view-state-context.tsx pour le partage.
  */
-import type { GraphViewSettings } from '../../../shared/model';
+import type { GraphCamera, GraphViewSettings } from '../../../shared/model';
 import { DEFAULT_FILTERS, type GraphFilters } from '../graph/graph-model';
 import { EMPTY_HISTORY, step, visit, type NavHistory } from './nav-history';
 
@@ -31,6 +31,10 @@ export interface ViewState {
   graph: GraphViewState;
   /** Précédent / Suivant : nœuds ouverts, quel que soit le moyen. */
   history: NavHistory;
+  /** Vue graphe enregistrée appliquée en dernier (sélecteur du graphe). */
+  activeViewId: string | null;
+  /** Caméra d'une vue à appliquer par le graphe, puis oubliée. */
+  cameraRequest: { camera: GraphCamera; nonce: number } | null;
 }
 
 export const DEFAULT_GRAPH_VIEW: GraphViewState = {
@@ -48,6 +52,8 @@ export const INITIAL_VIEW_STATE: ViewState = {
   multiSelection: new Set(),
   graph: DEFAULT_GRAPH_VIEW,
   history: EMPTY_HISTORY,
+  activeViewId: null,
+  cameraRequest: null,
 };
 
 export type ViewAction =
@@ -81,7 +87,18 @@ export type ViewAction =
   /** Plus rien de masqué ni de solo. */
   | { type: 'showAll' }
   /** Réglages du graphe restaurés à l'ouverture de l'espace. */
-  | { type: 'restoreGraph'; graph: GraphViewState };
+  | { type: 'restoreGraph'; graph: GraphViewState }
+  /** Vue enregistrée : ses réglages, sa caméra, et elle devient active. */
+  | {
+      type: 'applyView';
+      id: string;
+      graph: GraphViewState;
+      camera: GraphCamera | null;
+    }
+  /** Vue active (enregistrée, renommée…) ou aucune (vue supprimée). */
+  | { type: 'setActiveView'; id: string | null }
+  /** Le graphe a appliqué la caméra demandée. */
+  | { type: 'cameraApplied' };
 
 function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   const next = new Set(set);
@@ -230,6 +247,24 @@ export function viewReducer(
       return updateGraph(state, { hidden: new Set(), solo: null });
     case 'restoreGraph':
       return { ...state, graph: action.graph };
+    case 'applyView':
+      return {
+        ...state,
+        graph: action.graph,
+        activeViewId: action.id,
+        cameraRequest: action.camera
+          ? {
+              camera: action.camera,
+              nonce: (state.cameraRequest?.nonce ?? 0) + 1,
+            }
+          : null,
+      };
+    case 'setActiveView':
+      return state.activeViewId === action.id
+        ? state
+        : { ...state, activeViewId: action.id };
+    case 'cameraApplied':
+      return state.cameraRequest ? { ...state, cameraRequest: null } : state;
   }
 }
 
@@ -259,6 +294,27 @@ export function toGraphViewSettings(graph: GraphViewState): GraphViewSettings {
 
 const keep = (ids: readonly string[], existing: ReadonlySet<string>) =>
   new Set(ids.filter((id) => existing.has(id)));
+
+const normalizedSettings = (settings: GraphViewSettings) =>
+  JSON.stringify({
+    ...settings,
+    nodeTypes: settings.nodeTypes.toSorted(),
+    tagIds: settings.tagIds.toSorted(),
+    hiddenRelationTypeIds: settings.hiddenRelationTypeIds.toSorted(),
+    collapsed: settings.collapsed.toSorted(),
+    hidden: settings.hidden.toSorted(),
+  });
+
+/**
+ * Réglages comparables : listes triées, pour savoir si la vue courante
+ * diffère d'une vue enregistrée (« modifiée »).
+ */
+export function sameGraphViewSettings(
+  a: GraphViewSettings,
+  b: GraphViewSettings,
+): boolean {
+  return normalizedSettings(a) === normalizedSettings(b);
+}
 
 /** Réglages enregistrés → état de la vue, sans les identifiants disparus. */
 export function fromGraphViewSettings(

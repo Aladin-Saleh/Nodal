@@ -30,6 +30,8 @@ import type { GraphScopeKind } from '../workspace/view-state';
 import { useViewDispatch, useViewState } from '../workspace/view-state-context';
 import { EdgeCard } from './EdgeCard';
 import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
+import { GraphViewsMenu } from './GraphViewsMenu';
+import type { GraphViewsApi } from '../workspace/useGraphViewPersistence';
 
 export interface GraphPanelProps {
   graph: GraphData;
@@ -57,6 +59,8 @@ export interface GraphPanelProps {
   onValidate(ids: string[]): void;
   /** Double-clic dans le vide : créer un nœud à cet endroit. */
   onCreateAt(position: { x: number; y: number; z: number }): void;
+  /** Vues enregistrées (sélecteur de la barre du graphe). */
+  views: GraphViewsApi;
 }
 
 const GRAPH_HELP =
@@ -91,6 +95,7 @@ export function GraphPanel({
   onBulkDelete,
   onValidate,
   onCreateAt,
+  views,
 }: GraphPanelProps) {
   const { preferences } = usePreferences();
   const client = useClient();
@@ -103,6 +108,7 @@ export function GraphPanel({
     selectedId,
     multiSelection,
     graph: { scope, depth, filters, collapsed, hidden, solo },
+    cameraRequest,
   } = useViewState();
   const dispatch = useViewDispatch();
   const scopeKind =
@@ -197,6 +203,11 @@ export function GraphPanel({
     () => new Set(visible.nodes.map((node) => node.id)),
     [visible],
   );
+  // Caméra d'une vue enregistrée : appliquée par la vue 3D (effet enfant,
+  // exécuté avant celui-ci), la demande peut être oubliée.
+  useEffect(() => {
+    if (cameraRequest) dispatch({ type: 'cameraApplied' });
+  }, [cameraRequest, dispatch]);
   const selectionShortcuts = useRef({
     visibleIds,
     multiSelection,
@@ -305,6 +316,10 @@ export function GraphPanel({
   return (
     <section className="graph-panel" aria-label="Graphe">
       <div className="graph-toolbar">
+        <GraphViewsMenu
+          api={views}
+          getCamera={() => view.current?.getCamera() ?? null}
+        />
         <div className="segmented" role="group" aria-label="Portée du graphe">
           <button
             type="button"
@@ -627,6 +642,7 @@ export function GraphPanel({
           <Graph3DView
             ref={view}
             centerRequest={centerRequest}
+            cameraRequest={cameraRequest}
             visible={visible}
             relationTypes={graph.relationTypes}
             selectedId={selectedId}

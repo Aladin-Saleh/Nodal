@@ -938,3 +938,29 @@ kbd {
   border: 1px solid currentColor;
   border-radius: 3px;
 }
+
+/* Vues graphe enregistrées */
+
+.graph-views {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.graph-views select {
+  max-width: 180px;
+}
+
+.graph-view-modified {
+  font-size: 12px;
+  font-style: italic;
+}
+
+.view-menu-panel {
+  gap: 4px;
+  width: 280px;
+}
+
+.view-menu-panel button {
+  text-align: left;
+}

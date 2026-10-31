@@ -88,6 +88,8 @@ export const CODE_LANGUAGES = [
 ] as const;
 
 export const TITLE_MAX_LENGTH = 300;
+/** Nom d'une vue graphe enregistrée. */
+export const GRAPH_VIEW_NAME_MAX_LENGTH = 80;
 export const SUMMARY_MAX_LENGTH = 2000;
 export const DESCRIPTION_MAX_LENGTH = 2000;
 export const TAG_NAME_MAX_LENGTH = 60;

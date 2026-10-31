@@ -82,6 +82,7 @@ function fakeClient(overrides: Handlers = {}) {
     }),
     'edge:listForNode': () => [],
     'view:getGraph': () => null,
+    'graphView:list': () => [],
     'view:saveGraph': () => null,
     'tag:list': () => [],
     'node:create': ({ parentId, title, nodeType }) => {

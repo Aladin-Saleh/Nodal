@@ -124,6 +124,24 @@ export interface GraphViewSettings {
   assistantPendingOnly: boolean;
 }
 
+/** Caméra du graphe : position et point visé (coordonnées de la scène). */
+export interface GraphCamera {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+/** Vue graphe enregistrée, nommée (réglages d'affichage + caméra). */
+export interface GraphViewInfo {
+  id: string;
+  name: string;
+  settings: GraphViewSettings;
+  /** `null` : cadrage automatique. */
+  camera: GraphCamera | null;
+  /** Vue appliquée à l'ouverture de l'espace (une au plus). */
+  isDefault: boolean;
+  updatedAt: string;
+}
+
 export interface RecentWorkspace {
   id: string;
   name: string;

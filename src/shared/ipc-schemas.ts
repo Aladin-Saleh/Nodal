@@ -17,6 +17,7 @@ import {
   SUMMARY_MAX_LENGTH,
   TAG_NAME_MAX_LENGTH,
   TITLE_MAX_LENGTH,
+  GRAPH_VIEW_NAME_MAX_LENGTH,
   WORKSPACE_NAME_MAX_LENGTH,
 } from './domain';
 import type { IpcArgs, IpcChannel } from './ipc-contract';
@@ -110,6 +111,29 @@ export const graphViewSettingsSchema = z.strictObject({
 });
 
 const idInput = z.strictObject({ id: idSchema });
+
+/** Coordonnées d'affichage : nombres finis, bornés pour rester raisonnables. */
+const coordinate = z.number().finite().min(-1e7).max(1e7);
+const point = z.tuple([coordinate, coordinate, coordinate]);
+export const graphCameraSchema = z.strictObject({
+  position: point,
+  target: point,
+});
+export const graphViewNameSchema = label(
+  'Le nom de la vue',
+  GRAPH_VIEW_NAME_MAX_LENGTH,
+);
+export const createGraphViewInputSchema = z.strictObject({
+  name: graphViewNameSchema,
+  settings: graphViewSettingsSchema,
+  camera: graphCameraSchema.nullable(),
+});
+export const updateGraphViewInputSchema = z.strictObject({
+  id: idSchema,
+  name: graphViewNameSchema.optional(),
+  settings: graphViewSettingsSchema.optional(),
+  camera: graphCameraSchema.nullable().optional(),
+});
 
 export const createNodeInputSchema = z.strictObject({
   parentId: idSchema.nullable(),
@@ -223,8 +247,6 @@ export const updateEdgeInputSchema = z.strictObject({
   ).optional(),
 });
 
-/** Coordonnées d'affichage : nombres finis, bornés pour rester raisonnables. */
-const coordinate = z.number().finite().min(-1e7).max(1e7);
 export const savePositionsInputSchema = z.strictObject({
   positions: z
     .array(
@@ -262,6 +284,11 @@ export const ipcArgsSchemas = {
   'workspace:updateSettings': one(workspaceSettingsSchema),
   'view:getGraph': noArgs,
   'view:saveGraph': one(graphViewSettingsSchema),
+  'graphView:list': noArgs,
+  'graphView:create': one(createGraphViewInputSchema),
+  'graphView:update': one(updateGraphViewInputSchema),
+  'graphView:delete': one(idInput),
+  'graphView:setDefault': one(z.strictObject({ id: idSchema.nullable() })),
 
   'node:list': noArgs,
   'node:get': one(idInput),

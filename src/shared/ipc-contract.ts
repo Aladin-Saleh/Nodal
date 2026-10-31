@@ -31,6 +31,8 @@ import type {
   TagInfo,
   WorkspaceSettings,
   GraphViewSettings,
+  GraphCamera,
+  GraphViewInfo,
 } from './model';
 
 export interface AppInfo {
@@ -64,6 +66,20 @@ export interface UpdateWorkspaceInput {
 export interface IdInput {
   id: string;
 }
+export interface CreateGraphViewInput {
+  name: string;
+  settings: GraphViewSettings;
+  camera: GraphCamera | null;
+}
+
+/** Champs absents : inchangés. */
+export interface UpdateGraphViewInput {
+  id: string;
+  name?: string;
+  settings?: GraphViewSettings;
+  camera?: GraphCamera | null;
+}
+
 export interface CreateNodeInput {
   parentId: string | null;
   title: string;
@@ -212,6 +228,13 @@ export interface IpcContract {
   /** Réglages d'affichage du graphe enregistrés ; `null` s'il n'y en a pas. */
   'view:getGraph': { args: []; result: GraphViewSettings | null };
   'view:saveGraph': { args: [GraphViewSettings]; result: null };
+  /** Vues graphe enregistrées, par ordre de création. */
+  'graphView:list': { args: []; result: GraphViewInfo[] };
+  'graphView:create': { args: [CreateGraphViewInput]; result: GraphViewInfo };
+  'graphView:update': { args: [UpdateGraphViewInput]; result: GraphViewInfo };
+  'graphView:delete': { args: [IdInput]; result: null };
+  /** Vue appliquée à l'ouverture ; `null` : reprendre la dernière session. */
+  'graphView:setDefault': { args: [{ id: string | null }]; result: null };
 
   'node:list': { args: []; result: NodeSummary[] };
   'node:get': { args: [IdInput]; result: NodeDetail };
@@ -314,6 +337,11 @@ export const IPC_CHANNELS = [
   'workspace:updateSettings',
   'view:getGraph',
   'view:saveGraph',
+  'graphView:list',
+  'graphView:create',
+  'graphView:update',
+  'graphView:delete',
+  'graphView:setDefault',
   'node:list',
   'node:get',
   'node:create',

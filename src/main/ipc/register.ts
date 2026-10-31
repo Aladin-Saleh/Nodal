@@ -26,6 +26,7 @@ import {
 } from '../knowledge/llm-export-service';
 import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
+import { GraphViewService } from '../knowledge/graph-view-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -66,6 +67,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const tags = new TagService(context);
   const attachments = new AttachmentService(context);
   const settings = new SettingsService(context);
+  const graphViews = new GraphViewService(context);
   const relationTypes = new RelationTypeService(context);
   const edges = new EdgeService(context);
   const graph = new GraphService(context);
@@ -155,6 +157,17 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     'view:getGraph': () => settings.getGraphView(),
     'view:saveGraph': (input) => {
       settings.saveGraphView(input);
+      return null;
+    },
+    'graphView:list': () => graphViews.list(),
+    'graphView:create': (input) => graphViews.create(input),
+    'graphView:update': (input) => graphViews.update(input),
+    'graphView:delete': ({ id }) => {
+      graphViews.delete(id);
+      return null;
+    },
+    'graphView:setDefault': ({ id }) => {
+      graphViews.setDefault(id);
       return null;
     },
 
