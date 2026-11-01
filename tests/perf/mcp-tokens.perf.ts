@@ -6,8 +6,14 @@
  * à graine fixe : mêmes données à chaque exécution, UUID mis à part).
  * Lancement : npm run test:perf -- mcp-tokens
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { inTransaction } from '../../src/main/database/transaction';
+import {
+  setAnchors,
+  writeCodeRoots,
+} from '../../src/main/knowledge/anchor-service';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { createDefaultTokenizer } from '../../src/main/knowledge/llm-export-service';
 import { formatNodeLink } from '../../src/shared/wiki-links';
@@ -229,5 +235,81 @@ Appelle ${formatNodeLink(ids.components[1]!)}, ${formatNodeLink(ids.components[7
     const output = ['', health.content[0]!.text.slice(0, 700), '', ...lines];
     process.stdout.write(output.join('\n'));
     await client.close();
+  });
+});
+
+/** Texte complet d'une réponse (TOON et documents). */
+const text = (result: { content: { text: string }[] }) =>
+  result.content.map((part) => part.text).join('\n');
+
+describe('tokens : fichiers du code (ancrage)', () => {
+  it('mesure nodal_for_files, le champ stale et les consignes', async () => {
+    const { context, service, dir } = workspace();
+    const { components } = seedScaleOne(context());
+    // Dossier de code : un dossier par service, deux fichiers chacun ; les
+    // dix premiers services ont un fichier modifié bien après la mise à jour.
+    const root = path.join(dir, 'code');
+    components.forEach((id, index) => {
+      const folder = path.join(root, 'src', `service-${index}`);
+      fs.mkdirSync(folder, { recursive: true });
+      for (const name of ['index.ts', 'handler.ts']) {
+        const file = path.join(folder, name);
+        fs.writeFileSync(file, 'export {};\n');
+        const mtime = new Date(
+          index < 10 && name === 'handler.ts' ? '2030-01-01' : '2020-01-01',
+        );
+        fs.utimesSync(file, mtime, mtime);
+      }
+    });
+    const ctx = context();
+    writeCodeRoots(ctx, [root]);
+    const client = await connect(service.getCurrent()!.filePath, false);
+    const { count } = await createDefaultTokenizer();
+    const before = await client.call('nodal_get_node', { id: components[0] });
+    const search = await client.call('nodal_search', { query: 'Service 0.0' });
+    inTransaction(ctx.db, () =>
+      components.forEach((id, index) =>
+        setAnchors(ctx, id, [`src/service-${index}/**`]),
+      ),
+    );
+    const files = [
+      path.join(root, 'src', 'service-0', 'handler.ts'),
+      path.join(root, 'src', 'service-1', 'index.ts'),
+      path.join(root, 'src', 'autre.ts'),
+    ];
+    let start = performance.now();
+    const forFiles = await client.call('nodal_for_files', { paths: files });
+    const forFilesMs = performance.now() - start;
+    const after = await client.call('nodal_get_node', { id: components[0] });
+    const searchAfter = await client.call('nodal_search', {
+      query: 'Service 0.0',
+    });
+    start = performance.now();
+    const health = await client.call('nodal_health', {});
+    const healthMs = performance.now() - start;
+    const readOnly = await connect(service.getCurrent()!.filePath, true);
+    const lines = [
+      `nodal_for_files (3 chemins, 2 nœuds, documents inclus) : ${count(text(forFiles))} (${forFilesMs.toFixed(0)} ms)`,
+      `nodal_get_node sans ancrage : ${count(text(before))}`,
+      `nodal_get_node ancré et obsolète : ${count(text(after))}`,
+      `nodal_search sans ancrage : ${count(text(search))}`,
+      `nodal_search avec stale : ${count(text(searchAfter))}`,
+      `nodal_health (60 nœuds ancrés, 10 obsolètes) : ${count(health.content[0]!.text)} (${healthMs.toFixed(0)} ms)`,
+      `consignes (lecture seule) : ${count(String(readOnly.init.instructions))}`,
+      `consignes (écriture) : ${count(String(client.init.instructions))}`,
+    ];
+    const output = [
+      '',
+      forFiles.content[0]!.text,
+      '',
+      after.content[0]!.text.split('\n').slice(0, 14).join('\n'),
+      '',
+      ...lines,
+      '',
+    ];
+    process.stdout.write(output.join('\n'));
+    expect(forFiles.isError).toBeFalsy();
+    await client.close();
+    await readOnly.close();
   });
 });

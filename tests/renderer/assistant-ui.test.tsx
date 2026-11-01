@@ -12,12 +12,14 @@ describe('consignes « Nodal d’abord »', () => {
     expect(text).toContain('« Base infra »');
     expect(text).toContain('`nodal_search`');
     expect(text).toContain('serveur MCP `nodal`');
+    expect(text).toContain('`nodal_for_files`');
     expect(text).not.toContain('nodal_apply');
   });
 
   it('invitent à enregistrer ce qui est appris seulement si l’écriture est autorisée', () => {
     const text = assistantInstructions('Base infra', true);
     expect(text).toContain('`nodal_apply`');
+    expect(text).toContain('opération `anchor`');
   });
 });
 

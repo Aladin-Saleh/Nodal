@@ -20,6 +20,8 @@ export interface TreePaneProps {
   onMove(id: string, move: DropMove): void;
   /** Actions du nœud (registre commun) : menu contextuel. */
   actionsForNode(id: string): AppAction[];
+  /** Nœuds à la documentation possiblement obsolète. */
+  stale?: ReadonlySet<string>;
 }
 
 /** Actions du menu contextuel, dans cet ordre (les inactives sont omises). */
@@ -55,6 +57,7 @@ export function TreePane({
   onRename,
   onMove,
   actionsForNode,
+  stale,
 }: TreePaneProps) {
   const [menu, setMenu] = useState<{
     id: string;
@@ -139,6 +142,7 @@ export function TreePane({
         solo={solo}
         onToggleHidden={(id) => dispatch({ type: 'toggleHidden', id })}
         onToggleSolo={(id) => dispatch({ type: 'toggleSolo', id })}
+        stale={stale}
       />
       {menu && (
         <ContextMenu

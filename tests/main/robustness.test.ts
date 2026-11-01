@@ -73,6 +73,21 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
     text: fs.readFileSync(file, 'utf8'),
   }));
 
+  /**
+   * Seule exception : la lecture de l'historique git (ancrage aux fichiers
+   * du code), par execFile sans shell, dans un unique fichier.
+   */
+  const GIT_HISTORY = path.join('src', 'main', 'code', 'git-history.ts');
+
+  it('git est lancé sans shell, en un seul endroit, avec des arguments fixes', () => {
+    const text = files.find(({ file }) => file === GIT_HISTORY)?.text ?? '';
+    expect(text).toMatch(/\bexecFile\(/);
+    expect(text).toMatch(/shell:\s*false/);
+    expect(text).not.toMatch(/\bexec\(|\bexecSync\(|\bspawn\(|shell:\s*true/);
+    // Les motifs passent toujours après `--`.
+    expect(text).toMatch(/'--',\s*\n\s*\.\.\.patterns/);
+  });
+
   it.each([
     ['lancement de processus', /\bchild_process\b|\bspawn\(|\bexecFile\(/],
     ['évaluation de code', /\beval\(|new Function\(/],
@@ -82,6 +97,7 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
     ['contexte non isolé', /contextIsolation:\s*false/],
   ])('aucune trace de %s dans les sources', (_label, pattern) => {
     const offenders = files
+      .filter(({ file }) => file !== GIT_HISTORY)
       .filter(({ text }) => pattern.test(text))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);

@@ -11,10 +11,12 @@
  */
 import * as z from 'zod';
 import { CONTENT_TYPES, NODE_TYPES } from '../shared/domain';
+import { ANCHORS_MAX_PER_NODE } from '../shared/code-anchors';
 import { NodalError } from '../shared/errors';
 import type { ShortIds } from './short-ids';
 import {
   addDocument,
+  anchorFiles,
   createNode,
   link,
   tagNode,
@@ -29,6 +31,10 @@ export const APPLY_MAX_OPERATIONS = 100;
 /** Identifiant (préfixe affiché ou UUID) ou référence « $n ». */
 const target = z.string().min(1).max(100);
 const tagNames = z.array(z.string().min(1).max(100)).max(50);
+/** Chemins (absolus ou relatifs) ou motifs glob de fichiers du code. */
+const anchorPaths = z
+  .array(z.string().min(1).max(1000))
+  .max(ANCHORS_MAX_PER_NODE);
 
 export const operationSchema = z.discriminatedUnion('op', [
   z.object({
@@ -77,6 +83,12 @@ export const operationSchema = z.discriminatedUnion('op', [
     nodeId: target,
     add: tagNames.optional(),
     remove: tagNames.optional(),
+  }),
+  z.object({
+    op: z.literal('anchor'),
+    nodeId: target,
+    add: anchorPaths.optional(),
+    remove: anchorPaths.optional(),
   }),
 ]);
 
@@ -170,6 +182,10 @@ function run(ctx: WriteContext, operation: Operation): string {
     case 'tag': {
       const { op: _op, ...input } = operation;
       return tagNode(ctx, input).nodeId;
+    }
+    case 'anchor': {
+      const { op: _op, ...input } = operation;
+      return anchorFiles(ctx, input).nodeId;
     }
   }
 }

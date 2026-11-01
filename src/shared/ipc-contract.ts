@@ -37,6 +37,7 @@ import type {
   LinkSuggestion,
   HealthReport,
 } from './model';
+import type { CodeRootInfo, NodeAnchors, StaleNode } from './code-anchors';
 
 export interface AppInfo {
   appName: string;
@@ -259,6 +260,24 @@ export interface IpcContract {
     args: [{ sourceId: string; targetId: string }];
     result: null;
   };
+  /** Dossiers de code de l'espace (chemins locaux). */
+  'code:getRoots': { args: []; result: CodeRootInfo[] };
+  /** Choix d'un dossier par le main ; `null` si annulé. */
+  'code:addRoot': { args: []; result: CodeRootInfo[] | null };
+  'code:removeRoot': { args: [{ path: string }]; result: CodeRootInfo[] };
+  /** Motifs ancrés au nœud, fichiers trouvés, obsolescence éventuelle. */
+  'anchor:listForNode': { args: [IdInput]; result: NodeAnchors };
+  /** Remplace les motifs ancrés ; renvoie la liste normalisée. */
+  'anchor:set': {
+    args: [{ nodeId: string; patterns: string[] }];
+    result: string[];
+  };
+  /** Choix de fichiers par le main (dans un dossier de code) ; `null` si annulé. */
+  'anchor:pickFiles': { args: [IdInput]; result: string[] | null };
+  /** « Marquer comme à jour ». */
+  'anchor:markReviewed': { args: [IdInput]; result: null };
+  /** Nœuds dont un fichier ancré a changé depuis leur dernière mise à jour. */
+  'anchor:staleNodes': { args: []; result: StaleNode[] };
   'node:get': { args: [IdInput]; result: NodeDetail };
   'node:create': { args: [CreateNodeInput]; result: NodeSummary };
   'node:update': { args: [UpdateNodeInput]; result: NodeSummary };
@@ -371,6 +390,14 @@ export const IPC_CHANNELS = [
   'gap:setStatus',
   'suggestion:accept',
   'suggestion:ignore',
+  'code:getRoots',
+  'code:addRoot',
+  'code:removeRoot',
+  'anchor:listForNode',
+  'anchor:set',
+  'anchor:pickFiles',
+  'anchor:markReviewed',
+  'anchor:staleNodes',
   'node:get',
   'node:create',
   'node:update',

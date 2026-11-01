@@ -24,7 +24,19 @@ import {
   readDocument,
   search,
   tree,
+  anchorCheck,
+  changedFilesText,
+  DEFAULT_FOR_FILES_CHARS,
+  forFiles,
+  staleRow,
+  type AnchorCheck,
 } from './tools';
+import { findStaleNodes } from '../main/code/code-check';
+import type { StaleNode } from '../shared/code-anchors';
+import {
+  readCodeRoots,
+  resolveCodeRoots,
+} from '../main/knowledge/anchor-service';
 import {
   APPLY_MAX_OPERATIONS,
   applyOperations,
@@ -66,7 +78,8 @@ l'utilisateur ne l'a pas validé.
 Commencez par nodal_search : résumés des nœuds et contenu (ou sections) des
 documents trouvés, souvent suffisants. Question à plusieurs volets : plusieurs
 recherches en parallèle. Pour approfondir : nodal_get_node, nodal_read_document,
-nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.`;
+nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.
+Avant de modifier du code : nodal_for_files.`;
 
 const WRITE_INSTRUCTIONS = `
 
@@ -75,7 +88,8 @@ sujets à documenter) : complétez le nœud existant
 (cherchez d'abord) plutôt que d'en créer un ; résumé d'une ou deux phrases,
 détail dans des documents, relations avec les types existants. Plusieurs
 écritures : nodal_apply (un appel, une transaction). Rien n'est supprimé ;
-tout est journalisé et annulable par l'utilisateur.`;
+tout est journalisé et annulable par l'utilisateur. Après avoir modifié du
+code : mettez ses nœuds à jour, ancrez les nouveaux fichiers (op anchor).`;
 
 const READ_ONLY_INSTRUCTIONS = `
 
@@ -154,6 +168,23 @@ function failure(error: unknown): CallToolResult {
       : `Erreur interne : ${error instanceof Error ? error.message : String(error)}`;
   return { content: [{ type: 'text', text: message }], isError: true };
 }
+
+/**
+ * Nœuds possiblement obsolètes parmi ceux d'une réponse : lit le disque et
+ * git une fois la connexion refermée. Un échec n'empêche pas de répondre.
+ */
+async function staleOf(check: AnchorCheck): Promise<StaleNode[]> {
+  if (check.roots.length === 0 || check.nodes.length === 0) return [];
+  try {
+    return await findStaleNodes(check.roots, check.nodes);
+  } catch {
+    return [];
+  }
+}
+
+/** Champ `stale` d'une réponse, absent s'il n'y a rien à signaler. */
+const staleField = (stale: StaleNode[]) =>
+  stale.length > 0 ? { stale: stale.map(staleRow) } : {};
 
 export function createNodalMcpServer(
   options: NodalMcpServerOptions,
@@ -274,9 +305,20 @@ export function createNodalMcpServer(
     },
     async (args): Promise<CallToolResult> => {
       try {
-        const found = call(args, 'read', search);
+        const found = call(args, 'read', (ctx, input: typeof args) => {
+          const data = search(ctx, input);
+          const ids = data.result.nodes.map((node) => node.id);
+          return {
+            ...data,
+            check: anchorCheck(ctx, options.workspaceFile, ids),
+          };
+        });
         if (found.result.nodeCount === 0) noteSearchGap(args.query);
-        return withDocuments(found);
+        const stale = await staleOf(found.check);
+        return withDocuments({
+          result: { ...found.result, ...staleField(stale) },
+          documents: found.documents,
+        });
       } catch (error) {
         return failure(error);
       }
@@ -296,11 +338,27 @@ export function createNodalMcpServer(
     },
     async (args): Promise<CallToolResult> => {
       try {
-        return withDocuments(
-          call(args, 'read', (ctx, input: { id: string }) =>
-            getNode(ctx, input.id),
-          ),
-        );
+        const found = call(args, 'read', (ctx, input: { id: string }) => {
+          const data = getNode(ctx, input.id);
+          return {
+            ...data,
+            check: anchorCheck(ctx, options.workspaceFile, [input.id]),
+          };
+        });
+        const [stale] = await staleOf(found.check);
+        const { node } = found.result;
+        return withDocuments({
+          result: {
+            ...found.result,
+            node: stale
+              ? {
+                  ...node,
+                  stale: `depuis ${stale.since.slice(0, 10)} : ${changedFilesText(stale)}`,
+                }
+              : node,
+          },
+          documents: found.documents,
+        });
       } catch (error) {
         return failure(error);
       }
@@ -406,7 +464,63 @@ export function createNodalMcpServer(
       }),
       annotations: READ_ONLY,
     },
-    run(health),
+    async (args): Promise<CallToolResult> => {
+      try {
+        // Nœuds ancrés d'abord (identifiants complets), vérifiés hors connexion.
+        const check = withWorkspace(options.workspaceFile, (ctx) =>
+          anchorCheck(ctx, options.workspaceFile),
+        );
+        const stale = check.nodes.length > 0 ? await staleOf(check) : null;
+        const data = call(args, 'read', (ctx, input: typeof args) =>
+          health(ctx, input, stale),
+        );
+        return { content: [{ type: 'text', text: encodeToon(data) }] };
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    'nodal_for_files',
+    {
+      title: 'Nœuds des fichiers du code',
+      description:
+        'Nœuds ancrés à des fichiers du code (chemins absolus, ou relatifs au dossier de code), ' +
+        'au format de nodal_search : chemin, résumé, fichiers concernés, puis leurs documents courts ' +
+        '(dans la limite de maxChars ; les autres dans otherDocuments). notAnchored : fichiers sans nœud ; ' +
+        'stale : nœuds dont des fichiers ont changé depuis leur dernière mise à jour (aussi signalés par ' +
+        'nodal_search et nodal_get_node). À appeler avant de modifier ces fichiers.',
+      inputSchema: z.object({
+        paths: z
+          .array(z.string().min(1).max(1000))
+          .min(1)
+          .max(100)
+          .describe('Chemins des fichiers'),
+        maxChars: z
+          .number()
+          .int()
+          .min(0)
+          .max(100_000)
+          .default(DEFAULT_FOR_FILES_CHARS)
+          .describe('Contenu de documents renvoyé au plus'),
+      }),
+      annotations: READ_ONLY,
+    },
+    async (args): Promise<CallToolResult> => {
+      try {
+        const found = call(args, 'read', (ctx, input: typeof args) =>
+          forFiles(ctx, input, options.workspaceFile),
+        );
+        const stale = await staleOf(found.check);
+        return withDocuments({
+          result: { ...found.result, ...staleField(stale) },
+          documents: found.documents,
+        });
+      } catch (error) {
+        return failure(error);
+      }
+    },
   );
 
   server.registerTool(
@@ -445,7 +559,17 @@ export function createNodalMcpServer(
       try {
         const client = server.server.getClientVersion()?.name ?? null;
         const data = call(args, 'write', (ctx, resolved) =>
-          change({ ...ctx, client }, resolved),
+          change(
+            {
+              ...ctx,
+              client,
+              codeRoots: resolveCodeRoots(
+                readCodeRoots(ctx),
+                options.workspaceFile,
+              ),
+            },
+            resolved,
+          ),
         );
         return { content: [{ type: 'text', text: encodeToon(data) }] };
       } catch (error) {
@@ -579,7 +703,8 @@ export function createNodalMcpServer(
       description:
         'Applique dans l’ordre une liste d’opérations, en une seule transaction (tout ou rien) : ' +
         'createNode, updateNode, addDocument, updateDocument, link, tag — mêmes champs que les outils ' +
-        'unitaires, plus op. Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
+        'unitaires, plus op — et anchor (nodeId, add/remove : fichiers du code, chemins ou motifs glob ' +
+        'comme src/mcp/**, à ancrer au nœud). Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
         'la n-ième opération (ex. nodeId: "$1"). Renvoie l’identifiant de chaque élément touché. ' +
         'À préférer dès qu’il y a plusieurs choses à enregistrer.',
       inputSchema: z.object({

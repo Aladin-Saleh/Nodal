@@ -15,6 +15,8 @@ export interface HealthDialogProps {
   onOpenNode(id: string): void;
   onOpenDocument(documentId: string, nodeId: string): void;
   onValidate(ids: string[]): void;
+  /** « Marquer comme à jour » : les badges de l'arbre sont à revérifier. */
+  onCodeAnchorsChanged(): void;
   /** Créer un nœud pour un sujet à documenter (marqué traité ensuite). */
   onCreateFromGap(gap: SearchGap): void;
 }
@@ -28,6 +30,8 @@ const HINTS: Partial<Record<HealthCheckId, string>> = {
   brokenLink: 'Le nœud visé a été supprimé ou renommé (lien par titre).',
   duplicate: 'Titres presque identiques : à fusionner ou à distinguer.',
   assistantPending: 'Ajouté par un assistant IA, pas encore vérifié.',
+  stale:
+    'Des fichiers du code ancrés au nœud ont changé depuis sa dernière mise à jour.',
 };
 
 /**
@@ -41,6 +45,7 @@ export function HealthDialog({
   onOpenNode,
   onOpenDocument,
   onValidate,
+  onCodeAnchorsChanged,
   onCreateFromGap,
 }: HealthDialogProps) {
   const client = useClient();
@@ -60,6 +65,15 @@ export function HealthDialog({
     await run(() =>
       client.call('gap:setStatus', { key: gap.key, status: 'ignored' }),
     );
+    void load();
+  };
+
+  const markReviewed = async (nodeId: string) => {
+    const done = await run(() =>
+      client.call('anchor:markReviewed', { id: nodeId }),
+    );
+    if (done === undefined) return;
+    onCodeAnchorsChanged();
     void load();
   };
 
@@ -111,6 +125,20 @@ export function HealthDialog({
               }}
             >
               Valider
+            </button>
+          </>
+        );
+      case 'stale':
+        return (
+          <>
+            {open}
+            <button
+              type="button"
+              className="secondary"
+              title="La documentation reflète le code actuel"
+              onClick={() => void markReviewed(item.nodeId)}
+            >
+              Marquer comme à jour
             </button>
           </>
         );

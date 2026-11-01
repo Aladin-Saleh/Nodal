@@ -13,6 +13,7 @@ import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { DocumentService } from './document-service';
 import { EdgeService } from './edge-service';
 import { NodeService } from './node-service';
+import { listAnchors, setAnchors } from './anchor-service';
 import { asRow, asRows } from './rows';
 import { listNodeTags } from './tag-service';
 
@@ -37,6 +38,7 @@ export interface ChangeStates {
   update_document: { before: DocumentState; after: DocumentState };
   link: { before: null; after: { edgeId: string } };
   tag: { before: { tagIds: string[] }; after: { tagIds: string[] } };
+  anchor: { before: { patterns: string[] }; after: { patterns: string[] } };
 }
 
 export type ChangeEntry = {
@@ -280,6 +282,19 @@ export class AssistantChangeService {
               existing.has(tagId),
             ),
           });
+          break;
+        }
+        case 'anchor': {
+          const current = listAnchors(ctx, row.entity_id);
+          const { patterns: expected } = after as { patterns: string[] };
+          if (!sameJson(current, expected)) {
+            throw modifiedSince('Les fichiers ancrés au nœud');
+          }
+          setAnchors(
+            ctx,
+            row.entity_id,
+            (before as { patterns: string[] }).patterns,
+          );
           break;
         }
       }

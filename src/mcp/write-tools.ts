@@ -32,6 +32,13 @@ import { RelationTypeService } from '../main/knowledge/relation-type-service';
 import { asRow, asRows } from '../main/knowledge/rows';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
+import { toRootRelative } from '../shared/code-anchors';
+import {
+  PATHS_CASE_INSENSITIVE,
+  listAnchors,
+  normalizeAnchorList,
+  setAnchors,
+} from '../main/knowledge/anchor-service';
 import { canonicalizeLlmLinks } from './links';
 import { loadShortIds } from './short-ids';
 import type { ReadContext } from './workspace-reader';
@@ -49,6 +56,8 @@ function canonicalBody(ctx: ReadContext, body: string): string {
 /** Contexte d'une écriture : l'espace et le nom de l'assistant appelant. */
 export interface WriteContext extends ReadContext {
   client: string | null;
+  /** Dossiers de code de l'espace (absolus), pour ancrer des chemins absolus. */
+  codeRoots?: string[];
 }
 
 /** Valide une valeur avec les règles de l'application (mêmes messages). */
@@ -367,4 +376,51 @@ export function tagNode(
     });
   }
   return { nodeId: input.nodeId, tags: after.map((t) => t.name).join(', ') };
+}
+
+/**
+ * Ancre des fichiers du code à un nœud (ou en retire) : chemins absolus dans
+ * un dossier de code de l'espace, ou chemins et motifs glob relatifs à ces
+ * dossiers (ex. src/mcp/**).
+ */
+export function anchorFiles(
+  ctx: WriteContext,
+  input: { nodeId: string; add?: string[]; remove?: string[] },
+) {
+  nodeType(ctx, input.nodeId);
+  const roots = ctx.codeRoots ?? [];
+  const relative = (raw: string) => {
+    const found = toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE);
+    if (found?.path) return found.path;
+    throw new NodalError(
+      'VALIDATION_ERROR',
+      roots.length === 0
+        ? `« ${raw} » : aucun dossier de code n'est déclaré dans Nodal ; donnez un chemin relatif.`
+        : `« ${raw} » n'est dans aucun dossier de code (${roots.join(', ')}).`,
+    );
+  };
+  const before = listAnchors(ctx, input.nodeId);
+  const removed = new Set(
+    normalizeAnchorList((input.remove ?? []).map(relative)),
+  );
+  const added = normalizeAnchorList((input.add ?? []).map(relative));
+  const after = setAnchors(ctx, input.nodeId, [
+    ...before.filter((pattern) => !removed.has(pattern)),
+    ...added,
+  ]);
+  const unchanged =
+    after.length === before.length &&
+    after.every((pattern, index) => pattern === before[index]);
+  if (!unchanged) {
+    recordAssistantChange(ctx, {
+      action: 'anchor',
+      nodeId: input.nodeId,
+      entityId: input.nodeId,
+      summary: `Fichiers ancrés à ${pathOf(ctx, input.nodeId)} : ${after.join(', ') || 'aucun'}`,
+      client: ctx.client,
+      before: { patterns: before },
+      after: { patterns: after },
+    });
+  }
+  return { nodeId: input.nodeId, anchors: after.join(', ') };
 }

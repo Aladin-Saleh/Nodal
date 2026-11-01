@@ -87,6 +87,7 @@ interface NodeRow {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  code_reviewed_at: string | null;
 }
 
 interface DocumentRow {
@@ -183,7 +184,7 @@ export async function exportWorkspace(
     db
       .prepare(
         `SELECT id, parent_id, title, node_type, summary, color, position_x, position_y, position_z,
-           sort_order, created_at, updated_at
+           sort_order, created_at, updated_at, code_reviewed_at
          FROM node WHERE workspace_id = ? ORDER BY sort_order, rowid`,
       )
       .all(workspaceId),
@@ -210,6 +211,16 @@ export async function exportWorkspace(
       .prepare(
         `SELECT nt.node_id, nt.tag_id FROM node_tag nt
          JOIN node n ON n.id = nt.node_id WHERE n.workspace_id = ?`,
+      )
+      .all(workspaceId),
+  );
+
+  const anchors = asRows<{ node_id: string; pattern: string }>(
+    db
+      .prepare(
+        `SELECT a.node_id, a.pattern FROM node_anchor a
+         JOIN node n ON n.id = a.node_id WHERE n.workspace_id = ?
+         ORDER BY a.node_id, a.sort_order, a.pattern`,
       )
       .all(workspaceId),
   );
@@ -298,6 +309,14 @@ export async function exportWorkspace(
       attachmentsByNode.set(ownerNodeId, list);
     }
 
+    const anchorsByNode = new Map<string, string[]>();
+    for (const { node_id, pattern } of anchors) {
+      anchorsByNode.set(node_id, [
+        ...(anchorsByNode.get(node_id) ?? []),
+        pattern,
+      ]);
+    }
+
     const tagsByNode = new Map<string, string[]>();
     for (const { node_id, tag_id } of nodeTags) {
       tagsByNode.set(node_id, [...(tagsByNode.get(node_id) ?? []), tag_id]);
@@ -334,6 +353,12 @@ export async function exportWorkspace(
         tagIds: tagsByNode.get(node.id) ?? [],
         createdAt: node.created_at,
         updatedAt: node.updated_at,
+        // Ancrage aux fichiers du code : motifs relatifs, portables. Les
+        // dossiers de code (chemins locaux) ne sont pas exportés.
+        ...(anchorsByNode.has(node.id) && {
+          codeAnchors: anchorsByNode.get(node.id),
+        }),
+        ...(node.code_reviewed_at && { codeReviewedAt: node.code_reviewed_at }),
         documents: documentsByNode.get(node.id) ?? [],
         attachments: attachmentsByNode.get(node.id) ?? [],
       })),

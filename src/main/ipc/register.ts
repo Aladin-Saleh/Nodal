@@ -12,6 +12,7 @@ import type {
   PreferencesUpdate,
 } from '../../shared/preferences';
 import type { FileDialogs } from '../file-dialogs';
+import { CodeAnchorService } from '../code/code-anchor-service';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
 import { AttachmentService } from '../knowledge/attachment-service';
 import type { ContextProvider } from '../knowledge/context';
@@ -28,6 +29,7 @@ import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
+import { listAnchoredNodes } from '../knowledge/anchor-service';
 import { SuggestionService } from '../knowledge/suggestion-service';
 import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
@@ -78,6 +80,12 @@ export function createImplementations(deps: IpcDependencies): Implementations {
   const search = new SearchService(context);
   const maintenance = new MaintenanceService(context);
   const assistantChanges = new AssistantChangeService(context);
+  const codeAnchors = new CodeAnchorService(context, () => {
+    const current = workspaces.getCurrent();
+    if (!current)
+      throw new NodalError('NO_WORKSPACE_OPEN', "Aucun espace n'est ouvert.");
+    return current.filePath;
+  });
   // Le dictionnaire du tokenizer est chargé une seule fois, à la demande.
   let tokenizer: Promise<Tokenizer> | null = null;
   const requireCurrent = () => {
@@ -177,7 +185,30 @@ export function createImplementations(deps: IpcDependencies): Implementations {
 
     'node:list': () => nodes.list(),
     'suggestion:listForNode': ({ id }) => suggestions.listForNode(id),
-    'health:report': () => healthReport(context()),
+    'health:report': async () => {
+      // Obsolescence d'abord (disque, git), puis le rapport en un seul tenant.
+      const anchored = listAnchoredNodes(context()).length > 0;
+      const stale = anchored ? await codeAnchors.staleNodes() : null;
+      return healthReport(context(), undefined, stale);
+    },
+    'code:getRoots': () => codeAnchors.getRoots(),
+    'code:addRoot': async () => {
+      const directory = await dialogs.pickCodeRoot();
+      return directory ? codeAnchors.addRoot(directory) : null;
+    },
+    'code:removeRoot': ({ path }) => codeAnchors.removeRoot(path),
+    'anchor:listForNode': ({ id }) => codeAnchors.listForNode(id),
+    'anchor:set': ({ nodeId, patterns }) =>
+      codeAnchors.setAnchors(nodeId, patterns),
+    'anchor:pickFiles': async ({ id }) => {
+      const files = await dialogs.pickAnchorFiles(codeAnchors.firstRoot());
+      return files.length > 0 ? codeAnchors.addFiles(id, files) : null;
+    },
+    'anchor:markReviewed': ({ id }) => {
+      codeAnchors.markReviewed(id);
+      return null;
+    },
+    'anchor:staleNodes': () => codeAnchors.staleNodes(),
     'gap:setStatus': ({ key, status }) => {
       setSearchGapStatus(context(), key, status);
       return null;

@@ -37,6 +37,7 @@ import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
 import { canStep } from './nav-history';
+import { useStaleNodes } from './useStaleNodes';
 import { useWorkspaceData } from './useWorkspaceData';
 import {
   nodeActions,
@@ -129,6 +130,14 @@ function WorkspaceView({
 
   /** Incrémenté à chaque document enregistré (suggestions de liens). */
   const [documentsRevision, setDocumentsRevision] = useState(0);
+  /** Documentation possiblement obsolète : revérifiée après chaque écriture. */
+  const staleNodes = useStaleNodes(
+    documentsRevision + data.externalRevision * 100_000,
+  );
+  const staleIds = useMemo(
+    () => new Set(staleNodes.stale.keys()),
+    [staleNodes.stale],
+  );
   /** Demande de focus sur la recherche (Ctrl+F). */
   const [searchFocus, setSearchFocus] = useState(0);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
@@ -642,6 +651,7 @@ function WorkspaceView({
               if (node) void moveTo(node, move.parentId, move.index);
             }}
             actionsForNode={actionsForNode}
+            stale={staleIds}
           />
 
           <CenterPane
@@ -724,6 +734,7 @@ function WorkspaceView({
                     onAddDocument={() =>
                       openOverlay('addingDocumentFor', detail.id)
                     }
+                    onCodeAnchorsChanged={() => void staleNodes.refresh()}
                   />
                 </ErrorBoundary>
               )}
@@ -774,6 +785,7 @@ function WorkspaceView({
               openDocument(documentId, nodeId);
             }}
             onValidate={(ids) => void validate(ids)}
+            onCodeAnchorsChanged={() => void staleNodes.refresh()}
             onCreateFromGap={(gap) => {
               closeOverlay('health');
               setDialog({

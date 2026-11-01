@@ -28,6 +28,10 @@ export interface FileDialogs {
   pickExportParentDirectory(): Promise<string | null>;
   /** Dossier d'export à importer ; `null` si annulé. */
   pickImportFolder(): Promise<string | null>;
+  /** Dossier de code associé à l'espace ; `null` si annulé. */
+  pickCodeRoot(): Promise<string | null>;
+  /** Fichiers du code à ancrer à un nœud ; liste vide si annulé. */
+  pickAnchorFiles(defaultPath: string | null): Promise<string[]>;
   /** Emplacement d'un fichier .nodal (nouvel espace importé, sauvegarde). */
   pickNodalSavePath(
     title: string,
@@ -108,6 +112,23 @@ export function createFileDialogs(
         properties: ['openDirectory'],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickCodeRoot() {
+      const result = await open({
+        title: 'Choisir un dossier de code',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickAnchorFiles(defaultPath) {
+      const result = await open({
+        title: 'Ancrer des fichiers du code',
+        ...(defaultPath ? { defaultPath } : {}),
+        properties: ['openFile', 'multiSelections'],
+      });
+      return result.canceled ? [] : result.filePaths;
     },
 
     async pickNodalSavePath(title, suggestedName) {

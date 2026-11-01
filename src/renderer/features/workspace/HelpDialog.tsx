@@ -18,6 +18,7 @@ const TREE_GESTURES: [string, string][] = [
   ['Clic droit', 'menu contextuel du nœud'],
   ['Œil (au survol)', 'masquer le nœud et ses descendants dans le graphe'],
   ['Alt + clic sur l’œil', 'n’afficher que cette branche (ou en sortir)'],
+  ['Marque « MAJ »', 'des fichiers du code ancrés ont changé depuis'],
 ];
 
 /** Touches propres à un panneau, hors du registre des actions. */
@@ -96,8 +97,12 @@ export function HelpDialog({
         d’un nœud (ou de son chemin) pour l’ouvrir, ou le nom d’une action.
         Documents : tapez [[ dans un document Markdown pour choisir un nœud et
         créer un lien interne (il suit les renommages et crée une relation « est
-        lié à »). « Mentionné dans » liste les documents qui citent le nœud. Le
-        guide complet est fourni avec l’application (docs/guide-utilisateur.md).
+        lié à »). « Mentionné dans » liste les documents qui citent le nœud.
+        Fichiers du code : déclarez un dossier de code dans les paramètres de
+        l’espace, puis ancrez un nœud à des fichiers (src/mcp/** par exemple)
+        depuis son panneau ; Nodal signale « possiblement obsolète » quand ils
+        changent après la dernière mise à jour du nœud. Le guide complet est
+        fourni avec l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

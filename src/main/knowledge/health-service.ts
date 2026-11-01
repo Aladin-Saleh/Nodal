@@ -5,8 +5,9 @@
  * (recherches d'un assistant restées sans résultat).
  *
  * Chaque vérification est une entrée de `HEALTH_CHECKS` : une nouvelle
- * vérification (ex. documentation obsolète après l'ancrage aux fichiers du
- * code) s'ajoute à la liste sans toucher au reste.
+ * vérification s'ajoute à la liste sans toucher au reste. Seule la
+ * documentation obsolète (fichiers ancrés modifiés) est à part : elle lit le
+ * disque de façon asynchrone et son résultat est passé à `healthReport`.
  */
 import type {
   HealthCheckId,
@@ -14,6 +15,7 @@ import type {
   HealthReport,
   SearchGap,
 } from '../../shared/model';
+import type { StaleNode } from '../../shared/code-anchors';
 import { foldText } from '../../shared/text';
 import { parseWikiLinks, resolveTarget } from '../../shared/wiki-links';
 import { pendingAssistantNodeIds } from './assistant-origin';
@@ -229,21 +231,69 @@ export const HEALTH_CHECKS: HealthCheck[] = [
   },
 ];
 
-/** Rapport complet : compteurs exacts, listes plafonnées à `limit`. */
+export const STALE_CHECK_LABEL = 'Documentation possiblement obsolète';
+
+/**
+ * Lignes « documentation possiblement obsolète » : la vérification lit le
+ * disque et git (asynchrone, hors connexion), son résultat est passé ici.
+ */
+function staleIssues(
+  ctx: ServiceContext,
+  stale: readonly StaleNode[],
+): HealthIssue[] {
+  const titleOf = ctx.db.prepare(
+    'SELECT title FROM node WHERE id = ? AND workspace_id = ?',
+  );
+  return stale.flatMap((node) => {
+    const row = titleOf.get(node.nodeId, ctx.workspaceId) as
+      | { title: string }
+      | undefined;
+    if (!row) return [];
+    const shown = node.files.slice(0, 3).map((file) => file.path);
+    const more = node.fileCount - shown.length;
+    return [
+      issue(
+        'stale',
+        { id: node.nodeId, title: row.title },
+        {
+          detail:
+            more > 0 ? `${shown.join(', ')} (+${more})` : shown.join(', '),
+        },
+      ),
+    ];
+  });
+}
+
+/**
+ * Rapport complet : compteurs exacts, listes plafonnées à `limit`. `stale` :
+ * nœuds ancrés possiblement obsolètes ; `null` (aucun nœud ancré) omet la
+ * vérification.
+ */
 export function healthReport(
   ctx: ServiceContext,
   limit = HEALTH_DEFAULT_LIMIT,
+  stale: readonly StaleNode[] | null = null,
 ): HealthReport {
-  const checks = HEALTH_CHECKS.map((check) => {
-    const issues = check.run(ctx);
-    return {
-      id: check.id,
-      label: check.label,
-      count: issues.length,
-      issues: issues.slice(0, limit),
-    };
-  });
-  return { checks, gaps: listSearchGaps(ctx, 'open', limit) };
+  const checks = HEALTH_CHECKS.map((check) => ({
+    id: check.id,
+    label: check.label,
+    issues: check.run(ctx),
+  }));
+  if (stale) {
+    checks.push({
+      id: 'stale',
+      label: STALE_CHECK_LABEL,
+      issues: staleIssues(ctx, stale),
+    });
+  }
+  return {
+    checks: checks.map((check) => ({
+      ...check,
+      count: check.issues.length,
+      issues: check.issues.slice(0, limit),
+    })),
+    gaps: listSearchGaps(ctx, 'open', limit),
+  };
 }
 
 // --- Sujets à documenter (recherches sans résultat) -------------------------

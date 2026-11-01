@@ -8,6 +8,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { z } from 'zod';
+import {
+  ANCHOR_PATTERN_MAX_LENGTH,
+  ANCHORS_MAX_PER_NODE,
+  normalizeAnchorPattern,
+} from '../../shared/code-anchors';
 import { CONTENT_TYPES, NODE_TYPES } from '../../shared/domain';
 import { NodalError } from '../../shared/errors';
 import { inTransaction } from '../database/transaction';
@@ -78,6 +83,12 @@ const manifestSchema = z.object({
       tagIds: z.array(id),
       createdAt: iso,
       updatedAt: iso,
+      /** Ancrage aux fichiers du code (absent des exports antérieurs). */
+      codeAnchors: z
+        .array(z.string().max(ANCHOR_PATTERN_MAX_LENGTH))
+        .max(ANCHORS_MAX_PER_NODE)
+        .optional(),
+      codeReviewedAt: iso.nullable().optional(),
       documents: z.array(documentSchema),
       attachments: z.array(attachmentSchema),
     }),
@@ -337,6 +348,12 @@ export function writeImport(
     const insertNodeTag = db.prepare(
       'INSERT INTO node_tag (node_id, tag_id) VALUES (?, ?)',
     );
+    const insertAnchor = db.prepare(
+      'INSERT INTO node_anchor (node_id, pattern, sort_order, created_at) VALUES (?, ?, ?, ?)',
+    );
+    const setReviewed = db.prepare(
+      'UPDATE node SET code_reviewed_at = ? WHERE id = ?',
+    );
     const insertDocument = db.prepare(
       `INSERT INTO document (id, node_id, title, content_type, language, body, sort_order, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -365,6 +382,17 @@ export function writeImport(
       );
       for (const tagId of new Set(node.tagIds))
         insertNodeTag.run(node.id, tagId);
+      if (node.codeReviewedAt) {
+        setReviewed.run(node.codeReviewedAt, node.id);
+      }
+      // Motif invalide (manifest modifié à la main) : ignoré.
+      const patterns = (node.codeAnchors ?? []).flatMap((raw) => {
+        const checked = normalizeAnchorPattern(raw);
+        return checked.ok ? [checked.pattern] : [];
+      });
+      [...new Set(patterns)].forEach((pattern, index) =>
+        insertAnchor.run(node.id, pattern, index, node.updatedAt),
+      );
     }
     // Documents puis pièces jointes (une pièce jointe peut viser un document).
     for (const node of nodes) {

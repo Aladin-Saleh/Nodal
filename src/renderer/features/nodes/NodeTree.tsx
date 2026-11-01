@@ -51,6 +51,8 @@ export interface NodeTreeProps {
   onMove?(id: string, move: DropMove): void;
   /** Clic droit, touche Menu ou Maj+F10 : menu contextuel du nœud. */
   onContextMenu?(id: string, point: { x: number; y: number }): void;
+  /** Documentation possiblement obsolète (fichiers ancrés modifiés depuis). */
+  stale?: ReadonlySet<string>;
 }
 
 /** Œil ouvert, ou barré quand le nœud est masqué. */
@@ -96,6 +98,7 @@ export function NodeTree({
   onToggleSolo,
   onMove,
   onContextMenu,
+  stale,
 }: NodeTreeProps) {
   const rows = visibleRows(index, expanded);
   const container = useRef<HTMLUListElement>(null);
@@ -331,6 +334,15 @@ export function NodeTree({
                 aria-label="Ajouté par l’IA, non validé"
               >
                 IA
+              </span>
+            )}
+            {stale?.has(row.node.id) && (
+              <span
+                className="stale-mark"
+                title="Possiblement obsolète : des fichiers ancrés ont changé depuis"
+                aria-label="Possiblement obsolète"
+              >
+                MAJ
               </span>
             )}
             {onToggleHidden && (

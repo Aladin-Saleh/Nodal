@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { decode as decodeToon } from '@toon-format/toon';
 import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  listAnchors,
+  setAnchors,
+  writeCodeRoots,
+} from '../../src/main/knowledge/anchor-service';
 import { AssistantChangeService } from '../../src/main/knowledge/assistant-change-service';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { EdgeService } from '../../src/main/knowledge/edge-service';
@@ -249,6 +254,7 @@ describe('serveur MCP', () => {
       tools: { name: string; annotations?: { readOnlyHint?: boolean } }[];
     };
     expect(tools.map((tool) => tool.name).toSorted()).toEqual([
+      'nodal_for_files',
       'nodal_get_node',
       'nodal_health',
       'nodal_neighborhood',
@@ -1189,5 +1195,148 @@ describe('validation de ce qu’a ajouté l’IA', () => {
     journal.undo(entry!.id);
     expect(nodes.list().some((node) => node.id === id)).toBe(false);
     await client.close();
+  });
+});
+
+/** Dossier de code déclaré pour l'espace, avec un fichier modifié bien après. */
+function codeRoot() {
+  const { context, dir } = workspace();
+  const root = path.join(dir, 'code');
+  const write = (relative: string, mtime: Date) => {
+    const target = path.join(root, ...relative.split('/'));
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, 'x');
+    fs.utimesSync(target, mtime, mtime);
+  };
+  write('src/api/server.ts', new Date('2027-01-01T00:00:00Z'));
+  write('src/cache/redis.ts', new Date('2026-01-01T00:00:00Z'));
+  writeCodeRoots(context(), [root]);
+  return root;
+}
+
+describe('fichiers du code (ancrage)', () => {
+  it('ancre des fichiers par nodal_apply, journalisé et annulable', async () => {
+    const root = codeRoot();
+    const client = await connect(file, false);
+    const applied = toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'anchor',
+            nodeId: short(ids.api),
+            add: [path.join(root, 'src', 'api', 'server.ts'), 'src/api/**'],
+          },
+        ],
+      }),
+    );
+    expect(applied.results).toEqual([
+      { ref: '$1', op: 'anchor', id: short(ids.api) },
+    ]);
+    const { context } = workspace();
+    expect(listAnchors(context(), ids.api)).toEqual([
+      'src/api/server.ts',
+      'src/api/**',
+    ]);
+    const outside = await client.call('nodal_apply', {
+      operations: [
+        { op: 'anchor', nodeId: ids.api, add: [path.join(file, '..', 'x.ts')] },
+      ],
+    });
+    expect(outside.isError).toBe(true);
+    expect(outside.content[0]!.text).toContain(
+      "n'est dans aucun dossier de code",
+    );
+
+    const journal = new AssistantChangeService(context);
+    const entry = journal.list().find((change) => change.action === 'anchor')!;
+    expect(entry.summary).toContain('src/api/server.ts, src/api/**');
+    journal.undo(entry.id);
+    expect(listAnchors(context(), ids.api)).toEqual([]);
+  });
+
+  it('nodal_for_files renvoie les nœuds ancrés et signale la documentation obsolète', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    setAnchors(context(), ids.api, ['src/api/**']);
+    setAnchors(context(), ids.cache, ['src/cache/redis.ts']);
+    const client = await connect(file);
+    const result = await client.call('nodal_for_files', {
+      paths: [
+        path.join(root, 'src', 'api', 'server.ts'),
+        'src/cache/redis.ts',
+        'src/autre.ts',
+      ],
+      maxChars: 100,
+    });
+    const data = toon(result);
+    expect(data.nodes).toEqual([
+      {
+        id: short(ids.api),
+        path: 'API',
+        type: 'component',
+        summary: 'Expose les commandes',
+        files: 'src/api/server.ts',
+      },
+      {
+        id: short(ids.cache),
+        path: 'API > Cache',
+        type: 'data',
+        summary: null,
+        files: 'src/cache/redis.ts',
+      },
+    ]);
+    expect(data.notAnchored).toBe('src/autre.ts');
+    // Seule l'API a un fichier modifié après sa dernière mise à jour.
+    expect(data.stale).toEqual([
+      {
+        id: short(ids.api),
+        since: expect.stringMatching(/^2026-/),
+        changed: 'src/api/server.ts',
+      },
+    ]);
+    // Documents : le court en entier, le long cité.
+    expect(result.content[1]!.text).toContain(
+      'Le déploiement passe par la CI.',
+    );
+    expect(data.otherDocuments).toEqual([
+      {
+        nodeId: short(ids.cache),
+        id: short(ids.query),
+        title: 'Requête',
+        chars: 500,
+      },
+    ]);
+
+    // Le même champ dans la recherche et le détail du nœud.
+    expect(
+      toon(await client.call('nodal_search', { query: 'API' })).stale,
+    ).toHaveLength(1);
+    const node = toon(await client.call('nodal_get_node', { id: ids.api }));
+    expect(node.node.anchors).toBe('src/api/**');
+    expect(node.node.stale).toMatch(/^depuis 2026-.* : src\/api\/server\.ts$/);
+    expect(
+      toon(await client.call('nodal_get_node', { id: ids.cache })).node.stale,
+    ).toBeUndefined();
+    // Et dans la santé de la base.
+    const health = toon(await client.call('nodal_health', {}));
+    expect(health.counts.stale).toBe(1);
+    expect(health.issues).toContainEqual({
+      check: 'stale',
+      id: short(ids.api),
+      path: 'API',
+      detail: 'src/api/server.ts',
+    });
+  });
+
+  it('dit qu’aucun dossier de code n’est déclaré', async () => {
+    const client = await connect(file);
+    const data = toon(
+      await client.call('nodal_for_files', { paths: ['src/a.ts'] }),
+    );
+    expect(data.nodeCount).toBe(0);
+    expect(data.note).toContain('Aucun dossier de code');
+    expect(toon(await client.call('nodal_health', {})).counts.stale).toBe(
+      undefined,
+    );
   });
 });

@@ -47,6 +47,19 @@ const report: HealthReport = {
       ],
     },
     { id: 'orphan', label: 'Nœuds isolés', count: 0, issues: [] },
+    {
+      id: 'stale',
+      label: 'Documentation possiblement obsolète',
+      count: 1,
+      issues: [
+        {
+          check: 'stale',
+          nodeId: 'n3',
+          title: 'Serveur MCP',
+          detail: 'src/mcp/server.ts',
+        },
+      ],
+    },
   ],
   gaps: [
     {
@@ -69,6 +82,7 @@ function setup(focus: 'all' | 'gaps' = 'all') {
     onOpenNode: vi.fn(),
     onOpenDocument: vi.fn(),
     onValidate: vi.fn(),
+    onCodeAnchorsChanged: vi.fn(),
     onCreateFromGap: vi.fn(),
   };
   render(
@@ -122,5 +136,20 @@ describe('HealthDialog', () => {
         status: 'ignored',
       }),
     );
+  });
+
+  it('documentation obsolète : marquer comme à jour', async () => {
+    const { call, onCodeAnchorsChanged } = setup();
+    const stale = await screen.findByRole('region', {
+      name: 'Documentation possiblement obsolète',
+    });
+    expect(within(stale).getByText(/src\/mcp\/server\.ts/)).toBeTruthy();
+    fireEvent.click(
+      within(stale).getByRole('button', { name: 'Marquer comme à jour' }),
+    );
+    await vi.waitFor(() =>
+      expect(call).toHaveBeenCalledWith('anchor:markReviewed', { id: 'n3' }),
+    );
+    await vi.waitFor(() => expect(onCodeAnchorsChanged).toHaveBeenCalled());
   });
 });

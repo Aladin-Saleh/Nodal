@@ -107,3 +107,37 @@ describe('migration 005 : validation de ce qu’a ajouté l’IA', () => {
     ).toEqual({ summary: 'Nœud créé', undone_at: null, validated_at: null });
   });
 });
+
+describe('migration 010 : ancrage aux fichiers du code', () => {
+  it('reconstruit le journal à l’identique et accepte l’action anchor', () => {
+    runMigrations(db, MIGRATIONS.slice(0, 9));
+    db.exec(
+      "INSERT INTO workspace VALUES ('w', 'W', NULL, 't', 't');" +
+        "INSERT INTO node (id, workspace_id, title, node_type, created_at, updated_at) VALUES ('n', 'w', 'N', 'concept', 't', 't');" +
+        "INSERT INTO assistant_change (id, workspace_id, created_at, client, action, node_id, entity_id, summary, validated_at) VALUES ('c2', 'w', 't2', 'claude', 'tag', 'n', 'n', 'Tags', NULL);" +
+        "INSERT INTO assistant_change (id, workspace_id, created_at, client, action, node_id, entity_id, summary, validated_at) VALUES ('c1', 'w', 't1', 'claude', 'create_node', 'n', 'n', 'Nœud créé', 'v');",
+    );
+    expect(runMigrations(db)).toBe(LATEST_SCHEMA_VERSION);
+    expect(
+      db
+        .prepare(
+          'SELECT id, action, validated_at FROM assistant_change ORDER BY rowid',
+        )
+        .all(),
+    ).toEqual([
+      { id: 'c2', action: 'tag', validated_at: null },
+      { id: 'c1', action: 'create_node', validated_at: 'v' },
+    ]);
+    db.exec(
+      "INSERT INTO assistant_change (id, workspace_id, created_at, action, entity_id, summary) VALUES ('c3', 'w', 't3', 'anchor', 'n', 'Ancrage');",
+    );
+    expect(() =>
+      db.exec(
+        "INSERT INTO assistant_change (id, workspace_id, created_at, action, entity_id, summary) VALUES ('c4', 'w', 't4', 'autre', 'n', 'x');",
+      ),
+    ).toThrow(/CHECK constraint failed/);
+    expect(db.prepare('SELECT code_reviewed_at FROM node').get()).toEqual({
+      code_reviewed_at: null,
+    });
+  });
+});

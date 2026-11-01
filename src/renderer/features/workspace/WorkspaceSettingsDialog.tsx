@@ -11,6 +11,7 @@ import {
   useReportInfo,
   useRunner,
 } from '../../app/context';
+import type { CodeRootInfo } from '../../../shared/code-anchors';
 import type { IntegrityReport } from '../../../shared/model';
 import { IntegrityReportDialog } from './PortabilityDialogs';
 import { Modal } from '../../components/Modal';
@@ -25,7 +26,10 @@ export interface WorkspaceSettingsDialogProps {
   onClose(): void;
 }
 
-/** Nom, description, taille maximale des pièces jointes et suppression (§6.1). */
+/**
+ * Nom, description, taille maximale des pièces jointes, dossiers de code
+ * (ancrage des nœuds aux fichiers) et suppression (§6.1).
+ */
 export function WorkspaceSettingsDialog({
   workspace,
   onUpdated,
@@ -53,6 +57,21 @@ export function WorkspaceSettingsDialog({
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description ?? '');
   const [maxSizeMb, setMaxSizeMb] = useState<number | null>(null);
+  const [codeRoots, setCodeRoots] = useState<CodeRootInfo[]>([]);
+
+  useEffect(() => {
+    client.call('code:getRoots').then(setCodeRoots, reportError);
+  }, [client, reportError]);
+
+  // Les dossiers de code sont enregistrés aussitôt (comme la sauvegarde).
+  const addCodeRoot = async () => {
+    const roots = await run(() => client.call('code:addRoot'));
+    if (roots) setCodeRoots(roots);
+  };
+  const removeCodeRoot = async (path: string) => {
+    const roots = await run(() => client.call('code:removeRoot', { path }));
+    if (roots) setCodeRoots(roots);
+  };
 
   useEffect(() => {
     client
@@ -127,6 +146,44 @@ export function WorkspaceSettingsDialog({
           }
         />
         <p className="muted path">{workspace.filePath}</p>
+
+        <fieldset className="choices">
+          <legend>Dossiers de code</legend>
+          <p className="muted">
+            Les nœuds peuvent être ancrés à des fichiers de ces dossiers (ex.
+            src/mcp/**) : Nodal signale alors la documentation dont le code a
+            changé depuis. Chemins locaux, non exportés.
+          </p>
+          {codeRoots.length > 0 && (
+            <ul className="code-roots">
+              {codeRoots.map((root) => (
+                <li key={root.path}>
+                  <span className="path">{root.path}</span>
+                  {!root.exists && (
+                    <span className="anchor-missing">introuvable</span>
+                  )}
+                  <button
+                    type="button"
+                    className="link-button"
+                    aria-label={`Retirer le dossier ${root.path}`}
+                    onClick={() => void removeCodeRoot(root.path)}
+                  >
+                    Retirer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="inline-form">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void addCodeRoot()}
+            >
+              Ajouter un dossier…
+            </button>
+          </div>
+        </fieldset>
 
         <fieldset className="choices">
           <legend>Maintenance</legend>

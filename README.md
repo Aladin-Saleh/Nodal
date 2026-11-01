@@ -194,6 +194,19 @@ pièces jointes en BLOB).
     ajouts de l'IA à relire, chacun avec son action ; sujets à documenter :
     recherches MCP sans résultat (requête, date, nombre ; migration 009),
     à transformer en nœud ou à ignorer ; outil MCP `nodal_health`.
+- **v1.4 — Code ↔ connaissance** (en cours) :
+  - ancrage des nœuds aux fichiers du code : dossiers de code de l'espace
+    (chemins locaux, non exportés), motifs relatifs façon pathspec git
+    (`src/mcp/**`) par nœud (migration 010, table `node_anchor`), fichiers
+    trouvés ou introuvables dans le panneau ;
+  - documentation possiblement obsolète : dernier commit touchant les
+    fichiers (lu par `execFile('git')`, sans shell, en lecture seule) comparé
+    à la dernière mise à jour du nœud, repli sur les dates de modification
+    hors git ; marque « MAJ » dans l'arbre, avertissement et « Marquer comme
+    à jour » dans le panneau, ligne du rapport de santé ;
+  - MCP : `nodal_for_files(paths)` (nœuds ancrés, au format de
+    `nodal_search`), opération `anchor` de `nodal_apply`, champ compact
+    `stale` dans les réponses, consignes « avant / après modification ».
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

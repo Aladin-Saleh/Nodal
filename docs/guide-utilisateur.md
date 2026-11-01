@@ -185,6 +185,38 @@ Mermaid**. L'enregistrement est automatique.
 - **Mermaid** : le diagramme est rendu localement ; en cas d'erreur de
   syntaxe, le message s'affiche et le dernier rendu valide reste visible.
 
+### Fichiers du code
+
+Un nœud qui documente du code peut être **ancré** aux fichiers qu'il décrit :
+Nodal signale alors quand ces fichiers changent après la dernière mise à jour
+du nœud.
+
+- **Dossiers de code** : _Paramètres de l'espace_ › _Dossiers de code_ ›
+  **Ajouter un dossier…** (un ou plusieurs, par exemple le dépôt du projet).
+  Ce sont des chemins locaux : ils ne sont pas exportés.
+- **Ancrer** (panneau de droite, rubrique _Fichiers du code_) : saisissez un
+  chemin ou un motif relatif au dossier de code, puis **Ancrer** ; ou
+  **Choisir des fichiers…**. Motifs : `*` (sauf `/`), `?`, `**` (tous les
+  sous-dossiers) ; un chemin sans joker désigne le fichier ou tout le
+  dossier (`src/mcp` = `src/mcp/**`). Chaque motif affiche le nombre de
+  fichiers trouvés (**Voir les fichiers**) ou **introuvable** ; **×** le
+  retire.
+- **Possiblement obsolète** : un fichier ancré a changé depuis la dernière
+  mise à jour du nœud (le nœud lui-même ou l'un de ses documents). Le
+  panneau liste les fichiers concernés et leur date ; l'arborescence marque
+  le nœud **MAJ** ; le rapport _Santé de la base_ le liste aussi. Mettez la
+  documentation à jour, ou cliquez **Marquer comme à jour** si elle reste
+  juste. La vérification est refaite à l'ouverture de l'espace, après chaque
+  enregistrement et à chaque retour dans la fenêtre.
+- **Comment Nodal date les changements** : dans un dépôt git, par le dernier
+  commit qui touche le fichier, si le fichier a aussi été modifié sur le
+  disque après la mise à jour du nœud (modifier le code, mettre la
+  documentation à jour puis committer ne signale donc rien) ; un fichier
+  supprimé compte. Hors git, ou si git n'est pas installé, par la date de
+  modification du fichier. Les modifications pas encore committées ne
+  comptent pas dans un dépôt git. Nodal lit l'historique sans jamais
+  écrire dans le dépôt.
+
 **Pièces jointes** : _Joindre des fichiers…_ dans le panneau de propriétés
 (taille maximale réglable dans les Paramètres). Une pièce jointe n'est jamais
 ouverte par Nodal : utilisez **⤓** pour en enregistrer une copie.
@@ -238,6 +270,8 @@ de cas et, pour chacun, l'action qui permet de corriger :
   près : « Étape 1 » et « Étape 2 » ne sont pas des doublons) → Ouvrir l'un
   ou l'autre ;
 - **ajouts de l'IA à relire** → Valider ;
+- **documentation possiblement obsolète** (nœuds ancrés à des fichiers du
+  code, voir _Fichiers du code_) → Ouvrir, Marquer comme à jour ;
 - **sujets à documenter** (voir ci-dessous) → Créer un nœud, Ignorer.
 
 Les listes sont limitées à 50 lignes par vérification ; **Actualiser**
@@ -307,6 +341,12 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou
   Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
   ou de répondre de mémoire.
+- **Fichiers du code** : avant de modifier des fichiers, l'assistant demande
+  à Nodal les nœuds qui les documentent (outil `nodal_for_files`) ; après,
+  il met ces nœuds à jour et y ancre les nouveaux fichiers (opération
+  `anchor` de `nodal_apply`, journalisée et annulable comme les autres). Les
+  nœuds possiblement obsolètes lui sont signalés dans les réponses (champ
+  `stale`).
 
 ## 8. Préférences
 

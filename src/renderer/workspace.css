@@ -945,3 +945,107 @@ kbd.palette-detail {
   padding: 2px 8px;
   font-size: 12px;
 }
+
+/* Fichiers du code ancrés au nœud */
+
+.code-anchors {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.anchor-list,
+.anchor-files ul,
+.stale-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anchor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.anchor-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.anchor-pattern {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.anchor-missing {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.anchor-remove {
+  padding: 0 4px;
+}
+
+.anchor-files summary {
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.anchor-files li,
+.stale-files li {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.stale-warning {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius);
+}
+
+.stale-warning p {
+  margin: 0;
+}
+
+/* Documentation possiblement obsolète (arborescence) */
+
+.stale-mark {
+  flex: none;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--warning);
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+
+.code-roots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.code-roots li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.code-roots .path {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

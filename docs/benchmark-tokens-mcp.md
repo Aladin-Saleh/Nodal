@@ -310,6 +310,42 @@ recherches sans résultat notées) :
   (« Élément 0.0.1 » / « Élément 0.0.2 », à un chiffre près). La tolérance
   d'une lettre exclut désormais les chiffres.
 
+## Fichiers du code : `nodal_for_files` et `stale` (v1.4)
+
+Même méthode (`tests/perf/mcp-tokens.perf.ts`, espace ×1) : 60 services
+ancrés chacun à `src/service-N/**` (deux fichiers), dont 10 avec un fichier
+modifié après la dernière mise à jour du nœud.
+
+| Mesure                                                    |    Tokens |
+| --------------------------------------------------------- | --------: |
+| `nodal_for_files`, 3 chemins → 2 nœuds (documents inclus) |       245 |
+| `nodal_get_node` sans ancrage                             |       417 |
+| `nodal_get_node` ancré et obsolète (`anchors`, `stale`)   |       447 |
+| `nodal_search` (10 nœuds) sans ancrage                    |       773 |
+| `nodal_search` (10 nœuds), 10 signalés `stale`            |       937 |
+| `nodal_health` avec la vérification `stale` (10 lignes)   |       859 |
+| Consignes du serveur (lecture seule), avant → après       | 205 → 216 |
+| Consignes du serveur (écriture), avant → après            | 299 → 337 |
+
+- `stale{id,since,changed}` n'apparaît que s'il y a quelque chose à
+  signaler : aucun token pour une base sans ancrage ou à jour. Environ
+  16 tokens par nœud signalé (les trois fichiers les plus récents, puis
+  « (+n) »). Dans `nodal_get_node`, une seule chaîne (`stale: "depuis
+  2026-10-29 : src/a.ts"`) et la liste des motifs (`anchors`).
+- `nodal_for_files` reprend la forme de `nodal_search` : chemin et résumé des
+  nœuds, fichiers concernés en une chaîne, documents courts en entier dans
+  la limite de `maxChars` (6 000 caractères par défaut), les autres cités
+  (`otherDocuments`). `notAnchored` liste les fichiers sans nœud : à
+  documenter, ou à ancrer à un nœud existant.
+- Consignes : première version à 370 tokens en écriture (+71 à chaque tour).
+  L'explication de `stale` est passée dans la description de
+  `nodal_for_files`, chargée seulement quand l'outil sert ; restent une
+  phrase « avant » (lecture) et une phrase « après » (écriture) : +38.
+- Temps : `nodal_for_files` 40 ms et `nodal_health` 43 ms sur cet espace
+  (dates de modification, sans git). Avec git, 30 nœuds ancrés vérifiés sur
+  le dépôt de Nodal en 480 ms (quatre appels `git log` en parallèle, environ
+  60 ms chacun sous Windows) ; l'application garde le résultat 30 s.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

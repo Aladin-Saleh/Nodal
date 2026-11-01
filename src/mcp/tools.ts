@@ -24,6 +24,16 @@ import {
   type PathGraphEdge,
   type PathLink,
 } from '../shared/graph-path';
+import { toRootRelative, type StaleNode } from '../shared/code-anchors';
+import {
+  PATHS_CASE_INSENSITIVE,
+  listAnchoredNodes,
+  listAnchors,
+  nodesForPaths,
+  readCodeRoots,
+  resolveCodeRoots,
+  type AnchoredNode,
+} from '../main/knowledge/anchor-service';
 import type { ReadContext } from './workspace-reader';
 
 export const DEFAULT_MAX_ROWS = 300;
@@ -513,6 +523,8 @@ export function getNode(ctx: ReadContext, id: string) {
         createdAt: detail.createdAt,
         updatedAt: detail.updatedAt,
         createdBy: origin(detail.createdByAssistant),
+        // Fichiers du code ancrés : absent s'il n'y en a pas.
+        ...anchorsOf(ctx, detail.id),
       },
       // chars : taille du document ; les documents courts suivent en entier.
       documents: bodies.map((doc) => ({
@@ -553,15 +565,25 @@ export function getNode(ctx: ReadContext, id: string) {
   };
 }
 
+function anchorsOf(ctx: ReadContext, nodeId: string) {
+  const patterns = listAnchors(ctx, nodeId);
+  return patterns.length > 0 ? { anchors: patterns.join(', ') } : {};
+}
+
 /** Lignes par vérification renvoyées par défaut par nodal_health. */
 export const HEALTH_MCP_LIMIT = 10;
 
 /**
  * Santé de la base pour un assistant : compteurs, une seule table de
- * problèmes (colonne check) et les sujets à documenter.
+ * problèmes (colonne check) et les sujets à documenter. `stale` : résultat
+ * de la vérification des fichiers ancrés (`null` : aucun nœud ancré).
  */
-export function health(ctx: ReadContext, input: { limit?: number }) {
-  const report = healthReport(ctx, input.limit ?? HEALTH_MCP_LIMIT);
+export function health(
+  ctx: ReadContext,
+  input: { limit?: number },
+  stale: readonly StaleNode[] | null = null,
+) {
+  const report = healthReport(ctx, input.limit ?? HEALTH_MCP_LIMIT, stale);
   const outline = loadOutline(ctx);
   return {
     counts: Object.fromEntries(
@@ -793,5 +815,143 @@ export function findPath(
       title: outline.byId.get(step.nodeId)!.title,
       via: step.via ? describeLink(step.via, relationNames) : '',
     })),
+  };
+}
+
+// --- Fichiers du code ----------------------------------------------------
+
+/**
+ * De quoi vérifier, après l'appel et hors connexion, si des nœuds sont
+ * possiblement obsolètes : dossiers de code et nœuds ancrés concernés.
+ */
+export interface AnchorCheck {
+  roots: string[];
+  nodes: AnchoredNode[];
+}
+
+export function anchorCheck(
+  ctx: ReadContext,
+  workspaceFile: string,
+  nodeIds?: readonly string[],
+): AnchorCheck {
+  const roots = resolveCodeRoots(readCodeRoots(ctx), workspaceFile);
+  return {
+    roots,
+    nodes: roots.length > 0 ? listAnchoredNodes(ctx, nodeIds) : [],
+  };
+}
+
+/** Fichiers modifiés, en une chaîne : les trois plus récents, puis le reste compté. */
+export function changedFilesText(stale: StaleNode): string {
+  const shown = stale.files
+    .slice(0, 3)
+    .map((file) => (file.deleted ? `${file.path} (supprimé)` : file.path));
+  const more = stale.fileCount - shown.length;
+  return more > 0 ? `${shown.join(', ')} (+${more})` : shown.join(', ');
+}
+
+/** Ligne compacte d'un nœud possiblement obsolète. */
+export const staleRow = (stale: StaleNode) => ({
+  id: stale.nodeId,
+  since: stale.since.slice(0, 10),
+  changed: changedFilesText(stale),
+});
+
+/** Contenu de documents renvoyé par défaut par nodal_for_files. */
+export const DEFAULT_FOR_FILES_CHARS = 6_000;
+
+/**
+ * Nœuds ancrés à des fichiers du code (chemins absolus, ou relatifs à un
+ * dossier de code), au format de nodal_search : chemin, type et résumé de
+ * chaque nœud, fichiers concernés, puis ses documents courts dans la limite
+ * de `maxChars` ; les autres documents sont cités (otherDocuments).
+ */
+export function forFiles(
+  ctx: ReadContext,
+  input: { paths: string[]; maxChars: number },
+  workspaceFile: string,
+) {
+  const check = anchorCheck(ctx, workspaceFile);
+  if (check.roots.length === 0) {
+    return {
+      result: {
+        nodeCount: 0,
+        note: "Aucun dossier de code n'est déclaré dans Nodal (paramètres de l'espace) : aucun fichier n'est ancré.",
+      },
+      documents: [] as FoundDocument[],
+      check,
+    };
+  }
+  const relative: string[] = [];
+  const unknown: string[] = [];
+  for (const raw of input.paths) {
+    const found = toRootRelative(raw, check.roots, PATHS_CASE_INSENSITIVE);
+    if (found?.path) relative.push(found.path);
+    else unknown.push(raw);
+  }
+  const matches = nodesForPaths(ctx, relative);
+  const covered = new Set(matches.flatMap((match) => match.paths));
+  const outline = loadOutline(ctx);
+  const nodeInfo = ctx.db.prepare(
+    'SELECT node_type, summary FROM node WHERE id = ?',
+  );
+  const documentIds = ctx.db.prepare(
+    'SELECT id FROM document WHERE node_id = ? ORDER BY sort_order, rowid',
+  );
+  const documents = new DocumentService(() => ctx);
+  const found: FoundDocument[] = [];
+  const others: { nodeId: string; id: string; title: string; chars: number }[] =
+    [];
+  let used = 0;
+  for (const { node } of matches) {
+    const path = pathOf(outline, node.nodeId);
+    for (const { id } of documentIds.all(node.nodeId) as { id: string }[]) {
+      const doc = documents.get(id);
+      const size = doc.body.length;
+      if (size <= SHORT_DOCUMENT_CHARS && used + size <= input.maxChars) {
+        used += size;
+        found.push({
+          id: doc.id,
+          title: doc.title,
+          path,
+          contentType: doc.contentType,
+          language: doc.language,
+          totalChars: size,
+          body: doc.body,
+          sections: [],
+        });
+      } else {
+        others.push({ nodeId: node.nodeId, id, title: doc.title, chars: size });
+      }
+    }
+  }
+  const notAnchored = [
+    ...relative.filter((file) => !covered.has(file)),
+    ...unknown,
+  ];
+  return {
+    result: {
+      nodeCount: matches.length,
+      nodes: matches.map(({ node, paths }) => {
+        const info = nodeInfo.get(node.nodeId) as {
+          node_type: NodeType;
+          summary: string | null;
+        };
+        return {
+          id: node.nodeId,
+          path: pathOf(outline, node.nodeId),
+          type: info.node_type,
+          summary: info.summary,
+          files: paths.join(', '),
+        };
+      }),
+      ...(others.length > 0 ? { otherDocuments: others } : {}),
+      // Fichiers sans nœud : à documenter, ou à ancrer à un nœud existant.
+      ...(notAnchored.length > 0
+        ? { notAnchored: notAnchored.join(', ') }
+        : {}),
+    },
+    documents: found,
+    check: { roots: check.roots, nodes: matches.map(({ node }) => node) },
   };
 }

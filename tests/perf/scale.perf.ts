@@ -15,6 +15,8 @@ import {
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { SearchService } from '../../src/main/knowledge/search-service';
 import { inTransaction } from '../../src/main/database/transaction';
+import { findStaleNodes } from '../../src/main/code/code-check';
+import { findGitExecutable } from '../../src/main/code/git-history';
 import { healthReport } from '../../src/main/knowledge/health-service';
 import { listBacklinks } from '../../src/main/knowledge/link-service';
 import { suggestionsForNode } from '../../src/main/knowledge/suggestion-service';
@@ -225,4 +227,33 @@ describe(`échelle : ${NODES} nœuds, ${NODES * DOCS_PER_NODE} documents, ${EDGE
     ).toBeLessThan(50);
     expect(results['suggestions « Relier ? » d’un nœud']!).toBeLessThan(100);
   }, 120_000);
+});
+
+describe('ancrage : vérification avec git', () => {
+  it.skipIf(!findGitExecutable())(
+    'vérifie 30 nœuds ancrés sur le dépôt de Nodal',
+    async () => {
+      const patterns = [
+        'src/mcp/**',
+        'src/main/**',
+        'src/renderer/**',
+        'src/shared/*.ts',
+        'docs',
+        'README.md',
+      ];
+      const nodes = Array.from({ length: 30 }, (_, index) => ({
+        nodeId: `n${index}`,
+        title: `Nœud ${index}`,
+        patterns: [patterns[index % patterns.length]!],
+        since: '2026-10-01T00:00:00.000Z',
+      }));
+      const start = performance.now();
+      const stale = await findStaleNodes([process.cwd()], nodes);
+      const elapsed = performance.now() - start;
+      process.stdout.write(
+        `\n30 nœuds ancrés, dépôt git de Nodal : ${elapsed.toFixed(0)} ms, ${stale.length} possiblement obsolètes\n`,
+      );
+      expect(elapsed).toBeLessThan(10_000);
+    },
+  );
 });

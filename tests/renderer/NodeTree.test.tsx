@@ -213,6 +213,23 @@ describe('ajouts de l’IA dans l’arborescence', () => {
   });
 });
 
+describe('documentation possiblement obsolète', () => {
+  it('signale les nœuds dont des fichiers ancrés ont changé', () => {
+    renderTree({
+      index: buildTreeIndex([
+        node('a', null),
+        { ...node('b', null), sortOrder: 1 },
+      ]),
+      stale: new Set(['b']),
+    });
+    const [a, b] = screen.getAllByRole('treeitem');
+    expect(a!.querySelector('[aria-label="Possiblement obsolète"]')).toBeNull();
+    expect(
+      b!.querySelector('[aria-label="Possiblement obsolète"]'),
+    ).not.toBeNull();
+  });
+});
+
 describe('sélection venue du graphe', () => {
   it('amène la ligne du nœud sélectionné à l’écran', () => {
     const scrolled: string[] = [];

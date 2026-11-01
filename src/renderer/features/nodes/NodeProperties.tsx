@@ -17,6 +17,7 @@ import { AttachmentList } from '../attachments/AttachmentList';
 import { RelationList } from '../relations/RelationList';
 import { TagEditor } from '../tags/TagEditor';
 import { BacklinkList } from './BacklinkList';
+import { CodeAnchorList } from './CodeAnchorList';
 import { SuggestionList } from './SuggestionList';
 import { ParentSelect } from './NodeDialogs';
 import { buildTreeIndex, subtreeIds } from './tree';
@@ -42,6 +43,8 @@ export interface NodePropertiesProps {
   /** Document d'un autre nœud (rétroliens « Mentionné dans »). */
   onOpenDocumentOf(documentId: string, nodeId: string): void;
   onAddDocument(): void;
+  /** Ancrage aux fichiers du code ou vérification modifiés. */
+  onCodeAnchorsChanged(): void;
 }
 
 /**
@@ -63,6 +66,7 @@ export function NodeProperties({
   onOpenDocumentOf,
   onDocumentsChanged,
   onAddDocument,
+  onCodeAnchorsChanged,
 }: NodePropertiesProps) {
   const client = useClient();
   const run = useRunner();
@@ -220,6 +224,12 @@ export function NodeProperties({
           onOpenDocument={onOpenDocumentOf}
         />
       </section>
+
+      <CodeAnchorList
+        nodeId={node.id}
+        revision={documentsRevision}
+        onChanged={onCodeAnchorsChanged}
+      />
 
       <section>
         <h3>Tags</h3>

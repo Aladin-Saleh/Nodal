@@ -1,3 +1,7 @@
+import {
+  markReviewed,
+  setAnchors,
+} from '../../../src/main/knowledge/anchor-service';
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -108,6 +112,9 @@ function seed() {
     path.join(dir, 'schema.bin'),
   ]);
   new GraphService(context).savePositions([{ id: api, x: 1, y: 2, z: 3 }]);
+  // Ancrage aux fichiers du code : motifs et date de vérification conservés.
+  setAnchors(context(), api, ['src/api/**', 'README.md']);
+  markReviewed(context(), api);
   return { api, cache, other, md, sql, tag };
 }
 
@@ -133,6 +140,9 @@ function snapshot(db: DatabaseSync) {
     relationTypes: all('SELECT * FROM relation_type ORDER BY id'),
     tags: all('SELECT * FROM tag ORDER BY id'),
     nodeTags: all('SELECT * FROM node_tag ORDER BY node_id, tag_id'),
+    anchors: all(
+      'SELECT node_id, pattern, sort_order FROM node_anchor ORDER BY node_id, sort_order',
+    ),
     attachments: all(
       'SELECT id, node_id, document_id, file_name, mime_type, size_bytes, checksum, created_at, hex(data) AS data FROM attachment ORDER BY id',
     ),

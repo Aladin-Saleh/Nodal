@@ -20,6 +20,10 @@ import {
   GRAPH_VIEW_NAME_MAX_LENGTH,
   WORKSPACE_NAME_MAX_LENGTH,
 } from './domain';
+import {
+  ANCHOR_PATTERN_MAX_LENGTH,
+  ANCHORS_MAX_PER_NODE,
+} from './code-anchors';
 import type { IpcArgs, IpcChannel } from './ipc-contract';
 import { preferencesUpdateSchema } from './preferences';
 
@@ -310,6 +314,21 @@ export const ipcArgsSchemas = {
   'suggestion:ignore': one(
     z.strictObject({ sourceId: idSchema, targetId: idSchema }),
   ),
+  'code:getRoots': noArgs,
+  'code:addRoot': noArgs,
+  'code:removeRoot': one(z.strictObject({ path: z.string().min(1).max(4096) })),
+  'anchor:listForNode': one(idInput),
+  'anchor:set': one(
+    z.strictObject({
+      nodeId: idSchema,
+      patterns: z
+        .array(z.string().min(1).max(ANCHOR_PATTERN_MAX_LENGTH))
+        .max(ANCHORS_MAX_PER_NODE),
+    }),
+  ),
+  'anchor:pickFiles': one(idInput),
+  'anchor:markReviewed': one(idInput),
+  'anchor:staleNodes': noArgs,
   'node:get': one(idInput),
   'node:create': one(createNodeInputSchema),
   'node:update': one(updateNodeInputSchema),
