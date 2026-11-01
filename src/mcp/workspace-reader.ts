@@ -17,7 +17,6 @@ import {
 } from '../main/database/connection';
 import {
   LATEST_SCHEMA_VERSION,
-  assertSchemaSupported,
   getSchemaVersion,
 } from '../main/database/migrations';
 import { inTransaction } from '../main/database/transaction';
@@ -83,7 +82,17 @@ function openDatabase(filePath: string, mode: AccessMode): DatabaseSync {
       );
     }
     const version = getSchemaVersion(db);
-    assertSchemaSupported(version);
+    // Fichier d'une version plus récente de Nodal : lisible (les migrations
+    // ne font qu'ajouter), jamais modifié. L'assistant garde ainsi l'accès à
+    // la base même si le serveur installé n'a pas suivi l'application.
+    if (version > LATEST_SCHEMA_VERSION) {
+      if (mode === 'write') {
+        throw new NodalError(
+          'SCHEMA_TOO_NEW',
+          `Ce fichier a été créé par une version plus récente de Nodal (schéma ${version}, ce serveur gère le schéma ${LATEST_SCHEMA_VERSION}) : lecture seule. Mettez à jour le serveur MCP de Nodal pour y écrire.`,
+        );
+      }
+    }
     // Le serveur ne migre jamais un fichier : un fichier ancien doit d'abord
     // être ouvert une fois dans Nodal.
     if (version < LATEST_SCHEMA_VERSION) {

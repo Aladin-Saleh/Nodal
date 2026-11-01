@@ -10,11 +10,16 @@ export interface ToolResult {
 }
 
 /** Client JSON-RPC minimal relié au serveur en mémoire. */
-export async function connect(workspaceFile: string, readOnly = true) {
+export async function connect(
+  workspaceFile: string,
+  readOnly = true,
+  projectRoot: string | null = null,
+) {
   const server = createNodalMcpServer({
     workspaceFile,
     version: 'test',
     readOnly,
+    projectRoot,
   });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
   const pending = new Map<number, (message: JSONRPCMessage) => void>();

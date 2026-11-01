@@ -829,12 +829,25 @@ export interface AnchorCheck {
   nodes: AnchoredNode[];
 }
 
-export function anchorCheck(
+/**
+ * Dossiers de code vus par le serveur : ceux de l'espace, ou à défaut le
+ * dossier du projet depuis lequel le client MCP a lancé le serveur (dépôt
+ * git), sans rien écrire dans la base.
+ */
+export function codeRootsFor(
   ctx: ReadContext,
   workspaceFile: string,
+  projectRoot: string | null = null,
+): string[] {
+  const declared = resolveCodeRoots(readCodeRoots(ctx), workspaceFile);
+  return declared.length > 0 || !projectRoot ? declared : [projectRoot];
+}
+
+export function anchorCheck(
+  ctx: ReadContext,
+  roots: string[],
   nodeIds?: readonly string[],
 ): AnchorCheck {
-  const roots = resolveCodeRoots(readCodeRoots(ctx), workspaceFile);
   return {
     roots,
     nodes: roots.length > 0 ? listAnchoredNodes(ctx, nodeIds) : [],
@@ -869,9 +882,9 @@ export const DEFAULT_FOR_FILES_CHARS = 6_000;
 export function forFiles(
   ctx: ReadContext,
   input: { paths: string[]; maxChars: number },
-  workspaceFile: string,
+  roots: string[],
 ) {
-  const check = anchorCheck(ctx, workspaceFile);
+  const check = anchorCheck(ctx, roots);
   if (check.roots.length === 0) {
     return {
       result: {

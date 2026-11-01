@@ -25,6 +25,7 @@ import {
   search,
   tree,
   anchorCheck,
+  codeRootsFor,
   changedFilesText,
   DEFAULT_FOR_FILES_CHARS,
   forFiles,
@@ -33,10 +34,6 @@ import {
 } from './tools';
 import { findStaleNodes } from '../main/code/code-check';
 import type { StaleNode } from '../shared/code-anchors';
-import {
-  readCodeRoots,
-  resolveCodeRoots,
-} from '../main/knowledge/anchor-service';
 import {
   APPLY_MAX_OPERATIONS,
   applyOperations,
@@ -121,6 +118,11 @@ export interface NodalMcpServerOptions {
   version: string;
   /** N'expose que les outils de lecture. */
   readOnly?: boolean;
+  /**
+   * Dossier du projet (dépôt git) d'où le client a lancé le serveur :
+   * dossier de code par défaut quand l'espace n'en déclare aucun.
+   */
+  projectRoot?: string | null;
 }
 
 /**
@@ -189,6 +191,8 @@ const staleField = (stale: StaleNode[]) =>
 export function createNodalMcpServer(
   options: NodalMcpServerOptions,
 ): McpServer {
+  const codeRootsOf = (ctx: ReadContext) =>
+    codeRootsFor(ctx, options.workspaceFile, options.projectRoot ?? null);
   const server = new McpServer(
     { name: 'nodal', title: 'Nodal', version: options.version },
     {
@@ -310,7 +314,7 @@ export function createNodalMcpServer(
           const ids = data.result.nodes.map((node) => node.id);
           return {
             ...data,
-            check: anchorCheck(ctx, options.workspaceFile, ids),
+            check: anchorCheck(ctx, codeRootsOf(ctx), ids),
           };
         });
         if (found.result.nodeCount === 0) noteSearchGap(args.query);
@@ -342,7 +346,7 @@ export function createNodalMcpServer(
           const data = getNode(ctx, input.id);
           return {
             ...data,
-            check: anchorCheck(ctx, options.workspaceFile, [input.id]),
+            check: anchorCheck(ctx, codeRootsOf(ctx), [input.id]),
           };
         });
         const [stale] = await staleOf(found.check);
@@ -468,7 +472,7 @@ export function createNodalMcpServer(
       try {
         // Nœuds ancrés d'abord (identifiants complets), vérifiés hors connexion.
         const check = withWorkspace(options.workspaceFile, (ctx) =>
-          anchorCheck(ctx, options.workspaceFile),
+          anchorCheck(ctx, codeRootsOf(ctx)),
         );
         const stale = check.nodes.length > 0 ? await staleOf(check) : null;
         const data = call(args, 'read', (ctx, input: typeof args) =>
@@ -510,7 +514,7 @@ export function createNodalMcpServer(
     async (args): Promise<CallToolResult> => {
       try {
         const found = call(args, 'read', (ctx, input: typeof args) =>
-          forFiles(ctx, input, options.workspaceFile),
+          forFiles(ctx, input, codeRootsOf(ctx)),
         );
         const stale = await staleOf(found.check);
         return withDocuments({
@@ -563,10 +567,7 @@ export function createNodalMcpServer(
             {
               ...ctx,
               client,
-              codeRoots: resolveCodeRoots(
-                readCodeRoots(ctx),
-                options.workspaceFile,
-              ),
+              codeRoots: codeRootsOf(ctx),
             },
             resolved,
           ),

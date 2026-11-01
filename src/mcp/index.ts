@@ -7,6 +7,7 @@
  * principal d'Electron écrit une ligne vide sur stdout au démarrage, ce qui
  * corromprait le flux JSON-RPC.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { createNodalMcpServer } from './server';
@@ -31,10 +32,15 @@ async function main(): Promise<void> {
   }
   // stdout est réservé au protocole : tout diagnostic part sur stderr.
   console.log = console.error;
+  // Lancé par un client MCP depuis un dépôt git (Claude Code : dossier du
+  // projet) : dossier de code par défaut si l'espace n'en déclare aucun.
+  const cwd = process.cwd();
+  const projectRoot = fs.existsSync(path.join(cwd, '.git')) ? cwd : null;
   const server = createNodalMcpServer({
     workspaceFile: path.resolve(file),
     version: NODAL_VERSION,
     readOnly,
+    projectRoot,
   });
   await server.connect(new StdioServerTransport());
   console.error(

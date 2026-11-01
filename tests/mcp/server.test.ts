@@ -4,6 +4,7 @@ import { decode as decodeToon } from '@toon-format/toon';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
   listAnchors,
+  readCodeRoots,
   setAnchors,
   writeCodeRoots,
 } from '../../src/main/knowledge/anchor-service';
@@ -695,6 +696,24 @@ describe('serveur MCP', () => {
 
 const changes = () => new AssistantChangeService(workspace().context).list();
 
+describe('fichier d’une version plus récente de Nodal', () => {
+  it('reste lisible, mais refuse toute écriture', async () => {
+    const { context } = workspace();
+    context().db.exec('PRAGMA user_version = 999');
+    const client = await connect(file, false);
+    const found = toon(await client.call('nodal_search', { query: 'API' }));
+    expect(found.nodeCount).toBeGreaterThan(0);
+    const write = await client.call('nodal_create_node', {
+      title: 'X',
+      type: 'concept',
+    });
+    expect(write.isError).toBe(true);
+    expect(write.content[0]!.text).toContain('version plus récente de Nodal');
+    expect(write.content[0]!.text).toContain('lecture seule');
+    await client.close();
+  });
+});
+
 describe('serveur MCP en écriture', () => {
   it('ajoute les outils d’écriture, non marqués en lecture seule', async () => {
     const client = await connect(file, false);
@@ -1297,6 +1316,34 @@ describe('fichiers du code (ancrage)', () => {
     expect(entry.summary).toContain('src/api/server.ts, src/api/**');
     journal.undo(entry.id);
     expect(listAnchors(context(), ids.api)).toEqual([]);
+  });
+
+  it('prend le dossier du projet quand l’espace ne déclare aucun dossier de code', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    writeCodeRoots(context(), []);
+    setAnchors(context(), ids.api, ['src/api/**']);
+    const without = toon(
+      await (
+        await connect(file)
+      ).call('nodal_for_files', {
+        paths: ['src/api/server.ts'],
+      }),
+    );
+    expect(without.nodeCount).toBe(0);
+    const client = await connect(file, true, root);
+    const data = toon(
+      await client.call('nodal_for_files', {
+        paths: ['src/api/server.ts'],
+        maxChars: 0,
+      }),
+    );
+    expect(data.nodes.map((node: { id: string }) => node.id)).toEqual([
+      short(ids.api),
+    ]);
+    // Rien n'est écrit dans la base.
+    expect(readCodeRoots(context())).toEqual([]);
+    await client.close();
   });
 
   it('nodal_for_files renvoie les nœuds ancrés et signale la documentation obsolète', async () => {
