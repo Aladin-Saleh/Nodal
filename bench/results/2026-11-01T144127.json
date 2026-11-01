@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "date": "2026-11-01T14:41:27.285Z",
+    "label": "diagnostic : appels de capture",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "8ecb7a3",
+    "runsPerCase": 1
+  },
+  "rows": [
+    {
+      "question": "capture",
+      "variant": "nodal",
+      "runs": 1,
+      "turns": 5,
+      "input": 128530,
+      "output": 932,
+      "cost": 0.17522900000000002
+    }
+  ],
+  "results": [
+    {
+      "question": "capture",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.17522900000000002,
+      "durationMs": 16484,
+      "inputTokens": 10,
+      "cacheWriteTokens": 16775,
+      "cacheReadTokens": 111745,
+      "outputTokens": 932,
+      "tools": {
+        "mcp__nodal__nodal_search": 2,
+        "ToolSearch": 1,
+        "mcp__nodal__nodal_get_node": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "capture rapide"
+          },
+          "resultChars": 498
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "fenêtre capture IPC canaux",
+            "allTerms": "false"
+          },
+          "resultChars": 2002
+        },
+        {
+          "name": "ToolSearch",
+          "input": {
+            "query": "select:mcp__nodal__nodal_get_node",
+            "max_results": 1
+          },
+          "resultChars": 0
+        },
+        {
+          "name": "mcp__nodal__nodal_get_node",
+          "input": {
+            "id": "31c93c69"
+          },
+          "resultChars": 841
+        }
+      ],
+      "answer": "D'après Nodal (nœud « Capture rapide et boîte de réception », écrit par une IA et pas encore validé par toi ; je n'ai pas lu les sources) :\n\n- **Déclenchement** : un raccourci global, Ctrl+Maj+Espace par défaut, réglable avec les préférences `quickCapture` et `quickCaptureShortcut`. Il ouvre une fenêtre `#capture` au premier plan.\n- **Contenu** : un titre et une note, enregistrés dans le nœud racine « Boîte de réception » de l'espace. Ce nœud est repéré par `workspace_settings` → `inbox.nodeId`.\n- **Sans espace ouvert** : la capture va dans l'espace le plus récent. Il est ouvert seulement le temps de l'écriture, puis refermé.\n- **Canaux IPC autorisés** : `capture:getTarget`, `capture:submit` et `preferences:get`. La liste se trouve dans `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n- **Contrôle** : `routeSenderByChannel` (`src/main/ipc/handler.ts`) vérifie qui appelle chaque canal. La fenêtre de capture n'est acceptée que sur ces trois canaux, et tous les autres sont réservés à la fenêtre principale.\n\nNodal ne dit pas ce qui se passe quand aucun espace récent n'existe. Pour le savoir, il faudrait lire `src/main/capture/**`.",
+      "run": 1
+    }
+  ]
+}

@@ -456,7 +456,7 @@ describe('serveur MCP', () => {
     await client.close();
   });
 
-  it('demande à Claude Code de charger la recherche d’emblée', async () => {
+  it('demande à Claude Code de charger d’emblée la recherche et l’approfondissement', async () => {
     const client = await connect(file);
     const { tools } = (await client.listTools()) as {
       tools: { name: string; _meta?: Record<string, unknown> }[];
@@ -466,7 +466,12 @@ describe('serveur MCP', () => {
       // oxlint-disable-next-line no-underscore-dangle
       .filter((tool) => tool._meta?.['anthropic/alwaysLoad'])
       .map((tool) => tool.name);
-    expect(loadedUpfront).toEqual(['nodal_search']);
+    expect(loadedUpfront.toSorted()).toEqual([
+      'nodal_for_files',
+      'nodal_get_node',
+      'nodal_read_document',
+      'nodal_search',
+    ]);
     await client.close();
   });
 

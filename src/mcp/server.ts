@@ -76,7 +76,8 @@ Commencez par nodal_search : résumés des nœuds et contenu (ou sections) des
 documents trouvés, souvent suffisants. Question à plusieurs volets : plusieurs
 recherches en parallèle. Pour approfondir : nodal_get_node, nodal_read_document,
 nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.
-Avant de modifier du code : nodal_for_files.`;
+Question sur des fichiers précis (avant de les modifier) : nodal_for_files,
+en parallèle de nodal_search.`;
 
 const WRITE_INSTRUCTIONS = `
 
@@ -339,6 +340,9 @@ export function createNodalMcpServer(
         'et les documents qui le mentionnent (mentionedIn).',
       inputSchema: z.object({ id: id.describe('Identifiant du nœud') }),
       annotations: READ_ONLY,
+      // Approfondissement : chargé d'emblée, sinon le premier usage coûte un
+      // tour de recherche d'outils (banc du 2026-11-01).
+      _meta: { 'anthropic/alwaysLoad': true },
     },
     async (args): Promise<CallToolResult> => {
       try {
@@ -393,6 +397,9 @@ export function createNodalMcpServer(
           .describe('Nombre maximal de caractères renvoyés'),
       }),
       annotations: READ_ONLY,
+      // Approfondissement : chargé d'emblée, sinon le premier usage coûte un
+      // tour de recherche d'outils (banc du 2026-11-01).
+      _meta: { 'anthropic/alwaysLoad': true },
     },
     async (args): Promise<CallToolResult> => {
       try {
@@ -510,6 +517,9 @@ export function createNodalMcpServer(
           .describe('Contenu de documents renvoyé au plus'),
       }),
       annotations: READ_ONLY,
+      // Chargé d'emblée aussi : appelé avant toute modification de fichier, il
+      // coûtait sinon un tour de recherche d'outils (banc du 2026-11-01).
+      _meta: { 'anthropic/alwaysLoad': true },
     },
     async (args): Promise<CallToolResult> => {
       try {

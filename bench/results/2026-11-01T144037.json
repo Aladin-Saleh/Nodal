@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "date": "2026-11-01T14:40:37.158Z",
+    "label": "nodal_for_files chargé d'emblée, consigne en parallèle",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "8ecb7a3",
+    "runsPerCase": 2
+  },
+  "rows": [
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 4.5,
+      "input": 113595,
+      "output": 1234,
+      "cost": 0.19362089999999998
+    }
+  ],
+  "results": [
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.3224874,
+      "durationMs": 15895,
+      "inputTokens": 10,
+      "cacheWriteTokens": 34357,
+      "cacheReadTokens": 95857,
+      "outputTokens": 1421,
+      "tools": {
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_search": 1,
+        "ToolSearch": 1,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "answer": "1. **Structure** : `apply-tool.ts` contient `operationSchema`, une union discriminée sur `op` (aujourd'hui createNode, updateNode, addDocument, updateDocument, link, tag), et la fonction `run`. Ta nouvelle opération doit **réutiliser la fonction de `write-tools.ts`** qui fait la même chose. Elle aura ainsi la même validation et la même entrée de journal `recordAssistantChange` (une par opération, annulable). Si cette fonction n'existe pas encore, crée-la d'abord dans `write-tools.ts`.\n2. **Références et identifiants** : prends en charge les références `$n` (élément créé par la n-ième opération) et les identifiants abrégés via `ShortIds`. Le `resolveIds` du serveur ne descend pas dans `operations`, donc ces résolutions se font dans `apply-tool.ts`.\n3. **Tout ou rien** : l'appel entier tourne dans une seule transaction. En cas d'erreur, garde le message « Opération N (op) : … Rien n'a été enregistré. ». La réponse renvoie `applied` et `results[N]{ref,op,id}`. La limite reste de 100 opérations.\n4. **Tests** : ajoute-les dans `tests/mcp/server.test.ts` avec `connect(file, false)`, `short()` et `changes()`. Vérifie le cas réussi, une référence `$n`, l'annulation et le retour arrière après une erreur.\n5. **Coût en tokens** : un schéma plus gros coûte des tokens. Mesure-le avec `tests/perf/mcp-tokens.perf.ts`, puis ajoute une section dans `docs/benchmark-tokens-mcp.md`. Il a été décidé de ne pas charger `nodal_apply` d'office (pas d'`alwaysLoad`).\n6. **Fin d'étape** : `npx tsc --noEmit`, puis `npx oxfmt --write src tests` suivi de `npm run lint`, puis `npx vitest run`. Mets à jour le guide utilisateur, `HelpDialog.tsx` et `README.md` si c'est visible pour l'utilisateur.\n7. **Serveur utilisé par Claude Code** : reconstruis-le avec `npx vite build -c vite.mcp.config.mts`, puis recopie le résultat dans `~/.nodal/mcp-dev/nodal-mcp.cjs`.\n8. **À noter** : `server.ts` et `server.test.ts` ont déjà des modifications non commitées. Commite ou range-les avant, pour ne pas les mélanger avec ta nouvelle opération.\n\nTout cela vient de Nodal, sans lire les sources. Mais le nœud « Serveur MCP » est marqué périmé (fichiers modifiés depuis le 31/10) : jette un œil au code avant de commencer.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0647544,
+      "durationMs": 15572,
+      "inputTokens": 6,
+      "cacheWriteTokens": 3128,
+      "cacheReadTokens": 93832,
+      "outputTokens": 1047,
+      "tools": {
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "answer": "D'après Nodal (je n'ai pas lu les sources ; les deux nœuds sont marqués « stale », car `server.ts` a changé depuis et contient des modifications non commitées) :\n\n1. **Structure** : `operationSchema` est une union discriminée sur `op`, avec 6 opérations aujourd'hui. Ajoute ta variante au schéma et son cas dans `run`. La limite reste de 100 opérations par appel.\n2. **Réutilisation** : passe par les fonctions de `write-tools.ts`. Tu gardes ainsi la même validation et une entrée de journal `assistant_change` annulable par opération (`recordAssistantChange`).\n3. **Identifiants** : gère les références `$n` (1-based) et résous les préfixes courts via `ShortIds`. Le `resolveIds` du serveur ne descend pas dans `operations`.\n4. **Tout ou rien** : tout l'appel tient dans une seule transaction (`withWorkspace`). Une erreur doit suivre le format « Opération N (op) : … Rien n'a été enregistré. », et la réponse reste `applied` + `results[N]{ref,op,id}`.\n5. **Tests** : dans `tests/mcp/server.test.ts`, avec les helpers `connect(file,false)`, `toon()`, `short()`, `full()` et `changes()`. Couvre aussi `$n`, l'annulation et le rollback.\n6. **Tokens** : le schéma s'alourdit, donc relance la mesure `tests/perf/mcp-tokens.perf.ts` et mets à jour `docs/benchmark-tokens-mcp.md`. C'est la raison pour laquelle on n'a pas mis `alwaysLoad`.\n7. **Fin d'étape** : `npx tsc --noEmit`, `npx oxfmt --write src tests`, `npm run lint`, `npx vitest run`. Mets à jour la documentation (guide, F1, README v1.4), puis rebuild `vite.mcp.config.mts` et recopie dans `~/.nodal/mcp-dev`.\n8. **Après coup** : complète le nœud « Serveur MCP » dans Nodal (liste des opérations).",
+      "run": 2
+    }
+  ]
+}

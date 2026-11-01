@@ -372,6 +372,12 @@ sans le champ.
   `nodal_update_document` (`mode: "replace"`) ; dans `nodal_apply`, il est
   rendu dans la ligne de résultat de l'opération.
 
+## Suivi de bout en bout
+
+Les bancs de bout en bout (questions de développement posées à Claude Code
+avec et sans Nodal, coût et tours) sont suivis dans
+[bench/README.md](../bench/README.md), lancés par `node bench/run-bench.mjs`.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

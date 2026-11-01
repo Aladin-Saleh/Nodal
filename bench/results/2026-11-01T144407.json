@@ -1,0 +1,260 @@
+{
+  "meta": {
+    "date": "2026-11-01T14:44:07.534Z",
+    "label": "outils d'approfondissement chargés d'emblée",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "8ecb7a3",
+    "runsPerCase": 2
+  },
+  "rows": [
+    {
+      "question": "ipc",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 3,
+      "input": 64414,
+      "output": 771.5,
+      "cost": 0.1576715
+    },
+    {
+      "question": "capture",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 3,
+      "input": 63943,
+      "output": 628.5,
+      "cost": 0.0873565
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 4,
+      "input": 98476,
+      "output": 1126,
+      "cost": 0.1230967
+    }
+  ],
+  "results": [
+    {
+      "question": "ipc",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.286825,
+      "durationMs": 8018,
+      "inputTokens": 4,
+      "cacheWriteTokens": 33165,
+      "cacheReadTokens": 31245,
+      "outputTokens": 762,
+      "tools": {
+        "mcp__nodal__nodal_search": 2
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IPC canal"
+          },
+          "resultChars": 1985
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IPC émetteur vérification",
+            "allTerms": "false"
+          },
+          "resultChars": 1535
+        }
+      ],
+      "answer": "Selon la base Nodal (nœuds « Recettes de développement » et « Contrat IPC »), sans lire les sources :\n\n1. `src/shared/ipc-contract.ts` : ajouter le canal dans `IpcContract` (arguments et résultat) **et** dans `IPC_CHANNELS`, la liste des canaux autorisés par le preload.\n2. `src/shared/ipc-schemas.ts` : ajouter un schéma zod strict dans `ipcArgsSchemas`. Si un canal manque, le `satisfies` final empêche la compilation.\n3. `src/main/ipc/register.ts` : écrire l'implémentation dans `createImplementations`. Ne jamais accepter de chemin de fichier venant du renderer : les boîtes de dialogue passent par `src/main/file-dialogs.ts`.\n4. Renderer : appeler `client.call('canal', …)` via `useClient()` ou `useRunner()` (`src/renderer/app/context.tsx`).\n5. Émetteur : `src/main/ipc/handler.ts` le vérifie canal par canal avec `routeSenderByChannel`. Seule la fenêtre principale est acceptée, sauf pour les canaux de la fenêtre de capture, listés dans `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`). Le handler répond `{ ok, data | error }`, et le preload n'expose que `window.nodal.invoke()`.\n\nNodal signale le nœud « Recettes » comme périmé, mais seulement parce que `src/mcp/server.ts` a changé, ce qui ne touche pas l'IPC.",
+      "run": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.028517999999999998,
+      "durationMs": 8153,
+      "inputTokens": 4,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 64410,
+      "outputTokens": 781,
+      "tools": {
+        "mcp__nodal__nodal_search": 2
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IPC canal"
+          },
+          "resultChars": 1985
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IPC émetteur vérification",
+            "allTerms": "false"
+          },
+          "resultChars": 1535
+        }
+      ],
+      "answer": "D'après Nodal (nœuds « Recettes de développement » et « Architecture > Contrat IPC »), je n'ai pas eu à lire les sources :\n\n1. `src/shared/ipc-contract.ts` : ajouter le canal dans `IpcContract` (types args/résultat) **et** dans `IPC_CHANNELS`, la liste blanche du preload.\n2. `src/shared/ipc-schemas.ts` : ajouter un schéma zod strict dans `ipcArgsSchemas` (`noArgs` ou `one(z.strictObject(...))`). Le `satisfies` final empêche la compilation si un canal manque.\n3. `src/main/ipc/register.ts` : écrire l'implémentation dans `createImplementations` (`requireCurrent()` si le canal exige un espace ouvert). Le renderer ne doit jamais fournir de chemin : passer par les boîtes de dialogue de `src/main/file-dialogs.ts`, et adapter le mock de `tests/main/ipc/handler.test.ts`.\n4. Renderer : appeler `client.call('canal', …)` via `useClient()` ou `useRunner()` (`src/renderer/app/context.tsx`).\n\n**Vérification de l'émetteur** : dans `src/main/ipc/handler.ts`, `routeSenderByChannel` contrôle l'émetteur pour chaque canal. Seule la fenêtre principale est acceptée, sauf pour les canaux de `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`), où la fenêtre de capture est aussi admise. Les arguments sont ensuite validés par zod, et la réponse prend la forme `{ ok, data | error }`.",
+      "run": 2
+    },
+    {
+      "question": "capture",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.1495692,
+      "durationMs": 14578,
+      "inputTokens": 4,
+      "cacheWriteTokens": 15893,
+      "cacheReadTokens": 48046,
+      "outputTokens": 640,
+      "tools": {
+        "mcp__nodal__nodal_search": 2
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "capture rapide"
+          },
+          "resultChars": 498
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "fenêtre capture IPC canaux",
+            "allTerms": "false"
+          },
+          "resultChars": 2002
+        }
+      ],
+      "answer": "D'après la base Nodal (nœud « Capture rapide et boîte de réception », étape D1), sans lecture des fichiers sources :\n\n- **Déclenchement** : un raccourci global, Ctrl+Maj+Espace par défaut, ouvre une fenêtre `#capture` au premier plan. Le raccourci se règle dans les préférences `quickCapture` et `quickCaptureShortcut`.\n- **Contenu** : un titre et une note, rangés sous la racine « Boîte de réception » de l'espace. Ce nœud est repéré par le réglage `inbox.nodeId` dans `workspace_settings`.\n- **Sans espace ouvert** : la capture va dans l'espace le plus récent de la liste des récents. Il est ouvert seulement le temps d'écrire.\n- **Canaux IPC permis** : seulement `capture:getTarget`, `capture:submit` et `preferences:get`. La liste se trouve dans `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n- **Contrôle** : `routeSenderByChannel` (`src/main/ipc/handler.ts`) vérifie quelle fenêtre envoie chaque appel. La fenêtre de capture est refusée sur tous les autres canaux.",
+      "run": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0251438,
+      "durationMs": 7419,
+      "inputTokens": 4,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 63939,
+      "outputTokens": 617,
+      "tools": {
+        "mcp__nodal__nodal_search": 2
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "capture rapide"
+          },
+          "resultChars": 498
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "fenêtre capture IPC canaux",
+            "allTerms": "false"
+          },
+          "resultChars": 2002
+        }
+      ],
+      "answer": "D'après Nodal (nœud « Capture rapide et boîte de réception » et « Contrat IPC »), sans avoir eu besoin de lire le code :\n\n- **Déclenchement** : un raccourci global, Ctrl+Maj+Espace par défaut, réglable dans les préférences `quickCapture` et `quickCaptureShortcut`. Il ouvre une fenêtre `#capture` au premier plan.\n- **Rangement** : le titre et la note vont dans le nœud racine « Boîte de réception », désigné par le réglage d'espace `inbox.nodeId`.\n- **Sans espace ouvert** : la capture va dans le **dernier espace récent**. Nodal l'ouvre seulement le temps de l'écriture.\n- **Canaux autorisés** : la fenêtre de capture n'a droit qu'à `capture:getTarget`, `capture:submit` et `preferences:get`. La liste est `CAPTURE_WINDOW_CHANNELS` dans `src/shared/quick-capture.ts`.\n- **Contrôle** : `routeSenderByChannel` (`src/main/ipc/handler.ts`) vérifie l'émetteur de chaque canal. Il refuse tout autre canal venant de cette fenêtre, réservé à la fenêtre principale.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.17917660000000002,
+      "durationMs": 13349,
+      "inputTokens": 6,
+      "cacheWriteTokens": 17605,
+      "cacheReadTokens": 80863,
+      "outputTokens": 1107,
+      "tools": {
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 947
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "nodal_apply opération"
+          },
+          "resultChars": 1690
+        },
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "5fdaf433"
+          },
+          "resultChars": 3068
+        }
+      ],
+      "answer": "D'après Nodal (je n'ai pas lu les sources ; attention, les deux nœuds concernés sont marqués périmés depuis des changements dans `src/mcp/server.ts` et `tools.ts`) :\n\n1. **Où l'ajouter :** dans `operationSchema`, une union discriminée sur `op` (createNode, updateNode, addDocument, updateDocument, link, tag), puis dans `run`.\n2. **Logique :** réutilisez les fonctions de `write-tools.ts`. Vous gardez ainsi la même validation et la même entrée `assistant_change` (`recordAssistantChange`), une par opération et annulable.\n3. **Références :** `$n` renvoie à l'élément créé ou modifié par la n-ième opération, en partant de 1. Résolvez les identifiants courts vous-même avec `ShortIds`, car le `resolveIds` du serveur ne descend pas dans `operations`.\n4. **Règles à garder :** tout ou rien (une transaction par appel), message d'erreur « Opération N (op) : … Rien n'a été enregistré. », 100 opérations au plus, réponse `applied` + `results{ref,op,id}`. Pas d'`alwaysLoad`, parce que chaque opération ajoutée alourdit le schéma.\n5. **Tests :** dans `tests/mcp/server.test.ts`, avec les helpers `connect(file,false)`, `toon()`, `short()`, `full()` et `changes()`. Couvrez le cas réussi, une référence `$n`, l'annulation complète en cas d'erreur et l'entrée du journal. Attention, `server.ts` et ce fichier de test ont déjà des modifications non commitées.\n6. **Ensuite :** mesure des tokens (`tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`), `tsc --noEmit`, `oxfmt` puis `lint`, `vitest run`. Mettez à jour la documentation (guide, F1, README), reconstruisez le serveur MCP et recopiez-le dans `~/.nodal/mcp-dev`. Commit en français.\n7. Une fois fait, complétez la section `nodal_apply` du nœud « Serveur MCP » dans Nodal.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0670168,
+      "durationMs": 12812,
+      "inputTokens": 6,
+      "cacheWriteTokens": 3128,
+      "cacheReadTokens": 95344,
+      "outputTokens": 1145,
+      "tools": {
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 947
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "nodal_apply opération"
+          },
+          "resultChars": 1690
+        },
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "5fdaf433"
+          },
+          "resultChars": 3068
+        }
+      ],
+      "answer": "D'après Nodal (nœuds « Serveur MCP » et « Recettes de développement ») :\n\n1. **Structure** : ajoute un membre à l'union discriminée `operationSchema` (sur `op`) et son cas dans `run`. La limite reste de 100 opérations par appel.\n2. **Pas de logique en double** : appelle la fonction de `src/mcp/write-tools.ts` (à créer si besoin). Tu gardes ainsi la même validation et la même entrée de journal `assistant_change` (`recordAssistantChange`), une par opération et annulable.\n3. **Identifiants** : gère les références `$n` (1-based) et les préfixes courts toi-même via `ShortIds`, car `resolveIds` du serveur ne descend pas dans `operations`. Renvoie un `id` pour `results[N]{ref,op,id}`.\n4. **Tout ou rien** : tout tient dans une transaction (`withWorkspace`). Une erreur doit donner « Opération N (op) : … Rien n'a été enregistré. »\n5. **Ne pas ajouter** `anthropic/alwaysLoad` sur nodal_apply : c'est une décision prise pour économiser des tokens.\n6. **Tests** : `tests/mcp/server.test.ts` (`connect(file, false)`, `toon()`, `short()`, `changes()`). Vérifie le succès, le `$n`, le rollback en cas d'erreur et le journal.\n7. **Mesure des tokens** : le schéma grossit, donc lance `tests/perf/mcp-tokens.perf.ts` (`npx vitest run --config vitest.perf.config.mts -t …`) et mets à jour `docs/benchmark-tokens-mcp.md`.\n8. **Fin d'étape** : `npx oxfmt --write src tests`, `npx tsc --noEmit`, `npm run lint`, `npx vitest run`. Mets à jour la doc : `docs/guide-utilisateur.md`, `README.md` et la description de l'outil dans `server.ts`.\n9. **Rebuild** : `npx vite build -c vite.mcp.config.mts`, puis copie vers `~/.nodal/mcp-dev/nodal-mcp.cjs` pour que Claude Code voie l'opération.\n10. **Attention** : ces nœuds sont signalés périmés, car `server.ts` a changé depuis (modifs non commitées). Je n'ai pas relu `apply-tool.ts` ; vérifie la liste des opérations dans le code.",
+      "run": 2
+    }
+  ]
+}

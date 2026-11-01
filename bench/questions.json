@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ipc",
+    "prompt": "Quels fichiers dois-je modifier pour ajouter un nouveau canal IPC dans Nodal, et comment l'émetteur d'un message IPC est-il vérifié ? Réponds en 10 lignes au plus."
+  },
+  {
+    "id": "capture",
+    "prompt": "Comment fonctionne la capture rapide de Nodal : où la capture est-elle rangée quand aucun espace n'est ouvert, et quels canaux IPC la fenêtre de capture a-t-elle le droit d'appeler ? Réponds en 10 lignes au plus."
+  },
+  {
+    "id": "avant-modif",
+    "prompt": "Je vais ajouter une opération à src/mcp/apply-tool.ts. Que dois-je savoir avant, et qu'est-ce qu'il faudra mettre à jour ou tester ensuite ? Ne modifie rien. Réponds en 10 lignes au plus."
+  }
+]
