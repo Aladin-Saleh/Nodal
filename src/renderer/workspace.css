@@ -1049,3 +1049,7 @@ kbd.palette-detail {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.code-roots .link-button {
+  font-size: 13px;
+}
