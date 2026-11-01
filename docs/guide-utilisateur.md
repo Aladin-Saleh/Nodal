@@ -140,6 +140,28 @@ apparaissent en pointillés.
 - **Dupliquer** : copie le nœud avec ses documents, tags et pièces jointes
   (les relations ne sont pas copiées).
 
+### Capture rapide et boîte de réception
+
+Pour noter une idée sans quitter ce que vous faites, appuyez sur
+**Ctrl + Maj + Espace**, où que vous soyez (Nodal doit être lancé, même
+réduit) : une petite fenêtre s’ouvre au premier plan.
+
+- Saisissez un **titre** et, si besoin, une **note** (Markdown), puis
+  **Entrée** (dans le titre), **Ctrl + Entrée** ou **Enregistrer**. **Échap**
+  ferme sans rien enregistrer.
+- La capture devient un nœud de la **Boîte de réception**, un nœud racine
+  créé à la première capture ; la note devient son document « Note ».
+- Elle va dans l’espace ouvert ; si aucun espace n’est ouvert, dans le
+  dernier espace récent, sans l’afficher (la fenêtre l’indique : « espace
+  fermé »).
+- Pour **ranger** une capture : glissez-la à sa place dans l’arborescence,
+  ou clic droit → **Déplacer vers…**. La palette (Ctrl + P) propose aussi
+  « Boîte de réception » et « Capture rapide… ».
+
+Le raccourci se change ou se désactive dans les préférences (section
+« Capture rapide »). S’il est déjà pris par une autre application, les
+préférences le signalent : choisissez-en un autre.
+
 ## 5. Documents
 
 Un nœud contient une liste ordonnée de documents, chacun d'un seul type :
@@ -368,30 +390,34 @@ chaque changement s'applique et s'enregistre aussitôt.
 - **Lier le repli de l’arbre et du graphe** (désactivé par défaut) : déplier
   ou replier un nœud dans l’arborescence fait de même dans le graphe, et
   inversement.
+- **Capture rapide** : activer ou non le raccourci global, et le choisir
+  (cliquez sur le raccourci, puis appuyez sur la combinaison voulue ; il
+  faut Ctrl ou Alt, sauf pour une touche de fonction).
 
 La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 « Rétablir les valeurs par défaut » remet toutes les préférences à zéro.
 
 ## 9. Raccourcis clavier
 
-| Raccourci      | Action                                                 |
-| -------------- | ------------------------------------------------------ |
-| Ctrl + P       | palette de commandes (nœuds et actions)                |
-| Ctrl + Maj + P | palette de commandes, actions seules                   |
-| Alt + ← / →    | nœud précédent / suivant (aussi boutons de la souris)  |
-| Ctrl + N       | nouveau sous-nœud du nœud sélectionné                  |
-| Ctrl + Maj + N | nouveau nœud racine                                    |
-| Ctrl + F       | rechercher                                             |
-| Ctrl + S       | enregistrer immédiatement                              |
-| Ctrl + A       | sélectionner tous les nœuds affichés (graphe)          |
-| Échap          | vider la sélection ou la recherche, fermer une fenêtre |
-| F2             | renommer le nœud sélectionné                           |
-| Suppr          | supprimer le nœud sélectionné (arborescence)           |
-| H              | masquer / afficher le nœud dans le graphe (arbre)      |
-| Menu, Maj+F10  | menu contextuel du nœud (arborescence)                 |
-| F1             | aide                                                   |
-| Ctrl + ,       | préférences                                            |
-| Ctrl + = / -   | agrandir / réduire le texte (Ctrl + 0 : rétablir)      |
+| Raccourci       | Action                                                 |
+| --------------- | ------------------------------------------------------ |
+| Ctrl + P        | palette de commandes (nœuds et actions)                |
+| Ctrl + Maj + P  | palette de commandes, actions seules                   |
+| Alt + ← / →     | nœud précédent / suivant (aussi boutons de la souris)  |
+| Ctrl + N        | nouveau sous-nœud du nœud sélectionné                  |
+| Ctrl + Maj + N  | nouveau nœud racine                                    |
+| Ctrl + F        | rechercher                                             |
+| Ctrl + S        | enregistrer immédiatement                              |
+| Ctrl + A        | sélectionner tous les nœuds affichés (graphe)          |
+| Échap           | vider la sélection ou la recherche, fermer une fenêtre |
+| F2              | renommer le nœud sélectionné                           |
+| Suppr           | supprimer le nœud sélectionné (arborescence)           |
+| H               | masquer / afficher le nœud dans le graphe (arbre)      |
+| Menu, Maj+F10   | menu contextuel du nœud (arborescence)                 |
+| F1              | aide                                                   |
+| Ctrl + ,        | préférences                                            |
+| Ctrl + = / -    | agrandir / réduire le texte (Ctrl + 0 : rétablir)      |
+| Ctrl+Maj+Espace | capture rapide (global, réglable dans les préférences) |
 
 ## 10. Dépannage
 

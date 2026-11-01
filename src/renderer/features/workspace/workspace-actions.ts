@@ -38,6 +38,10 @@ export interface WorkspaceCommands {
   activity(): void;
   /** Santé de la base (`gaps` : sujets à documenter). */
   health(focus: 'all' | 'gaps'): void;
+  /** Fenêtre de capture rapide (comme le raccourci global). */
+  quickCapture(): void;
+  /** Sélectionne la boîte de réception (captures à ranger). */
+  openInbox(): void;
   settings(): void;
   preferences(): void;
   help(): void;
@@ -319,6 +323,22 @@ export function workspaceActions(
       keywords: 'lacunes recherches sans resultat ia',
       enabled: true,
       run: () => commands.health('gaps'),
+    },
+    {
+      id: 'workspace.quickCapture',
+      label: 'Capture rapide…',
+      group: 'Espace',
+      keywords: 'noter idee boite reception inbox',
+      enabled: true,
+      run: commands.quickCapture,
+    },
+    {
+      id: 'workspace.inbox',
+      label: 'Boîte de réception',
+      group: 'Espace',
+      keywords: 'captures ranger inbox',
+      enabled: true,
+      run: commands.openInbox,
     },
     {
       id: 'workspace.settings',

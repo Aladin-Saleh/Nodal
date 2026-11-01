@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   ACCENTS,
   DEFAULT_PREFERENCES,
@@ -9,6 +9,11 @@ import {
   type StartView,
   type Theme,
 } from '../../../shared/preferences';
+import {
+  acceleratorFromKeyboard,
+  formatAccelerator,
+} from '../../../shared/quick-capture';
+import { useClient } from '../../app/context';
 import { usePreferences } from '../../app/preferences';
 import { Modal } from '../../components/Modal';
 
@@ -88,12 +93,83 @@ function Row({
 }
 
 /**
+ * Bouton qui enregistre une combinaison de touches : cliquer, puis appuyer
+ * sur le raccourci voulu (Échap annule).
+ */
+function ShortcutRecorder({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled: boolean;
+  onChange(accelerator: string): void;
+}) {
+  const [recording, setRecording] = useState(false);
+  return (
+    <button
+      type="button"
+      className="secondary shortcut-recorder"
+      aria-label="Raccourci de capture rapide"
+      aria-pressed={recording}
+      disabled={disabled}
+      onClick={() => setRecording(true)}
+      onBlur={() => setRecording(false)}
+      onKeyDown={(event) => {
+        if (!recording) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.key === 'Escape') {
+          setRecording(false);
+          return;
+        }
+        const accelerator = acceleratorFromKeyboard(event);
+        if (accelerator) {
+          setRecording(false);
+          onChange(accelerator);
+        }
+      }}
+    >
+      {recording ? 'Appuyez sur le raccourci…' : formatAccelerator(value)}
+    </button>
+  );
+}
+
+/**
+ * Le raccourci global est-il actif ? Relu à chaque changement de réglage ;
+ * `null` tant que la réponse pour le réglage courant n'est pas connue.
+ */
+function useShortcutStatus(shortcut: string, enabled: boolean) {
+  const client = useClient();
+  const setting = `${enabled}:${shortcut}`;
+  const [status, setStatus] = useState<{
+    setting: string;
+    registered: boolean;
+  } | null>(null);
+  useEffect(() => {
+    let active = true;
+    client.call('capture:shortcutStatus').then(
+      ({ registered }) => active && setStatus({ setting, registered }),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [client, setting]);
+  return status?.setting === setting ? status.registered : null;
+}
+
+/**
  * Préférences de l'application (profil utilisateur) : apparence et
  * comportement. Chaque changement s'applique et s'enregistre aussitôt.
  */
 export function PreferencesDialog({ onClose }: { onClose(): void }) {
   const { preferences, update } = usePreferences();
   const zoomId = useId();
+  const shortcutActive = useShortcutStatus(
+    preferences.quickCaptureShortcut,
+    preferences.quickCapture,
+  );
   const set = <K extends keyof AppPreferences>(
     key: K,
     value: AppPreferences[K],
@@ -218,6 +294,34 @@ export function PreferencesDialog({ onClose }: { onClose(): void }) {
             />
             Lier le repli de l’arbre et du graphe
           </label>
+        </Row>
+      </section>
+
+      <section className="pref-section" aria-labelledby="pref-capture">
+        <h3 id="pref-capture">Capture rapide</h3>
+        <Row
+          label="Raccourci global"
+          hint="Ouvre une petite fenêtre pour noter une idée, même quand Nodal n’est pas au premier plan."
+        >
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.quickCapture}
+              onChange={(event) => set('quickCapture', event.target.checked)}
+            />
+            Activer
+          </label>
+          <ShortcutRecorder
+            value={preferences.quickCaptureShortcut}
+            disabled={!preferences.quickCapture}
+            onChange={(accelerator) => set('quickCaptureShortcut', accelerator)}
+          />
+          {preferences.quickCapture && shortcutActive === false && (
+            <span className="warning" role="status">
+              Raccourci déjà utilisé par une autre application : choisissez-en
+              un autre.
+            </span>
+          )}
         </Row>
       </section>
     </Modal>

@@ -1053,3 +1053,54 @@ kbd.palette-detail {
 .code-roots .link-button {
   font-size: 13px;
 }
+
+/* Capture rapide (fenêtre dédiée) */
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100vh;
+  padding: 16px;
+  box-sizing: border-box;
+  background: var(--bg);
+}
+
+.capture-title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.capture textarea {
+  resize: none;
+}
+
+.capture-target {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.capture-saved {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.capture-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.capture-actions .muted {
+  margin-right: auto;
+  font-size: 12px;
+}
+
+.shortcut-recorder {
+  min-width: 180px;
+  font-family: inherit;
+  text-align: center;
+}

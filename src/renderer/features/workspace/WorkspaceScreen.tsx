@@ -475,6 +475,15 @@ function WorkspaceView({
     connectAssistant: () => openOverlay('mcp', true),
     activity: () => openOverlay('activity', true),
     health: (focus) => openOverlay('health', focus),
+    quickCapture: () => void client.call('capture:open').catch(reportError),
+    openInbox: () =>
+      void client.call('capture:getInbox').then((id) => {
+        if (id) select(id);
+        else
+          reportInfo(
+            'La boîte de réception est vide : utilisez la capture rapide.',
+          );
+      }, reportError),
     settings: () => setDialog({ kind: 'settings' }),
     preferences: onOpenPreferences,
     help: () => openOverlay('help', true),

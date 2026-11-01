@@ -1,6 +1,9 @@
 import type { IpcMainInvokeEvent } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
-import { createIpcHandler } from '../../../src/main/ipc/handler';
+import {
+  createIpcHandler,
+  routeSenderByChannel,
+} from '../../../src/main/ipc/handler';
 import { createImplementations } from '../../../src/main/ipc/register';
 import type { FileDialogs } from '../../../src/main/file-dialogs';
 import type { RecentWorkspacesStore } from '../../../src/main/workspace/recent-workspaces';
@@ -104,6 +107,33 @@ describe('createIpcHandler', () => {
   });
 });
 
+describe('routeSenderByChannel', () => {
+  const main = vi.fn((e: IpcMainInvokeEvent) => e === mainEvent);
+  const capture = vi.fn((e: IpcMainInvokeEvent) => e === captureEvent);
+  const mainEvent = { id: 'main' } as unknown as IpcMainInvokeEvent;
+  const captureEvent = { id: 'capture' } as unknown as IpcMainInvokeEvent;
+  const route = routeSenderByChannel(main, capture);
+
+  it('réserve les canaux de capture à la fenêtre de capture', () => {
+    expect(route(captureEvent, 'capture:submit')).toBe(true);
+    expect(route(captureEvent, 'capture:getTarget')).toBe(true);
+    expect(route(mainEvent, 'capture:submit')).toBe(false);
+  });
+
+  it('ne donne à la fenêtre de capture que la lecture des préférences', () => {
+    expect(route(captureEvent, 'preferences:get')).toBe(true);
+    expect(route(captureEvent, 'preferences:update')).toBe(false);
+    expect(route(captureEvent, 'node:list')).toBe(false);
+    expect(route(captureEvent, 'workspace:delete')).toBe(false);
+  });
+
+  it('laisse à la fenêtre principale tous les autres canaux', () => {
+    expect(route(mainEvent, 'node:list')).toBe(true);
+    expect(route(mainEvent, 'capture:open')).toBe(true);
+    expect(route(mainEvent, 'preferences:get')).toBe(true);
+  });
+});
+
 function setup(pickedPath: string | null, confirmed = true) {
   const workspaces = {
     create: vi.fn(() => workspace),
@@ -142,6 +172,12 @@ function setup(pickedPath: string | null, confirmed = true) {
     getPreferences: () => DEFAULT_PREFERENCES,
     updatePreferences: vi.fn(),
     isTrustedSender: trusted,
+    quickCapture: {
+      target: vi.fn(() => null),
+      submit: vi.fn(() => ({ workspaceName: 'KB', nodeId: 'n1' })),
+      open: vi.fn(),
+      shortcutRegistered: vi.fn(() => true),
+    },
   });
   return { impl, workspaces, dialogs, recent, trash };
 }

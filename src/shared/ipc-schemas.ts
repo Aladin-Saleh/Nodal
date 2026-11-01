@@ -266,6 +266,12 @@ export const savePositionsInputSchema = z.strictObject({
 
 const idListSchema = z.array(idSchema).min(1).max(10_000);
 
+/** Capture rapide : un titre, une note facultative (document Markdown). */
+export const captureInputSchema = z.strictObject({
+  title: label('Le titre', TITLE_MAX_LENGTH),
+  note: optionalText('La note', DOCUMENT_BODY_MAX_LENGTH),
+});
+
 const noArgs = z.tuple([]);
 const one = <T extends z.ZodType>(schema: T) => z.tuple([schema]);
 
@@ -274,6 +280,11 @@ export const ipcArgsSchemas = {
   'app:setUnsavedChanges': one(z.boolean()),
   'preferences:get': noArgs,
   'preferences:update': one(preferencesUpdateSchema),
+  'capture:getTarget': noArgs,
+  'capture:submit': one(captureInputSchema),
+  'capture:open': noArgs,
+  'capture:getInbox': noArgs,
+  'capture:shortcutStatus': noArgs,
 
   'workspace:create': one(createWorkspaceInputSchema),
   'workspace:open': noArgs,

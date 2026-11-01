@@ -28,6 +28,66 @@ export function getRendererIndexPath(): string {
   );
 }
 
+/** Réglages de sécurité communs à toutes les fenêtres (§4.2). */
+function secureWebPreferences(): Electron.WebPreferences {
+  return {
+    preload: path.join(__dirname, 'preload.cjs'),
+    contextIsolation: true,
+    nodeIntegration: false,
+    nodeIntegrationInWorker: false,
+    nodeIntegrationInSubFrames: false,
+    sandbox: true,
+    webSecurity: true,
+    allowRunningInsecureContent: false,
+    webviewTag: false,
+    devTools: !app.isPackaged,
+  };
+}
+
+/** Charge le renderer ; `hash` choisit l'écran (`capture`). */
+function loadRenderer(window: BrowserWindow, hash?: string): void {
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    void window.loadURL(
+      hash
+        ? `${MAIN_WINDOW_VITE_DEV_SERVER_URL}#${hash}`
+        : MAIN_WINDOW_VITE_DEV_SERVER_URL,
+    );
+  } else {
+    void window.loadFile(getRendererIndexPath(), hash ? { hash } : undefined);
+  }
+}
+
+const currentBackground = () =>
+  nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BACKGROUND.light;
+
+/**
+ * Petite fenêtre de capture rapide : même renderer et même sécurité que la
+ * fenêtre principale, sans menu, au premier plan.
+ */
+export function createCaptureWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    width: 480,
+    height: 360,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    title: 'Capture rapide — Nodal',
+    show: false,
+    backgroundColor: currentBackground(),
+    webPreferences: secureWebPreferences(),
+  });
+  window.setMenu(null);
+  window.once('ready-to-show', () => {
+    window.show();
+    window.focus();
+  });
+  loadRenderer(window, 'capture');
+  return window;
+}
+
 export interface MainWindowOptions {
   /** Taille et position mémorisées ; `null` : valeurs par défaut. */
   state: WindowState | null;
@@ -49,21 +109,8 @@ export function createMainWindow({
     minHeight: 500,
     title: 'Nodal',
     show: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors
-      ? BACKGROUND.dark
-      : BACKGROUND.light,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      nodeIntegrationInWorker: false,
-      nodeIntegrationInSubFrames: false,
-      sandbox: true,
-      webSecurity: true,
-      allowRunningInsecureContent: false,
-      webviewTag: false,
-      devTools: isDev,
-    },
+    backgroundColor: currentBackground(),
+    webPreferences: secureWebPreferences(),
   });
 
   window.once('ready-to-show', () => {
@@ -80,18 +127,12 @@ export function createMainWindow({
   // Le fond suit le thème (redimensionnement, rechargement).
   const syncBackground = () => {
     if (window.isDestroyed()) return;
-    window.setBackgroundColor(
-      nativeTheme.shouldUseDarkColors ? BACKGROUND.dark : BACKGROUND.light,
-    );
+    window.setBackgroundColor(currentBackground());
   };
   nativeTheme.on('updated', syncBackground);
   window.on('closed', () => nativeTheme.off('updated', syncBackground));
 
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    void window.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-  } else {
-    void window.loadFile(getRendererIndexPath());
-  }
+  loadRenderer(window);
 
   // DevTools en développement, sauf pendant les tests de bout en bout.
   if (isDev && !process.env.NODAL_E2E_USER_DATA) {

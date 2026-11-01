@@ -15,8 +15,11 @@ import {
   type PreferencesUpdate,
 } from '../shared/preferences';
 import { createAppUrlMatcher } from './app-url';
+import { CaptureController } from './capture/capture-controller';
+import { QuickCaptureService } from './capture/quick-capture-service';
 import { getSqliteVersion } from './database/connection';
 import { createFileDialogs } from './file-dialogs';
+import { routeSenderByChannel } from './ipc/handler';
 import { registerIpcHandlers } from './ipc/register';
 import { PreferencesStore, WindowStateStore } from './preferences-store';
 import {
@@ -156,10 +159,20 @@ function bootstrap(): void {
   );
   const applyZoom = (current: AppPreferences) =>
     mainWindow?.webContents.setZoomFactor(current.zoom / 100);
+  const recent = new RecentWorkspacesStore(
+    path.join(userData, 'recent-workspaces.json'),
+  );
+  const capture = new CaptureController({
+    service: new QuickCaptureService({ workspaces, recent }),
+    onCapturedInOpenWorkspace: () =>
+      mainWindow?.webContents.send(IPC_EVENTS.externalChange),
+    zoomFactor: () => preferences.get().zoom / 100,
+  });
   const updatePreferences = (changes: PreferencesUpdate): AppPreferences => {
     const next = preferences.update(changes);
     nativeTheme.themeSource = next.theme;
     applyZoom(next);
+    capture.applyPreferences(next);
     return next;
   };
   nativeTheme.themeSource = preferences.get().theme;
@@ -205,18 +218,21 @@ function bootstrap(): void {
     applySessionSecurity(session.defaultSession);
     registerIpcHandlers(ipcMain, {
       workspaces,
-      recent: new RecentWorkspacesStore(
-        path.join(app.getPath('userData'), 'recent-workspaces.json'),
-      ),
+      recent,
       dialogs,
       trash: (filePath) => shell.trashItem(filePath),
       getAppInfo,
       setUnsavedChanges,
       getPreferences: () => preferences.get(),
       updatePreferences,
-      isTrustedSender: createSenderValidator(getMainWindow, isAppUrl),
+      isTrustedSender: routeSenderByChannel(
+        createSenderValidator(getMainWindow, isAppUrl),
+        createSenderValidator(capture.getWindow, isAppUrl),
+      ),
+      quickCapture: capture,
     });
     openWindow();
+    capture.applyPreferences(preferences.get());
     setInterval(pollExternalChanges, EXTERNAL_CHANGE_POLL_MS);
 
     app.on('activate', () => {
@@ -230,5 +246,8 @@ function bootstrap(): void {
   });
 
   // Checkpoint WAL + fermeture : il ne doit rester qu'un seul fichier .nodal.
-  app.on('will-quit', closeWorkspace);
+  app.on('will-quit', () => {
+    capture.release();
+    closeWorkspace();
+  });
 }

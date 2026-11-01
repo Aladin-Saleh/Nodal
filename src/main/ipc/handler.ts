@@ -7,8 +7,39 @@ import type {
   IpcResultData,
 } from '../../shared/ipc-contract';
 import { ipcArgsSchemas } from '../../shared/ipc-schemas';
+import {
+  CAPTURE_WINDOW_CHANNELS,
+  CAPTURE_WINDOW_SHARED_CHANNELS,
+} from '../../shared/quick-capture';
 
-export type SenderValidator = (event: IpcMainInvokeEvent) => boolean;
+/** L'émetteur a-t-il le droit d'appeler ce canal ? */
+export type SenderValidator = (
+  event: IpcMainInvokeEvent,
+  channel: IpcChannel,
+) => boolean;
+
+type WindowValidator = (event: IpcMainInvokeEvent) => boolean;
+
+const captureOnly: ReadonlySet<string> = new Set(CAPTURE_WINDOW_CHANNELS);
+const captureShared: ReadonlySet<string> = new Set(
+  CAPTURE_WINDOW_SHARED_CHANNELS,
+);
+
+/**
+ * Répartit les canaux entre les fenêtres : la fenêtre de capture n'appelle
+ * que ses propres canaux (et lit les préférences), la fenêtre principale
+ * tous les autres.
+ */
+export function routeSenderByChannel(
+  fromMainWindow: WindowValidator,
+  fromCaptureWindow: WindowValidator,
+): SenderValidator {
+  return (event, channel) => {
+    if (captureOnly.has(channel)) return fromCaptureWindow(event);
+    if (fromMainWindow(event)) return true;
+    return captureShared.has(channel) && fromCaptureWindow(event);
+  };
+}
 
 export type IpcImplementation<C extends IpcChannel> = (
   ...args: IpcArgs<C>
@@ -31,7 +62,7 @@ export function createIpcHandler<C extends IpcChannel>(
   const schema = ipcArgsSchemas[channel];
 
   return async (event, ...rawArgs) => {
-    if (!isTrustedSender(event)) {
+    if (!isTrustedSender(event, channel)) {
       console.warn(`[ipc] ${channel} : émetteur refusé`);
       return {
         ok: false,

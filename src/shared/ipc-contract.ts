@@ -38,6 +38,11 @@ import type {
   HealthReport,
 } from './model';
 import type { CodeRootInfo, NodeAnchors, StaleNode } from './code-anchors';
+import type {
+  CaptureInput,
+  CaptureResult,
+  CaptureTarget,
+} from './quick-capture';
 
 export interface AppInfo {
   appName: string;
@@ -206,6 +211,17 @@ export interface IpcContract {
   'preferences:get': { args: []; result: AppPreferences };
   'preferences:update': { args: [PreferencesUpdate]; result: AppPreferences };
 
+  /** Fenêtre de capture : espace qui recevra la capture, ou `null`. */
+  'capture:getTarget': { args: []; result: CaptureTarget | null };
+  /** Fenêtre de capture : range la capture dans la boîte de réception. */
+  'capture:submit': { args: [CaptureInput]; result: CaptureResult };
+  /** Ouvre la fenêtre de capture (palette, sans le raccourci global). */
+  'capture:open': { args: []; result: null };
+  /** Boîte de réception de l'espace ouvert, ou `null` si elle n'existe pas. */
+  'capture:getInbox': { args: []; result: string | null };
+  /** Le raccourci global est-il actif (sinon pris par une autre application) ? */
+  'capture:shortcutStatus': { args: []; result: { registered: boolean } };
+
   /** `null` si l'utilisateur annule la boîte de dialogue. */
   'workspace:create': {
     args: [CreateWorkspaceInput];
@@ -365,6 +381,11 @@ export const IPC_CHANNELS = [
   'app:setUnsavedChanges',
   'preferences:get',
   'preferences:update',
+  'capture:getTarget',
+  'capture:submit',
+  'capture:open',
+  'capture:getInbox',
+  'capture:shortcutStatus',
   'workspace:create',
   'workspace:open',
   'workspace:openRecent',

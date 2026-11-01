@@ -101,7 +101,10 @@ export function HelpDialog({
         Fichiers du code : déclarez un dossier de code dans les paramètres de
         l’espace, puis ancrez un nœud à des fichiers (src/mcp/** par exemple)
         depuis son panneau ; Nodal signale « possiblement obsolète » quand ils
-        changent après la dernière mise à jour du nœud. Le guide complet est
+        changent après la dernière mise à jour du nœud. Capture rapide : Ctrl +
+        Maj + Espace (réglable dans les préférences), même quand Nodal n’est pas
+        au premier plan, range un titre et une note dans la « Boîte de réception
+        » ; glissez ensuite chaque capture à sa place. Le guide complet est
         fourni avec l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>

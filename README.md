@@ -207,6 +207,14 @@ pièces jointes en BLOB).
   - MCP : `nodal_for_files(paths)` (nœuds ancrés, au format de
     `nodal_search`), opération `anchor` de `nodal_apply`, champ compact
     `stale` dans les réponses, consignes « avant / après modification ».
+- **v1.4 — Saisie** (en cours) :
+  - capture rapide : raccourci global configurable et désactivable
+    (`Ctrl+Maj+Espace` par défaut, `globalShortcut`), petite fenêtre au
+    premier plan (même renderer, mêmes réglages de sécurité, accès IPC
+    limité à ses deux canaux et à la lecture des préférences) ; titre et
+    note rangés dans la « Boîte de réception » de l'espace ouvert, ou du
+    dernier espace récent ouvert le temps de l'écriture, sans afficher
+    l'application ; rangement par glisser-déposer ou « Déplacer vers… ».
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
@@ -215,12 +223,14 @@ sélectionner dans le graphe, `Échap` vider la sélection ou la recherche,
 `F2` renommer, `Suppr` supprimer, `F1` aide, `Ctrl+,` préférences,
 `Ctrl+=` / `Ctrl+-` / `Ctrl+0` taille du texte, flèches pour parcourir
 l'arborescence, `H` masquer le nœud dans le graphe, touche Menu ou
-`Maj+F10` menu contextuel du nœud.
+`Maj+F10` menu contextuel du nœud, `Ctrl+Maj+Espace` capture rapide
+(global, tant que Nodal est lancé).
 
 Préférences de l'application (profil utilisateur, `preferences.json`) :
 thème (système, clair, sombre, appliqué par `nativeTheme`), couleur
 d'accent, densité, taille du texte (zoom de la fenêtre), vue à l'ouverture
-d'un espace, réouverture du dernier espace, aide des gestes du graphe. La
+d'un espace, réouverture du dernier espace, aide des gestes du graphe,
+raccourci de capture rapide. La
 taille et la position de la fenêtre sont mémorisées (`window-state.json`). Le détail est dans le [guide d'utilisation](docs/guide-utilisateur.md).
 
 ## Stack

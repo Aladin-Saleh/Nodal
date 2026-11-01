@@ -11,6 +11,11 @@ import type {
   AppPreferences,
   PreferencesUpdate,
 } from '../../shared/preferences';
+import type {
+  CaptureInput,
+  CaptureResult,
+  CaptureTarget,
+} from '../../shared/quick-capture';
 import type { FileDialogs } from '../file-dialogs';
 import { CodeAnchorService } from '../code/code-anchor-service';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
@@ -30,6 +35,7 @@ import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
 import { listAnchoredNodes } from '../knowledge/anchor-service';
+import { findInbox } from '../knowledge/inbox-service';
 import { SuggestionService } from '../knowledge/suggestion-service';
 import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
@@ -60,6 +66,16 @@ export interface IpcDependencies {
   /** Enregistre et applique (thème, zoom) ; retourne les préférences à jour. */
   updatePreferences(changes: PreferencesUpdate): AppPreferences;
   isTrustedSender: SenderValidator;
+  /** Capture rapide : fenêtre dédiée et raccourci global (main/index). */
+  quickCapture: QuickCaptureControls;
+}
+
+export interface QuickCaptureControls {
+  target(): CaptureTarget | null;
+  /** Enregistre, prévient la fenêtre principale et ferme la capture. */
+  submit(input: CaptureInput): CaptureResult;
+  open(): void;
+  shortcutRegistered(): boolean;
 }
 
 type Implementations = { [C in IpcChannel]: IpcImplementation<C> };
@@ -113,6 +129,17 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
     'preferences:get': () => deps.getPreferences(),
     'preferences:update': (changes) => deps.updatePreferences(changes),
+
+    'capture:getTarget': () => deps.quickCapture.target(),
+    'capture:submit': (input) => deps.quickCapture.submit(input),
+    'capture:open': () => {
+      deps.quickCapture.open();
+      return null;
+    },
+    'capture:getInbox': () => findInbox(context()),
+    'capture:shortcutStatus': () => ({
+      registered: deps.quickCapture.shortcutRegistered(),
+    }),
 
     'workspace:create': async ({ name }) => {
       const filePath = await dialogs.pickNewWorkspacePath(name);

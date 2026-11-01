@@ -3,6 +3,10 @@
  * espace : apparence de l'interface et quelques comportements.
  */
 import { z } from 'zod';
+import {
+  isValidAccelerator,
+  QUICK_CAPTURE_DEFAULT_SHORTCUT,
+} from './quick-capture';
 
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
@@ -40,6 +44,12 @@ export const preferencesSchema = z.strictObject({
   showGraphHints: z.boolean(),
   /** Déplier / replier dans l'arbre fait de même dans le graphe, et inversement. */
   linkTreeAndGraphFolding: z.boolean(),
+  /** Raccourci global de capture rapide, actif même hors de Nodal. */
+  quickCapture: z.boolean(),
+  quickCaptureShortcut: z
+    .string()
+    .max(64)
+    .refine(isValidAccelerator, 'Raccourci invalide.'),
 });
 
 export type AppPreferences = z.infer<typeof preferencesSchema>;
@@ -56,6 +66,8 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
   reopenLastWorkspace: true,
   showGraphHints: true,
   linkTreeAndGraphFolding: false,
+  quickCapture: true,
+  quickCaptureShortcut: QUICK_CAPTURE_DEFAULT_SHORTCUT,
 };
 
 /** Niveau de zoom voisin (Ctrl+= / Ctrl+-), borné aux niveaux proposés. */
