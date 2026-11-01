@@ -193,7 +193,7 @@ describe('parcours principaux', () => {
 
   it('exporte puis réimporte l’espace sans perte', async () => {
     await stubDialogs({ open: exportDir });
-    await page.getByText('Exporter ▾').click();
+    await page.getByText('Importer / exporter ▾').click();
     await page.getByRole('menuitem', { name: /Export portable/ }).click();
     await page.getByText(/Espace exporté dans/).waitFor();
     const [exported] = fs.readdirSync(exportDir);

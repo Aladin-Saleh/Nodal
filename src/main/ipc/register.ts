@@ -44,6 +44,14 @@ import {
   saveTemplates,
 } from '../knowledge/template-service';
 import { inTransaction } from '../database/transaction';
+import { randomUUID } from 'node:crypto';
+import {
+  backupPathBeforeImport,
+  previewMarkdownImport,
+  scanMarkdownFolder,
+  writeMarkdownImport,
+  type ScannedFolder,
+} from '../markdown-import/markdown-import-service';
 import { SuggestionService } from '../knowledge/suggestion-service';
 import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
@@ -123,6 +131,9 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     const info = deps.getAppInfo();
     return { name: info.appName, version: info.appVersion };
   };
+
+  // Dossier Markdown lu pour l'aperçu, importé ensuite tel quel.
+  let markdownScan: { token: string; scan: ScannedFolder } | null = null;
 
   const remember = (info: WorkspaceInfo) => {
     recent.touch(info.filePath, info.name);
@@ -444,6 +455,34 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return target;
     },
     'workspace:checkIntegrity': () => maintenance.checkIntegrity(),
+    'markdownImport:pick': async () => {
+      requireCurrent();
+      const folder = await dialogs.pickMarkdownFolder();
+      if (!folder) return null;
+      const scan = scanMarkdownFolder(folder);
+      const token = randomUUID();
+      markdownScan = { token, scan };
+      return previewMarkdownImport(scan, context(), token);
+    },
+    'markdownImport:run': ({ token }) => {
+      const current = requireCurrent();
+      if (!markdownScan || markdownScan.token !== token) {
+        throw new NodalError(
+          'NOT_FOUND',
+          'Cet aperçu n’est plus valable : choisissez à nouveau le dossier.',
+        );
+      }
+      const { scan } = markdownScan;
+      markdownScan = null;
+      // Sauvegarde de secours d'abord, comme avant tout import.
+      const backupPath = backupPathBeforeImport(current.filePath, new Date());
+      maintenance.backupTo(backupPath);
+      return writeMarkdownImport(scan, context(), backupPath);
+    },
+    'markdownImport:cancel': () => {
+      markdownScan = null;
+      return null;
+    },
     'assistant:listChanges': () => assistantChanges.list(),
     'assistant:validateNodes': ({ ids }) => ({
       validated: assistantChanges.validateNodes(ids),

@@ -19,6 +19,8 @@ import { usePreferences } from '../../app/preferences';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { actionForKey, type PaletteNode } from '../commands/actions';
 import { CommandPalette } from '../commands/CommandPalette';
+import type { MarkdownImportPreview } from '../../../shared/markdown-import';
+import { MarkdownImportDialog } from './MarkdownImportDialog';
 import { maskedNodeIds } from '../graph/graph-model';
 import { PathPanel } from '../graph/PathPanel';
 import {
@@ -120,6 +122,8 @@ function WorkspaceView({
   );
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [markdownPreview, setMarkdownPreview] =
+    useState<MarkdownImportPreview | null>(null);
   /** « Chemin vers… » : extrémités du chemin affiché. */
   const [pathQuery, setPathQuery] = useState<{
     fromId: string;
@@ -380,6 +384,13 @@ function WorkspaceView({
     openOverlay('editingDocumentId', created.id);
   };
 
+  const pickMarkdownFolder = async () => {
+    // La sauvegarde d'avant import doit contenir les dernières saisies.
+    await tracker.flushAll();
+    const preview = await run(() => client.call('markdownImport:pick'));
+    if (preview) setMarkdownPreview(preview);
+  };
+
   const exportWorkspace = async () => {
     setExporting(true);
     try {
@@ -476,6 +487,7 @@ function WorkspaceView({
     templates: () => setDialog({ kind: 'templates' }),
     relationTypes: () => setDialog({ kind: 'relationTypes' }),
     exportPortable: () => void exportWorkspace(),
+    importMarkdown: () => void pickMarkdownFolder(),
     exportLlm: () => openOverlay('llmExport', true),
     connectAssistant: () => openOverlay('mcp', true),
     activity: () => openOverlay('activity', true),
@@ -787,6 +799,17 @@ function WorkspaceView({
           }
           actions={actions}
         />
+        {markdownPreview && (
+          <MarkdownImportDialog
+            preview={markdownPreview}
+            onImported={(report) => {
+              void data.refreshNodes().then(() => select(report.rootId));
+              void data.refreshTags();
+              data.bumpRelations();
+            }}
+            onClose={() => setMarkdownPreview(null)}
+          />
+        )}
         {overlays.health && (
           <HealthDialog
             focus={overlays.health}

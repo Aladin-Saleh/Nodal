@@ -396,6 +396,31 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   nœuds possiblement obsolètes lui sont signalés dans les réponses (champ
   `stale`).
 
+### Importer un dossier Markdown ou un coffre Obsidian
+
+Menu **Importer / exporter ▾** → **Importer un dossier Markdown /
+Obsidian…** (ou la palette). Choisissez le dossier : Nodal le lit, sans rien
+écrire, et affiche un aperçu (dossiers, notes, liens, pièces jointes, liens
+non résolus, éléments ignorés). **Importer** :
+
+- fait d’abord une sauvegarde de l’espace à côté de son fichier
+  (`<nom>-avant-import-<date>.nodal`) ;
+- crée un nœud racine au nom du dossier ; chaque sous-dossier contenant des
+  notes devient un nœud, chaque note `.md` un nœud avec son document ;
+- reprend du front-matter le titre, le type (`type: procedure`,
+  `composant`…), le résumé (`summary` ou `description`), les tags et les
+  alias (pour résoudre les liens) ;
+- convertit les liens `[[Note]]`, `[[Note#Titre|texte]]`, `[texte](note.md)`
+  en liens Nodal, avec leur relation « est lié à » ; un lien vers une note
+  absente mais vers un nœud existant de même titre le vise ; les autres
+  restent des liens cassés, signalés par la santé de la base ;
+- importe les fichiers référencés (`![[image.png]]`, `![](assets/a.pdf)`)
+  comme pièces jointes de la note.
+
+Les fichiers sont lus comme des données, jamais exécutés ; les liens
+symboliques, les dossiers cachés (`.obsidian`, `.git`) et les notes non
+UTF-8 sont ignorés et listés dans le rapport.
+
 ## 8. Préférences
 
 Les préférences concernent l'application, quel que soit l'espace ouvert. On

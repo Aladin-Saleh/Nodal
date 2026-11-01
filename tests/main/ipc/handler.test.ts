@@ -148,6 +148,7 @@ function setup(pickedPath: string | null, confirmed = true) {
     pickAttachmentSavePath: vi.fn(async () => null),
     pickExportParentDirectory: vi.fn(async () => null),
     pickImportFolder: vi.fn(async () => null),
+    pickMarkdownFolder: vi.fn(async () => null),
     pickCodeRoot: vi.fn(async () => null),
     pickAnchorFiles: vi.fn(async () => []),
     pickNodalSavePath: vi.fn(async () => null),

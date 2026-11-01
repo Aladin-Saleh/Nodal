@@ -416,6 +416,9 @@ export const ipcArgsSchemas = {
   ),
   'workspace:import': noArgs,
   'workspace:backup': noArgs,
+  'markdownImport:pick': noArgs,
+  'markdownImport:run': one(z.strictObject({ token: idSchema })),
+  'markdownImport:cancel': noArgs,
   'assistant:listChanges': noArgs,
   'assistant:undo': one(idInput),
   'assistant:validateNodes': one(

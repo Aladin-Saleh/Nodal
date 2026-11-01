@@ -35,6 +35,8 @@ export interface WorkspaceCommands {
   templates(): void;
   relationTypes(): void;
   exportPortable(): void;
+  /** Importer un dossier Markdown / coffre Obsidian dans l'espace. */
+  importMarkdown(): void;
   exportLlm(): void;
   connectAssistant(): void;
   activity(): void;
@@ -293,6 +295,14 @@ export function workspaceActions(
       keywords: 'exporter sauvegarde',
       enabled: !state.exporting,
       run: commands.exportPortable,
+    },
+    {
+      id: 'workspace.importMarkdown',
+      label: 'Importer un dossier Markdown / Obsidian…',
+      group: 'Espace',
+      keywords: 'coffre vault notes md',
+      enabled: true,
+      run: commands.importMarkdown,
     },
     {
       id: 'workspace.exportLlm',

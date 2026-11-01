@@ -112,9 +112,10 @@ export function TopBar({
             className={exporting ? 'disabled' : undefined}
             aria-disabled={exporting}
           >
-            {exporting ? 'Export…' : 'Exporter ▾'}
+            {exporting ? 'Export…' : 'Importer / exporter ▾'}
           </summary>
           <div className="export-menu-panel" role="menu">
+            {menuItem('workspace.importMarkdown')}
             {menuItem('workspace.export')}
             {menuItem('workspace.exportLlm')}
             {menuItem('workspace.mcp')}

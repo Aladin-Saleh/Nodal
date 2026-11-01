@@ -44,6 +44,10 @@ import type {
   CaptureTarget,
 } from './quick-capture';
 import type { DocumentTemplate, TemplateList } from './templates';
+import type {
+  MarkdownImportPreview,
+  MarkdownImportReport,
+} from './markdown-import';
 
 export interface AppInfo {
   appName: string;
@@ -371,6 +375,18 @@ export interface IpcContract {
   };
   /** Valide un dossier d'export puis crée un nouvel espace ; `null` si annulé. */
   'workspace:import': { args: []; result: ImportResult | null };
+  /**
+   * Choisit un dossier Markdown / coffre Obsidian et le lit ; aperçu de
+   * l'import, ou `null` si annulé. Rien n'est écrit.
+   */
+  'markdownImport:pick': { args: []; result: MarkdownImportPreview | null };
+  /** Sauvegarde l'espace puis importe le dossier de l'aperçu `token`. */
+  'markdownImport:run': {
+    args: [{ token: string }];
+    result: MarkdownImportReport;
+  };
+  /** Oublie le dossier lu (aperçu fermé sans importer). */
+  'markdownImport:cancel': { args: []; result: null };
   /** Copie de sauvegarde du fichier courant ; chemin créé, ou `null` si annulé. */
   'workspace:backup': { args: []; result: string | null };
   'workspace:checkIntegrity': { args: []; result: IntegrityReport };
@@ -475,6 +491,9 @@ export const IPC_CHANNELS = [
   'workspace:exportLlm',
   'workspace:import',
   'workspace:backup',
+  'markdownImport:pick',
+  'markdownImport:run',
+  'markdownImport:cancel',
   'workspace:checkIntegrity',
   'assistant:listChanges',
   'assistant:undo',

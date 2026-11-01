@@ -222,6 +222,14 @@ pièces jointes en BLOB).
     les modèles par défaut : pas de migration), conservés par l'export
     portable ; MCP : champ `template` de `nodal_create_node` et de
     l'opération `createNode` de `nodal_apply`.
+  - import d'un dossier Markdown / coffre Obsidian dans l'espace ouvert
+    (menu « Importer / exporter », palette) : dossiers → hiérarchie sous une
+    nouvelle racine, notes → nœuds et documents, front-matter (titre, type,
+    résumé, tags, alias), liens `[[Note#Titre|texte]]` et `[texte](note.md)`
+    → liens `[[node:…]]` et relations, fichiers référencés → pièces jointes ;
+    aperçu avant import (liens non résolus, éléments ignorés), sauvegarde
+    automatique à côté du fichier, une seule transaction ; fichiers lus comme
+    données, liens symboliques et dossiers cachés ignorés.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

@@ -28,6 +28,8 @@ export interface FileDialogs {
   pickExportParentDirectory(): Promise<string | null>;
   /** Dossier d'export à importer ; `null` si annulé. */
   pickImportFolder(): Promise<string | null>;
+  /** Dossier Markdown ou coffre Obsidian à importer ; `null` si annulé. */
+  pickMarkdownFolder(): Promise<string | null>;
   /** Dossier de code associé à l'espace ; `null` si annulé. */
   pickCodeRoot(): Promise<string | null>;
   /** Fichiers du code à ancrer à un nœud ; liste vide si annulé. */
@@ -109,6 +111,14 @@ export function createFileDialogs(
     async pickImportFolder() {
       const result = await open({
         title: 'Choisir le dossier d’export Nodal à importer',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickMarkdownFolder() {
+      const result = await open({
+        title: 'Choisir un dossier Markdown ou un coffre Obsidian à importer',
         properties: ['openDirectory'],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);
