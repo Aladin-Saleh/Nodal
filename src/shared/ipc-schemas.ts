@@ -26,6 +26,7 @@ import {
 } from './code-anchors';
 import type { IpcArgs, IpcChannel } from './ipc-contract';
 import { preferencesUpdateSchema } from './preferences';
+import { templateIdSchema, templateListSchema } from './templates';
 
 // Caractères de contrôle C0/C1 : interdits dans un libellé sur une ligne.
 // oxlint-disable-next-line no-control-regex
@@ -143,6 +144,7 @@ export const createNodeInputSchema = z.strictObject({
   parentId: idSchema.nullable(),
   title: nodeTitleSchema,
   nodeType: nodeTypeSchema,
+  templateId: templateIdSchema.nullable().optional(),
 });
 export const updateNodeInputSchema = z.strictObject({
   id: idSchema,
@@ -174,6 +176,7 @@ export const createDocumentInputSchema = z.strictObject({
   title: nodeTitleSchema,
   contentType: contentTypeSchema,
   language: languageSchema.optional(),
+  templateId: templateIdSchema.optional(),
 });
 export const updateDocumentInputSchema = z.strictObject({
   id: idSchema,
@@ -364,6 +367,9 @@ export const ipcArgsSchemas = {
 
   'document:get': one(idInput),
   'document:create': one(createDocumentInputSchema),
+  'template:list': noArgs,
+  'template:save': one(z.strictObject({ templates: templateListSchema })),
+  'template:reset': noArgs,
   'document:update': one(updateDocumentInputSchema),
   'document:delete': one(idInput),
   'document:reorder': one(reorderDocumentsInputSchema),

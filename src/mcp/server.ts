@@ -597,6 +597,13 @@ export function createNodalMcpServer(
           .describe('Une ou deux phrases'),
         tags: tagNames.optional(),
         allowDuplicate: z.boolean().optional(),
+        template: z
+          .string()
+          .max(100)
+          .optional()
+          .describe(
+            'Modèle de document à ajouter (nom, ex. « Procédure », « Décision (ADR) »)',
+          ),
       }),
       annotations: ADDITIVE,
     },

@@ -18,6 +18,7 @@ import { listEdges } from './edge-service';
 import { listRelationTypes } from './relation-type-service';
 import { asRows } from './rows';
 import { readSettings } from './settings-service';
+import { readTemplates } from './template-service';
 
 export const EXPORT_FORMAT = 'nodal-export';
 export const EXPORT_FORMAT_VERSION = 1;
@@ -228,6 +229,7 @@ export async function exportWorkspace(
   // Métadonnées lues maintenant : l'instantané reste cohérent même si
   // l'utilisateur continue d'éditer pendant l'écriture des fichiers.
   const settings = readSettings(ctx);
+  const templates = readTemplates(ctx);
   const relationTypes = listRelationTypes(ctx).map(
     ({ id, name, color, isBuiltin }) => ({ id, name, color, isBuiltin }),
   );
@@ -336,6 +338,8 @@ export async function exportWorkspace(
         updatedAt: workspace.updatedAt,
       },
       settings,
+      // Modèles de documents, seulement s'ils sont propres à l'espace.
+      ...(templates.customized && { templates: templates.templates }),
       relationTypes,
       tags,
       nodes: nodes.map((node) => ({

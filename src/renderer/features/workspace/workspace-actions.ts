@@ -31,6 +31,8 @@ export interface WorkspaceCommands {
   openPalette(actionsOnly: boolean): void;
   save(): void;
   tags(): void;
+  /** Modèles de documents de l'espace. */
+  templates(): void;
   relationTypes(): void;
   exportPortable(): void;
   exportLlm(): void;
@@ -268,6 +270,14 @@ export function workspaceActions(
       keywords: 'gerer etiquettes',
       enabled: true,
       run: commands.tags,
+    },
+    {
+      id: 'workspace.templates',
+      label: 'Modèles de documents…',
+      group: 'Espace',
+      keywords: 'gabarit procedure composant donnee adr decision',
+      enabled: true,
+      run: commands.templates,
     },
     {
       id: 'workspace.relationTypes',

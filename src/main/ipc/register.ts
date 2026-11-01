@@ -36,6 +36,14 @@ import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
 import { listAnchoredNodes } from '../knowledge/anchor-service';
 import { findInbox } from '../knowledge/inbox-service';
+import {
+  addDocumentFromTemplate,
+  readTemplates,
+  requireTemplate,
+  resetTemplates,
+  saveTemplates,
+} from '../knowledge/template-service';
+import { inTransaction } from '../database/transaction';
 import { SuggestionService } from '../knowledge/suggestion-service';
 import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
@@ -253,7 +261,17 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return listBacklinks(ctx, id);
     },
     'node:get': ({ id }) => nodes.get(id),
-    'node:create': (input) => nodes.create(input),
+    'node:create': ({ templateId, ...input }) => {
+      if (!templateId) return nodes.create(input);
+      // Nœud et document du modèle : tout ou rien.
+      const ctx = context();
+      return inTransaction(ctx.db, () => {
+        const template = requireTemplate(ctx, templateId);
+        const node = nodes.create(input);
+        addDocumentFromTemplate(ctx, node.id, template);
+        return node;
+      });
+    },
     'node:update': (input) => nodes.update(input),
     'node:move': (input) => {
       nodes.move(input);
@@ -281,7 +299,19 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
 
     'document:get': ({ id }) => documents.get(id),
-    'document:create': (input) => documents.create(input),
+    'document:create': ({ templateId, ...input }) => {
+      if (!templateId) return documents.create(input);
+      const ctx = context();
+      return addDocumentFromTemplate(
+        ctx,
+        input.nodeId,
+        requireTemplate(ctx, templateId),
+        input.title,
+      );
+    },
+    'template:list': () => readTemplates(context()),
+    'template:save': ({ templates }) => saveTemplates(context(), templates),
+    'template:reset': () => resetTemplates(context()),
     'document:update': (input) => documents.update(input),
     'document:delete': ({ id }) => {
       documents.delete(id);

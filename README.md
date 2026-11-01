@@ -215,6 +215,13 @@ pièces jointes en BLOB).
     note rangés dans la « Boîte de réception » de l'espace ouvert, ou du
     dernier espace récent ouvert le temps de l'écriture, sans afficher
     l'application ; rangement par glisser-déposer ou « Déplacer vers… ».
+  - modèles de documents par type de nœud (Procédure, Composant, Donnée,
+    Décision (ADR) pour un concept), proposés à la création d'un nœud ou
+    d'un document avec le choix « Aucun » ; modifiables par espace
+    (`workspace_settings`, clé `templates`, absente tant que l'espace suit
+    les modèles par défaut : pas de migration), conservés par l'export
+    portable ; MCP : champ `template` de `nodal_create_node` et de
+    l'opération `createNode` de `nodal_apply`.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

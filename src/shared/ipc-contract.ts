@@ -43,6 +43,7 @@ import type {
   CaptureResult,
   CaptureTarget,
 } from './quick-capture';
+import type { DocumentTemplate, TemplateList } from './templates';
 
 export interface AppInfo {
   appName: string;
@@ -93,6 +94,8 @@ export interface CreateNodeInput {
   parentId: string | null;
   title: string;
   nodeType: NodeType;
+  /** Modèle de document à ajouter au nœud créé ; absent ou `null` : aucun. */
+  templateId?: string | null;
 }
 export interface UpdateNodeInput {
   id: string;
@@ -139,6 +142,8 @@ export interface CreateDocumentInput {
   title: string;
   contentType: ContentType;
   language?: string | null;
+  /** Document Markdown pré-rempli avec ce modèle. */
+  templateId?: string;
 }
 export interface UpdateDocumentInput {
   id: string;
@@ -312,6 +317,15 @@ export interface IpcContract {
 
   'document:get': { args: [IdInput]; result: DocumentInfo };
   'document:create': { args: [CreateDocumentInput]; result: DocumentInfo };
+
+  /** Modèles de documents de l'espace (par défaut tant qu'ils n'ont pas changé). */
+  'template:list': { args: []; result: TemplateList };
+  'template:save': {
+    args: [{ templates: DocumentTemplate[] }];
+    result: TemplateList;
+  };
+  /** Revient aux modèles par défaut. */
+  'template:reset': { args: []; result: TemplateList };
   'document:update': { args: [UpdateDocumentInput]; result: DocumentInfo };
   'document:delete': { args: [IdInput]; result: null };
   'document:reorder': { args: [ReorderDocumentsInput]; result: null };
@@ -433,6 +447,9 @@ export const IPC_CHANNELS = [
   'node:deleteMany',
   'document:get',
   'document:create',
+  'template:list',
+  'template:save',
+  'template:reset',
   'document:update',
   'document:delete',
   'document:reorder',

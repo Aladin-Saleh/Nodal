@@ -1,4 +1,4 @@
-import type { ContentType, NodeType } from '../../../shared/domain';
+import type { NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
   BulkDeletionImpact,
@@ -9,7 +9,11 @@ import type {
 } from '../../../shared/model';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { DocumentEditorDialog } from '../documents/DocumentEditorDialog';
-import { NewDocumentDialog, type Language } from '../documents/DocumentsPanel';
+import { TemplatesDialog } from '../templates/TemplatesDialog';
+import {
+  NewDocumentDialog,
+  type NewDocument,
+} from '../documents/DocumentsPanel';
 import {
   DeleteNodeDialog,
   DuplicateNodeDialog,
@@ -43,7 +47,8 @@ export type DialogState =
   | { kind: 'bulkDelete'; ids: string[]; impact: BulkDeletionImpact }
   | { kind: 'tags' }
   | { kind: 'relationTypes' }
-  | { kind: 'settings' };
+  | { kind: 'settings' }
+  | { kind: 'templates' };
 
 /** Fenêtres secondaires ouvertes en dehors des dialogues de nœud. */
 export interface Overlays {
@@ -75,6 +80,8 @@ export interface WorkspaceDialogsProps {
   dialog: DialogState | null;
   overlays: Overlays;
   onCloseDialog(): void;
+  /** Remplace la boîte de dialogue ouverte (paramètres → modèles). */
+  onOpenDialog(dialog: DialogState): void;
   onCloseOverlay(name: keyof Overlays): void;
   onSelect(id: string): void;
   onWorkspaceChanged(workspace: WorkspaceInfo): void;
@@ -84,18 +91,14 @@ export interface WorkspaceDialogsProps {
     title: string,
     nodeType: NodeType,
     parentId: string | null,
+    templateId: string | null,
   ): void;
   onMove(nodes: NodeSummary[], parentId: string | null, bulk: boolean): void;
   onDuplicate(node: NodeSummary, includeChildren: boolean): void;
   onDeleteNode(node: NodeSummary, strategy: ChildrenStrategy): void;
   onBulkDelete(ids: string[], strategy: ChildrenStrategy): void;
   onExportForLlm(options: LlmExportOptions): void;
-  onCreateDocument(
-    nodeId: string,
-    title: string,
-    contentType: ContentType,
-    language: Language | null,
-  ): void;
+  onCreateDocument(nodeId: string, document: NewDocument): void;
   /** Registre des actions : raccourcis listés dans l'aide. */
   actions: readonly AppAction[];
 }
@@ -109,6 +112,7 @@ export function WorkspaceDialogs({
   dialog,
   overlays,
   onCloseDialog,
+  onOpenDialog,
   onCloseOverlay,
   onSelect,
   onWorkspaceChanged,
@@ -172,13 +176,11 @@ export function WorkspaceDialogs({
       )}
       {overlays.addingDocumentFor && (
         <NewDocumentDialog
-          onSubmit={(title, contentType, language) =>
-            onCreateDocument(
-              overlays.addingDocumentFor!,
-              title,
-              contentType,
-              language,
-            )
+          nodeType={
+            index.byId.get(overlays.addingDocumentFor)?.nodeType ?? null
+          }
+          onSubmit={(document) =>
+            onCreateDocument(overlays.addingDocumentFor!, document)
           }
           onCancel={() => onCloseOverlay('addingDocumentFor')}
         />
@@ -251,11 +253,15 @@ export function WorkspaceDialogs({
           onClose={onCloseDialog}
         />
       )}
+      {dialog?.kind === 'templates' && (
+        <TemplatesDialog onClose={onCloseDialog} />
+      )}
       {dialog?.kind === 'settings' && (
         <WorkspaceSettingsDialog
           workspace={workspace}
           onUpdated={onWorkspaceChanged}
           onDeleted={onWorkspaceDeleted}
+          onOpenTemplates={() => onOpenDialog({ kind: 'templates' })}
           onClose={onCloseDialog}
         />
       )}

@@ -104,8 +104,11 @@ export function HelpDialog({
         changent après la dernière mise à jour du nœud. Capture rapide : Ctrl +
         Maj + Espace (réglable dans les préférences), même quand Nodal n’est pas
         au premier plan, range un titre et une note dans la « Boîte de réception
-        » ; glissez ensuite chaque capture à sa place. Le guide complet est
-        fourni avec l’application (docs/guide-utilisateur.md).
+        » ; glissez ensuite chaque capture à sa place. Modèles de documents :
+        choisissez un modèle (Procédure, Composant, Donnée, Décision) en créant
+        un nœud ou un document ; modifiez-les depuis la palette (« Modèles de
+        documents… »). Le guide complet est fourni avec l’application
+        (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

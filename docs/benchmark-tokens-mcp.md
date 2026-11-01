@@ -346,6 +346,32 @@ modifié après la dernière mise à jour du nœud.
   le dépôt de Nodal en 480 ms (quatre appels `git log` en parallèle, environ
   60 ms chacun sous Windows) ; l'application garde le résultat 30 s.
 
+## Modèles de documents : champ `template` (v1.4)
+
+`nodal_create_node` et l'opération `createNode` de `nodal_apply` acceptent
+`template` (nom ou identifiant d'un modèle de l'espace) : le nœud est créé
+avec le document du modèle. Mesure : `tests/perf/mcp-tokens.perf.ts`
+(« modèles de documents »), définitions servies par `tools/list` avec et
+sans le champ.
+
+| Mesure                                     |      Tokens |
+| ------------------------------------------ | ----------: |
+| Définition de `nodal_create_node`          |   301 → 340 |
+| Définition de `nodal_apply`                | 1023 → 1040 |
+| Réponse de `nodal_create_node` sans modèle |          12 |
+| Réponse avec modèle (`documentId` en plus) |          22 |
+
+- Le coût est payé une fois, quand le client charge les outils ; les
+  consignes du serveur ne changent pas. La description du champ cite deux
+  noms de modèles par défaut plutôt que la liste de l'espace, qui varierait
+  d'un espace à l'autre.
+- Un modèle inconnu est refusé avant toute écriture, avec la liste des
+  modèles de l'espace dans le message : l'assistant n'a pas besoin d'un
+  outil pour les lister.
+- `documentId` (8 caractères) permet de remplir ensuite les sections avec
+  `nodal_update_document` (`mode: "replace"`) ; dans `nodal_apply`, il est
+  rendu dans la ligne de résultat de l'opération.
+
 ## Limites
 
 - Seule la taille des réponses a été mesurée, pas la qualité des réponses du

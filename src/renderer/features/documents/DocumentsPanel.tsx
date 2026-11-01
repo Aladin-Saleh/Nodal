@@ -5,17 +5,22 @@ import {
   CONTENT_TYPE_LABELS,
   TITLE_MAX_LENGTH,
   type ContentType,
+  type NodeType,
 } from '../../../shared/domain';
+import type { CreateDocumentInput } from '../../../shared/ipc-contract';
 import type { DocumentSummary } from '../../../shared/model';
 import { useClient, useRunner, useSaveTracker } from '../../app/context';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Modal } from '../../components/Modal';
+import { TemplateSelect, useTemplates } from '../templates/TemplateSelect';
 import { DocumentEditor } from './DocumentEditor';
 
 export type Language = (typeof CODE_LANGUAGES)[number];
 
 export interface DocumentsPanelProps {
   nodeId: string;
+  /** Type du nœud : ses modèles de documents sont proposés en premier. */
+  nodeType: NodeType;
   documents: DocumentSummary[];
   /** Change après une modification externe : l'éditeur est rechargé. */
   revision?: number;
@@ -25,6 +30,7 @@ export interface DocumentsPanelProps {
 /** Liste ordonnée des documents d'un nœud, en onglets, et l'éditeur courant. */
 export function DocumentsPanel({
   nodeId,
+  nodeType,
   documents,
   revision = 0,
   onChanged,
@@ -44,14 +50,10 @@ export function DocumentsPanel({
     documents.find((doc) => doc.id === selectedId) ?? documents[0] ?? null;
   const position = selected ? documents.indexOf(selected) : -1;
 
-  const create = async (
-    title: string,
-    contentType: ContentType,
-    language: Language | null,
-  ) => {
+  const create = async (document: NewDocument) => {
     setCreating(false);
     const created = await run(() =>
-      client.call('document:create', { nodeId, title, contentType, language }),
+      client.call('document:create', createDocumentInput(nodeId, document)),
     );
     if (created) {
       setSelectedId(created.id);
@@ -158,6 +160,7 @@ export function DocumentsPanel({
 
       {creating && (
         <NewDocumentDialog
+          nodeType={nodeType}
           onSubmit={create}
           onCancel={() => setCreating(false)}
         />
@@ -180,38 +183,82 @@ export function DocumentsPanel({
   );
 }
 
+/** Document à créer ; `templateId` : document Markdown pré-rempli. */
+export interface NewDocument {
+  title: string;
+  contentType: ContentType;
+  language: Language | null;
+  templateId: string | null;
+}
+
+/** Arguments de document:create (sans modèle : champ absent). */
+export function createDocumentInput(
+  nodeId: string,
+  { title, contentType, language, templateId }: NewDocument,
+): CreateDocumentInput {
+  return {
+    nodeId,
+    title,
+    contentType,
+    language,
+    ...(templateId && { templateId }),
+  };
+}
+
 export function NewDocumentDialog({
+  nodeType,
   onSubmit,
   onCancel,
 }: {
-  onSubmit(
-    title: string,
-    contentType: ContentType,
-    language: Language | null,
-  ): void;
+  /** Type du nœud : ses modèles sont proposés en premier. */
+  nodeType: NodeType | null;
+  onSubmit(document: NewDocument): void;
   onCancel(): void;
 }) {
   const titleId = useId();
   const typeId = useId();
   const languageId = useId();
+  const templateFieldId = useId();
+  const templates = useTemplates();
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState<ContentType>('markdown');
   const [language, setLanguage] = useState<Language | ''>('');
+  const [templateId, setTemplateId] = useState('');
   const trimmed = title.trim();
+
+  const chooseTemplate = (id: string) => {
+    const previous = templates.find((t) => t.id === templateId);
+    const next = templates.find((t) => t.id === id);
+    setTemplateId(id);
+    // Le titre suit le modèle tant qu'il n'a pas été saisi à la main.
+    if (!trimmed || trimmed === previous?.documentTitle) {
+      setTitle(next?.documentTitle ?? '');
+    }
+    if (next) setContentType('markdown');
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!trimmed) return;
-    onSubmit(
-      trimmed,
+    onSubmit({
+      title: trimmed,
       contentType,
-      contentType === 'code' && language ? language : null,
-    );
+      language: contentType === 'code' && language ? language : null,
+      templateId: templateId || null,
+    });
   };
 
   return (
     <Modal title="Nouveau document" onClose={onCancel}>
       <form className="form" onSubmit={submit}>
+        <label htmlFor={templateFieldId}>Modèle</label>
+        <TemplateSelect
+          id={templateFieldId}
+          templates={templates}
+          nodeType={nodeType}
+          value={templateId}
+          onChange={chooseTemplate}
+        />
         <label htmlFor={titleId}>Titre</label>
         <input
           id={titleId}
@@ -225,6 +272,8 @@ export function NewDocumentDialog({
         <select
           id={typeId}
           value={contentType}
+          // Un modèle est toujours un document Markdown.
+          disabled={templateId !== ''}
           onChange={(event) =>
             setContentType(event.target.value as ContentType)
           }

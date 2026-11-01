@@ -171,6 +171,32 @@ Mermaid**. L'enregistrement est automatique.
 - **Markdown** : modes _Édition_, _Côte à côte_, _Aperçu_. Les liens web
   s'ouvrent dans votre navigateur.
 
+### Modèles de documents
+
+Un modèle pré-remplit un document Markdown avec des sections à compléter.
+Quatre modèles sont fournis :
+
+| Modèle         | Proposé pour | Sections                                                              |
+| -------------- | ------------ | --------------------------------------------------------------------- |
+| Procédure      | Procédure    | Prérequis, Étapes, Vérification, Retour arrière                       |
+| Composant      | Composant    | Rôle, Responsabilités, Dépendances, Configuration, Points d’attention |
+| Donnée         | Donnée       | Schéma, Origine, Consommateurs                                        |
+| Décision (ADR) | Concept      | Contexte, Décision, Conséquences, Alternatives                        |
+
+- **À la création d’un nœud** : le champ « Modèle de document » est sur
+  « Aucun » ; choisir un type propose son modèle, que vous pouvez remplacer
+  par un autre ou par « Aucun ».
+- **À la création d’un document** : le champ « Modèle » liste d’abord les
+  modèles du type du nœud ; le titre du document reprend celui du modèle
+  (modifiable) et le document est en Markdown.
+- **Modifier les modèles** : palette → « Modèles de documents… », ou
+  Paramètres de l’espace → « Modifier les modèles… ». Nom, type pour lequel
+  le modèle est proposé, titre du document créé et contenu ; ajout et
+  suppression ; « Rétablir les modèles par défaut ». Les modèles sont propres
+  à l’espace et suivent l’export portable.
+- **Assistant IA (MCP)** : `nodal_create_node` et `nodal_apply` acceptent
+  `template` (le nom d’un modèle) pour créer un nœud avec son document.
+
 ### Liens entre nœuds `[[...]]`
 
 - Tapez **`[[`** dans un document Markdown : Nodal propose les nœuds (titre

@@ -13,6 +13,8 @@ import {
   ANCHORS_MAX_PER_NODE,
   normalizeAnchorPattern,
 } from '../../shared/code-anchors';
+import { templateListSchema } from '../../shared/templates';
+import { TEMPLATES_SETTING_KEY } from './template-service';
 import { CONTENT_TYPES, NODE_TYPES } from '../../shared/domain';
 import { NodalError } from '../../shared/errors';
 import { inTransaction } from '../database/transaction';
@@ -64,6 +66,8 @@ const manifestSchema = z.object({
     updatedAt: iso,
   }),
   settings: z.record(z.string(), z.unknown()).optional(),
+  /** Modèles de documents propres à l'espace (absent : modèles par défaut). */
+  templates: templateListSchema.optional(),
   relationTypes: z.array(
     z.object({ id, name: z.string().min(1), color, isBuiltin: z.boolean() }),
   ),
@@ -320,6 +324,13 @@ export function writeImport(
     const maxSize = manifest.settings?.attachmentMaxSizeBytes;
     if (typeof maxSize === 'number') {
       insertSetting.run(ws.id, 'attachment.maxSizeBytes', String(maxSize));
+    }
+    if (manifest.templates) {
+      insertSetting.run(
+        ws.id,
+        TEMPLATES_SETTING_KEY,
+        JSON.stringify(manifest.templates),
+      );
     }
 
     const insertType = db.prepare(

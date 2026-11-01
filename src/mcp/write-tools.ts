@@ -32,6 +32,7 @@ import { RelationTypeService } from '../main/knowledge/relation-type-service';
 import { asRow, asRows } from '../main/knowledge/rows';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
+import { requireTemplate } from '../main/knowledge/template-service';
 import { toRootRelative } from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
@@ -123,9 +124,13 @@ export function createNode(
     summary?: string;
     tags?: string[];
     allowDuplicate?: boolean;
+    /** Modèle de document de l'espace (nom ou identifiant). */
+    template?: string;
   },
 ) {
   const title = check(nodeTitleSchema, input.title);
+  // Modèle vérifié avant toute écriture : l'erreur liste ceux qui existent.
+  const template = input.template ? requireTemplate(ctx, input.template) : null;
   const parentId = input.parentId ?? null;
   if (parentId) nodeType(ctx, parentId);
   // Évite les doublons : l'assistant doit compléter le nœud existant.
@@ -166,7 +171,15 @@ export function createNode(
     before: null,
     after: { id },
   });
-  return { id, path };
+  if (!template) return { id, path };
+  // Document du modèle, journalisé comme un ajout de document.
+  const document = addDocument(ctx, {
+    nodeId: id,
+    title: template.documentTitle,
+    contentType: 'markdown',
+    body: template.body,
+  });
+  return { id, path, documentId: document.id };
 }
 
 export function updateNode(

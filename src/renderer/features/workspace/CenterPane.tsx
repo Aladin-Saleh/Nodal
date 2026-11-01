@@ -115,6 +115,7 @@ export function CenterPane({
             <DocumentsPanel
               key={detail.id}
               nodeId={detail.id}
+              nodeType={detail.nodeType}
               documents={detail.documents}
               revision={data.externalRevision}
               onChanged={data.refreshDetail}

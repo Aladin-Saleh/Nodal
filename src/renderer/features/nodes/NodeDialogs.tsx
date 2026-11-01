@@ -10,8 +10,10 @@ import type {
   NodeDeletionImpact,
   NodeSummary,
 } from '../../../shared/model';
+import { defaultTemplateFor } from '../../../shared/templates';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Modal } from '../../components/Modal';
+import { TemplateSelect, useTemplates } from '../templates/TemplateSelect';
 import { subtreeIds, visibleRows, type TreeIndex } from './tree';
 
 export function NewNodeDialog({
@@ -26,14 +28,23 @@ export function NewNodeDialog({
   initialTitle?: string;
   /** Si fourni, le parent se choisit dans la boîte (racine par défaut). */
   parentChoice?: { index: TreeIndex; parentId: string | null };
-  onSubmit(title: string, nodeType: NodeType, parentId: string | null): void;
+  onSubmit(
+    title: string,
+    nodeType: NodeType,
+    parentId: string | null,
+    templateId: string | null,
+  ): void;
   onCancel(): void;
 }) {
   const titleId = useId();
   const typeId = useId();
+  const templateFieldId = useId();
   const parentFieldId = useId();
+  const templates = useTemplates();
   const [title, setTitle] = useState(initialTitle);
   const [nodeType, setNodeType] = useState<NodeType>('concept');
+  // « Aucun » au départ ; choisir un type propose son modèle.
+  const [templateId, setTemplateId] = useState('');
   const [chosenParent, setChosenParent] = useState(
     parentChoice?.parentId ?? '',
   );
@@ -43,7 +54,7 @@ export function NewNodeDialog({
     event.preventDefault();
     if (!trimmed) return;
     const parentId = parentChoice ? chosenParent || null : null;
-    onSubmit(trimmed, nodeType, parentId);
+    onSubmit(trimmed, nodeType, parentId, templateId || null);
   };
 
   return (
@@ -71,7 +82,11 @@ export function NewNodeDialog({
         <select
           id={typeId}
           value={nodeType}
-          onChange={(event) => setNodeType(event.target.value as NodeType)}
+          onChange={(event) => {
+            const type = event.target.value as NodeType;
+            setNodeType(type);
+            setTemplateId(defaultTemplateFor(templates, type)?.id ?? '');
+          }}
         >
           {NODE_TYPES.map((type) => (
             <option key={type} value={type}>
@@ -79,6 +94,14 @@ export function NewNodeDialog({
             </option>
           ))}
         </select>
+        <label htmlFor={templateFieldId}>Modèle de document</label>
+        <TemplateSelect
+          id={templateFieldId}
+          templates={templates}
+          nodeType={nodeType}
+          value={templateId}
+          onChange={setTemplateId}
+        />
         {parentChoice && (
           <>
             <label htmlFor={parentFieldId}>Parent</label>

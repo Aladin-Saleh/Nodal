@@ -23,6 +23,8 @@ export interface WorkspaceSettingsDialogProps {
   onUpdated(workspace: WorkspaceInfo): void;
   /** L'espace a été placé dans la corbeille. */
   onDeleted(): void;
+  /** Ouvre les modèles de documents (à la place de cette boîte). */
+  onOpenTemplates(): void;
   onClose(): void;
 }
 
@@ -34,6 +36,7 @@ export function WorkspaceSettingsDialog({
   workspace,
   onUpdated,
   onDeleted,
+  onOpenTemplates,
   onClose,
 }: WorkspaceSettingsDialogProps) {
   const client = useClient();
@@ -181,6 +184,23 @@ export function WorkspaceSettingsDialog({
               onClick={() => void addCodeRoot()}
             >
               Ajouter un dossier…
+            </button>
+          </div>
+        </fieldset>
+
+        <fieldset className="choices">
+          <legend>Modèles de documents</legend>
+          <p className="muted">
+            Procédure, composant, donnée, décision (ADR)… proposés à la création
+            d’un nœud ou d’un document.
+          </p>
+          <div className="inline-form">
+            <button
+              type="button"
+              className="secondary"
+              onClick={onOpenTemplates}
+            >
+              Modifier les modèles…
             </button>
           </div>
         </fieldset>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NodalError } from '../../../shared/errors';
-import type { ContentType, NodeType } from '../../../shared/domain';
+import type { NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
   ChildrenStrategy,
@@ -26,7 +26,10 @@ import {
   pathLinkIds,
   shortestPath,
 } from '../../../shared/graph-path';
-import type { Language } from '../documents/DocumentsPanel';
+import {
+  createDocumentInput,
+  type NewDocument,
+} from '../documents/DocumentsPanel';
 import { NodeLinksContext } from '../editor/node-links';
 import { createLinkResolver } from '../../../shared/wiki-links';
 import { NodeProperties } from '../nodes/NodeProperties';
@@ -183,6 +186,7 @@ function WorkspaceView({
     title: string,
     nodeType: NodeType,
     chosenParentId: string | null,
+    templateId: string | null,
   ) => {
     if (dialog?.kind !== 'new') return;
     const { position } = dialog;
@@ -190,7 +194,12 @@ function WorkspaceView({
     const { gapKey } = dialog;
     setDialog(null);
     const created = await run(() =>
-      client.call('node:create', { parentId, title, nodeType }),
+      client.call('node:create', {
+        parentId,
+        title,
+        nodeType,
+        ...(templateId && { templateId }),
+      }),
     );
     if (!created) return;
     if (gapKey) {
@@ -361,15 +370,10 @@ function WorkspaceView({
     openOverlay('editingDocumentId', documentId);
   };
 
-  const createDocument = async (
-    nodeId: string,
-    title: string,
-    contentType: ContentType,
-    language: Language | null,
-  ) => {
+  const createDocument = async (nodeId: string, document: NewDocument) => {
     closeOverlay('addingDocumentFor');
     const created = await run(() =>
-      client.call('document:create', { nodeId, title, contentType, language }),
+      client.call('document:create', createDocumentInput(nodeId, document)),
     );
     if (!created) return;
     data.refreshDetail();
@@ -469,6 +473,7 @@ function WorkspaceView({
     openPalette: (actionsOnly) => setPalette({ actionsOnly }),
     save: () => void tracker.flushAll(),
     tags: () => setDialog({ kind: 'tags' }),
+    templates: () => setDialog({ kind: 'templates' }),
     relationTypes: () => setDialog({ kind: 'relationTypes' }),
     exportPortable: () => void exportWorkspace(),
     exportLlm: () => openOverlay('llmExport', true),
@@ -759,13 +764,14 @@ function WorkspaceView({
           dialog={dialog}
           overlays={overlays}
           onCloseDialog={() => setDialog(null)}
+          onOpenDialog={setDialog}
           onCloseOverlay={closeOverlay}
           onSelect={select}
           onWorkspaceChanged={onWorkspaceChanged}
           onWorkspaceDeleted={onDeleted}
           onRelationsChanged={relationsChanged}
-          onCreateNode={(title, nodeType, parentId) =>
-            void createNode(title, nodeType, parentId)
+          onCreateNode={(title, nodeType, parentId, templateId) =>
+            void createNode(title, nodeType, parentId, templateId)
           }
           onMove={(moved, parentId, bulk) =>
             bulk ? void bulkMove(parentId) : void moveTo(moved[0]!, parentId)
@@ -776,8 +782,8 @@ function WorkspaceView({
           onDeleteNode={(node, strategy) => void deleteNode(node, strategy)}
           onBulkDelete={(ids, strategy) => void bulkDelete(ids, strategy)}
           onExportForLlm={(options) => void exportForLlm(options)}
-          onCreateDocument={(nodeId, title, contentType, language) =>
-            void createDocument(nodeId, title, contentType, language)
+          onCreateDocument={(nodeId, document) =>
+            void createDocument(nodeId, document)
           }
           actions={actions}
         />

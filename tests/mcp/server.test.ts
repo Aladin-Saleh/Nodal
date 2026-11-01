@@ -1102,6 +1102,51 @@ describe('nodal_apply : écriture groupée', () => {
     await client.close();
   });
 
+  it('crée un nœud depuis un modèle et renvoie son document', async () => {
+    const client = await connect(file, false);
+    const data = toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'createNode',
+            title: 'Basculer la base',
+            type: 'procedure',
+            template: 'Procédure',
+          },
+        ],
+      }),
+    );
+    const [created] = data.results as { id: string; documentId: string }[];
+    expect(created!.documentId).toHaveLength(8);
+    const node = new NodeService(workspace().context).get(full(created!.id));
+    expect(node.documents.map((doc) => doc.title)).toEqual(['Procédure']);
+    const body = new DocumentService(workspace().context).get(
+      full(created!.documentId),
+    ).body;
+    expect(body).toContain('## Retour arrière');
+    // Nœud et document journalisés, annulables séparément.
+    expect(changes().map((change) => change.action)).toEqual([
+      'create_document',
+      'create_node',
+    ]);
+    await client.close();
+  });
+
+  it('refuse un modèle inconnu en listant ceux de l’espace', async () => {
+    const client = await connect(file, false);
+    const result = await client.call('nodal_create_node', {
+      title: 'X',
+      type: 'concept',
+      template: 'Inconnu',
+    });
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toContain(
+      "Modèle « Inconnu » introuvable. Modèles de l'espace : « Procédure »",
+    );
+    expect(changes()).toEqual([]);
+    await client.close();
+  });
+
   it('refuse une référence à une opération qui n’a pas encore eu lieu', async () => {
     const client = await connect(file, false);
     const result = await client.call('nodal_apply', {

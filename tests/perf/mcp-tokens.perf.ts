@@ -313,3 +313,55 @@ describe('tokens : fichiers du code (ancrage)', () => {
     await readOnly.close();
   });
 });
+
+describe('tokens : modèles de documents', () => {
+  it('mesure le champ template et la réponse de création', async () => {
+    const { context, service } = workspace();
+    seedScaleOne(context());
+    const client = await connect(service.getCurrent()!.filePath, false);
+    const { count } = await createDefaultTokenizer();
+    const { tools } = (await client.listTools()) as {
+      tools: {
+        name: string;
+        description?: string;
+        inputSchema: Record<string, unknown>;
+      }[];
+    };
+    /** Définition d'un outil telle que servie, avec ou sans `template`. */
+    const definition = (name: string, withTemplate: boolean) => {
+      const tool = structuredClone(tools.find((t) => t.name === name)!);
+      if (!withTemplate) {
+        const strip = (value: unknown): void => {
+          if (!value || typeof value !== 'object') return;
+          const record = value as Record<string, unknown>;
+          const properties = record.properties as
+            | Record<string, unknown>
+            | undefined;
+          if (properties) delete properties.template;
+          Object.values(record).forEach(strip);
+        };
+        strip(tool.inputSchema);
+      }
+      return count(JSON.stringify(tool));
+    };
+    const plain = await client.call('nodal_create_node', {
+      title: 'Sans modèle',
+      type: 'procedure',
+    });
+    const templated = await client.call('nodal_create_node', {
+      title: 'Avec modèle',
+      type: 'procedure',
+      template: 'Procédure',
+    });
+    expect(templated.isError).toBeFalsy();
+    expect(text(templated)).toContain('documentId');
+    const lines = [
+      `nodal_create_node (définition) : ${definition('nodal_create_node', false)} → ${definition('nodal_create_node', true)}`,
+      `nodal_apply (définition) : ${definition('nodal_apply', false)} → ${definition('nodal_apply', true)}`,
+      `réponse sans modèle : ${count(text(plain))}`,
+      `réponse avec modèle : ${count(text(templated))}`,
+    ];
+    process.stdout.write(['', text(templated), '', ...lines].join('\n'));
+    await client.close();
+  });
+});

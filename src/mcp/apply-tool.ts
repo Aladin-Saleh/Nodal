@@ -45,6 +45,7 @@ export const operationSchema = z.discriminatedUnion('op', [
     summary: z.string().max(2000).optional(),
     tags: tagNames.optional(),
     allowDuplicate: z.boolean().optional(),
+    template: z.string().min(1).max(100).optional(),
   }),
   z.object({
     op: z.literal('updateNode'),
@@ -119,7 +120,12 @@ export function applyOperations(
     );
   }
   const produced: string[] = [];
-  const results: { ref: string; op: Operation['op']; id: string }[] = [];
+  const results: {
+    ref: string;
+    op: Operation['op'];
+    id: string;
+    documentId?: string;
+  }[] = [];
 
   operations.forEach((operation, index) => {
     const position = index + 1;
@@ -142,9 +148,14 @@ export function applyOperations(
         const value = resolved[field];
         if (typeof value === 'string') resolved[field] = resolve(value);
       }
-      const id = run(ctx, resolved as Operation);
+      const { id, documentId } = run(ctx, resolved as Operation);
       produced.push(id);
-      results.push({ ref: `$${position}`, op: operation.op, id });
+      results.push({
+        ref: `$${position}`,
+        op: operation.op,
+        id,
+        ...(documentId && { documentId }),
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new NodalError(
@@ -156,36 +167,42 @@ export function applyOperations(
   return { applied: results.length, results };
 }
 
-/** Exécute une opération ; renvoie l'identifiant de l'élément touché. */
-function run(ctx: WriteContext, operation: Operation): string {
+/**
+ * Exécute une opération ; renvoie l'identifiant de l'élément touché (et du
+ * document créé par un modèle).
+ */
+function run(
+  ctx: WriteContext,
+  operation: Operation,
+): { id: string; documentId?: string } {
   switch (operation.op) {
     case 'createNode': {
       const { op: _op, ...input } = operation;
-      return createNode(ctx, input).id;
+      return createNode(ctx, input);
     }
     case 'updateNode': {
       const { op: _op, ...input } = operation;
-      return updateNode(ctx, input).id;
+      return { id: updateNode(ctx, input).id };
     }
     case 'addDocument': {
       const { op: _op, ...input } = operation;
-      return addDocument(ctx, input).id;
+      return { id: addDocument(ctx, input).id };
     }
     case 'updateDocument': {
       const { op: _op, ...input } = operation;
-      return updateDocument(ctx, input).id;
+      return { id: updateDocument(ctx, input).id };
     }
     case 'link': {
       const { op: _op, ...input } = operation;
-      return link(ctx, input).id;
+      return { id: link(ctx, input).id };
     }
     case 'tag': {
       const { op: _op, ...input } = operation;
-      return tagNode(ctx, input).nodeId;
+      return { id: tagNode(ctx, input).nodeId };
     }
     case 'anchor': {
       const { op: _op, ...input } = operation;
-      return anchorFiles(ctx, input).nodeId;
+      return { id: anchorFiles(ctx, input).nodeId };
     }
   }
 }
