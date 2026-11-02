@@ -159,7 +159,7 @@ pièces jointes en BLOB).
     (MCP)… », avec un bloc de consignes CLAUDE.md / AGENTS.md pour que
     l'assistant consulte Nodal avant de parcourir les fichiers.
 
-- **v1.4 — Navigation** (en cours) :
+- **v1.4 — Navigation** :
   - palette de commandes (`Ctrl+P`, `Ctrl+Maj+P` pour les actions seules) :
     nœuds par titre et chemin (correspondance approximative, sans accents)
     et actions de l'application ; un registre d'actions unique alimente la
@@ -177,7 +177,7 @@ pièces jointes en BLOB).
     deux nœuds par les relations (option : par la hiérarchie), mis en
     évidence dans le graphe, étapes et type de chaque relation dans le
     panneau droit ; outil MCP `nodal_path(fromId, toId, maxDepth)`.
-- **v1.4 — Liens et qualité de la base** (en cours) :
+- **v1.4 — Liens et qualité de la base** :
   - liens `[[...]]` : autocomplétion à `[[` dans l'éditeur Markdown, lien
     enregistré par identifiant (`[[node:<uuid>|texte]]`, survit aux
     renommages) et affiché par titre, `[[Titre|texte]]` accepté, liens
@@ -194,7 +194,7 @@ pièces jointes en BLOB).
     ajouts de l'IA à relire, chacun avec son action ; sujets à documenter :
     recherches MCP sans résultat (requête, date, nombre ; migration 009),
     à transformer en nœud ou à ignorer ; outil MCP `nodal_health`.
-- **v1.4 — Code ↔ connaissance** (en cours) :
+- **v1.4 — Code ↔ connaissance** :
   - ancrage des nœuds aux fichiers du code : dossiers de code de l'espace
     (chemins locaux, non exportés), motifs relatifs façon pathspec git
     (`src/mcp/**`) par nœud (migration 010, table `node_anchor`), fichiers
@@ -207,7 +207,7 @@ pièces jointes en BLOB).
   - MCP : `nodal_for_files(paths)` (nœuds ancrés, au format de
     `nodal_search`), opération `anchor` de `nodal_apply`, champ compact
     `stale` dans les réponses, consignes « avant / après modification ».
-- **v1.4 — Saisie** (en cours) :
+- **v1.4 — Saisie** :
   - capture rapide : raccourci global configurable et désactivable
     (`Ctrl+Maj+Espace` par défaut, `globalShortcut`), petite fenêtre au
     premier plan (même renderer, mêmes réglages de sécurité, accès IPC
