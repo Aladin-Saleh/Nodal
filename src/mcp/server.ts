@@ -77,7 +77,9 @@ documents trouvés, souvent suffisants. Question à plusieurs volets : plusieurs
 recherches en parallèle. Pour approfondir : nodal_get_node, nodal_read_document,
 nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.
 Question sur des fichiers précis (avant de les modifier) : nodal_for_files,
-en parallèle de nodal_search.`;
+en parallèle de nodal_search. Nodal décrit, le code fait foi : un détail
+d'implémentation dont dépend la réponse (condition, liste de champs,
+signature) se vérifie dans le fichier cité, par une lecture ciblée.`;
 
 const WRITE_INSTRUCTIONS = `
 

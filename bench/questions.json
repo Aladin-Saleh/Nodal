@@ -1,14 +1,47 @@
 [
   {
     "id": "ipc",
-    "prompt": "Quels fichiers dois-je modifier pour ajouter un nouveau canal IPC dans Nodal, et comment l'émetteur d'un message IPC est-il vérifié ? Réponds en 10 lignes au plus."
+    "prompt": "Quels fichiers dois-je modifier pour ajouter un nouveau canal IPC dans Nodal, et comment l'émetteur d'un message IPC est-il vérifié ? Réponds en 10 lignes au plus.",
+    "expect": [
+      "ipc-contract",
+      "IPC_CHANNELS",
+      "ipc-schemas",
+      "register\\.ts|createImplementations",
+      "zod",
+      "routeSenderByChannel",
+      "webContents|sender\\.id",
+      "cadre principal|mainFrame|routingId|frame",
+      "URL"
+    ]
   },
   {
     "id": "capture",
-    "prompt": "Comment fonctionne la capture rapide de Nodal : où la capture est-elle rangée quand aucun espace n'est ouvert, et quels canaux IPC la fenêtre de capture a-t-elle le droit d'appeler ? Réponds en 10 lignes au plus."
+    "prompt": "Comment fonctionne la capture rapide de Nodal : où la capture est-elle rangée quand aucun espace n'est ouvert, et quels canaux IPC la fenêtre de capture a-t-elle le droit d'appeler ? Réponds en 10 lignes au plus.",
+    "expect": [
+      "Bo[iî]te de r[ée]ception",
+      "dernier espace r[ée]cent",
+      "existe|exists",
+      "capture:getTarget",
+      "capture:submit",
+      "preferences:get",
+      "routeSenderByChannel",
+      "Markdown|document",
+      "NO_WORKSPACE_OPEN|aucun espace r[ée]cent"
+    ]
   },
   {
     "id": "avant-modif",
-    "prompt": "Je vais ajouter une opération à src/mcp/apply-tool.ts. Que dois-je savoir avant, et qu'est-ce qu'il faudra mettre à jour ou tester ensuite ? Ne modifie rien. Réponds en 10 lignes au plus."
+    "prompt": "Je vais ajouter une opération à src/mcp/apply-tool.ts. Que dois-je savoir avant, et qu'est-ce qu'il faudra mettre à jour ou tester ensuite ? Ne modifie rien. Réponds en 10 lignes au plus.",
+    "expect": [
+      "operationSchema",
+      "run\\(?\\)?",
+      "write-tools",
+      "ID_FIELDS",
+      "\\$n",
+      "transaction|tout ou rien|annul",
+      "server\\.test",
+      "description|server\\.ts",
+      "token|benchmark"
+    ]
   }
 ]

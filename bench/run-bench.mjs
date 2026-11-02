@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { scoreAnswer } from './score.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
@@ -203,6 +204,13 @@ for (const question of questions) {
       cost: mean(ok.map((r) => r.costUsd)),
       // Le 1er run écrit le cache (environ 30 000 tokens) : à chaud = runs ≥ 2.
       warmCost: mean(ok.filter((r) => r.run >= 2).map((r) => r.costUsd)),
+      // Qualité : part des faits attendus présents dans la réponse.
+      quality: mean(
+        ok.map((r) => {
+          const s = scoreAnswer(r.question, r.answer);
+          return s.total ? s.found / s.total : NaN;
+        }),
+      ),
     };
     rows.push({ question: question.id, variant, ...byVariant[variant] });
   }
@@ -245,11 +253,11 @@ const table = [
   '',
   `Commit ${meta.commit}, ${meta.claudeCode}, ${runs} run(s) par cas (moyennes des runs réussis).`,
   '',
-  '| Question | Variante | Runs | Tours | Entrée (tokens) | Sortie | Coût ($) | À chaud ($) |',
-  '| -------- | -------- | ---: | ----: | --------------: | -----: | -------: | ----------: |',
+  '| Question | Variante | Runs | Tours | Entrée (tokens) | Sortie | Coût ($) | À chaud ($) | Qualité |',
+  '| -------- | -------- | ---: | ----: | --------------: | -----: | -------: | ----------: | ------: |',
   ...rows.map(
     (r) =>
-      `| ${r.question} | ${r.variant} | ${r.runs} | ${fmt(r.turns, 1)} | ${fmt(r.input)} | ${fmt(r.output)} | ${fmt(r.cost, 4)} | ${fmt(r.warmCost, 4)} |`,
+      `| ${r.question} | ${r.variant} | ${r.runs} | ${fmt(r.turns, 1)} | ${fmt(r.input)} | ${fmt(r.output)} | ${fmt(r.cost, 4)} | ${fmt(r.warmCost, 4)} | ${fmt(r.quality * 100)} % |`,
   ),
   '',
 ];
