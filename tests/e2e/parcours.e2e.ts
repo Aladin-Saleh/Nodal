@@ -63,6 +63,7 @@ async function createNode(
   title: string,
   type: string,
   asChild = false,
+  template = 'Aucun',
 ): Promise<void> {
   await page
     .getByRole('button', { name: asChild ? '+ Enfant' : '+ Racine' })
@@ -70,6 +71,10 @@ async function createNode(
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Titre').fill(title);
   await dialog.getByLabel('Type').selectOption({ label: type });
+  // Choisir un type propose son modèle de document : imposé ici.
+  await dialog
+    .getByLabel('Modèle de document')
+    .selectOption({ label: template });
   await dialog.getByRole('button', { name: 'Créer' }).click();
   await page.getByRole('treeitem', { name: title }).waitFor();
 }
@@ -191,6 +196,13 @@ describe('parcours principaux', () => {
       .waitFor();
   });
 
+  it('crée un nœud avec le modèle de son type', async () => {
+    await createNode('Déployer', 'Procédure', false, 'Procédure');
+    await page.getByRole('button', { name: 'Documents' }).click();
+    await page.getByRole('tab', { name: 'Procédure' }).waitFor();
+    await page.getByText('Retour arrière').first().waitFor();
+  });
+
   it('exporte puis réimporte l’espace sans perte', async () => {
     await stubDialogs({ open: exportDir });
     await page.getByText('Importer / exporter ▾').click();
@@ -205,8 +217,66 @@ describe('parcours principaux', () => {
       save: importedFile,
     });
     await page.getByRole('button', { name: 'Importer un export…' }).click();
-    await page.getByText(/importé : 3 nœuds, 3 documents/).waitFor();
+    await page.getByText(/importé : 4 nœuds, 4 documents/).waitFor();
     await page.getByRole('treeitem', { name: 'Base de données' }).waitFor();
     expect(fs.existsSync(importedFile)).toBe(true);
+  });
+  it('capture rapide : la fenêtre dédiée range une note dans la boîte de réception', async () => {
+    await page.keyboard.press('Control+Shift+P');
+    await page
+      .getByRole('combobox', { name: 'Aller à un nœud ou lancer une action' })
+      .fill('capture rapide');
+    const opened = app.waitForEvent('window');
+    await page.keyboard.press('Enter');
+    const capture = await opened;
+    await capture.getByLabel('Titre').fill('Idée e2e');
+    await capture.getByLabel('Note').fill('Note **rapide**');
+    const closed = capture.waitForEvent('close');
+    await capture.keyboard.press('Control+Enter');
+    await closed;
+    await page.getByRole('treeitem', { name: 'Boîte de réception' }).waitFor();
+  });
+
+  it('importe un dossier Markdown avec ses liens', async () => {
+    const vault = path.join(work, 'Coffre');
+    fs.mkdirSync(path.join(vault, 'Infra'), { recursive: true });
+    fs.writeFileSync(
+      path.join(vault, 'Infra', 'Redis.md'),
+      ['---', 'type: component', '---', 'Voir [[Accueil]].'].join('\n'),
+    );
+    fs.writeFileSync(path.join(vault, 'Accueil.md'), '# Accueil');
+    await stubDialogs({ open: vault });
+    await page.getByText('Importer / exporter ▾').click();
+    await page
+      .getByRole('menuitem', { name: /Importer un dossier Markdown/ })
+      .click();
+    const dialog = page.getByRole('dialog', { name: 'Importer « Coffre »' });
+    await dialog.getByText(/2 notes/).waitFor();
+    await dialog.getByRole('button', { name: 'Importer' }).click();
+    await page.getByText(/« Coffre » importé : 4 nœuds/).waitFor();
+    await page
+      .getByRole('dialog', { name: 'Import terminé' })
+      .getByRole('button', { name: 'Fermer', exact: true })
+      .click();
+    await page.getByRole('treeitem', { name: 'Coffre' }).waitFor();
+    expect(
+      fs.readdirSync(work).some((name) => name.includes('-avant-import-')),
+    ).toBe(true);
+  });
+
+  it('donne la commande de l’assistant choisi (Gemini CLI)', async () => {
+    await page.getByText('Importer / exporter ▾').click();
+    await page
+      .getByRole('menuitem', { name: /Connecter un assistant IA/ })
+      .click();
+    const dialog = page.getByRole('dialog', {
+      name: 'Connecter un assistant IA (MCP)',
+    });
+    await dialog
+      .getByLabel('Assistant', { exact: true })
+      .selectOption({ label: 'Gemini CLI' });
+    await dialog.getByText(/^gemini mcp add nodal node "/).waitFor();
+    await dialog.getByText('GEMINI.md').waitFor();
+    await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();
   });
 });
