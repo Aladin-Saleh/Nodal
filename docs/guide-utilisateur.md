@@ -368,9 +368,12 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   `%APPDATA%\Nodal\mcp\` : après une mise à jour, la configuration reste
   valable et l'assistant utilise le nouveau serveur, qui met à jour de
   lui-même un espace d'une version précédente. Seul un déplacement du
-  fichier de l'espace oblige à refaire la configuration. Depuis Nodal 1.4.0
-  ou plus ancien, refaites-la une fois (l'ancien chemin contenait le numéro
-  de version).
+  fichier de l'espace oblige à refaire la configuration. Une configuration
+  faite avec Nodal 1.4.0 ou plus ancien (chemin contenant le numéro de
+  version) est corrigée automatiquement au premier démarrage : Nodal y
+  remplace seulement ce chemin, dans les fichiers de configuration des
+  assistants proposés (globaux et des dossiers de projet connus). Redémarrez
+  ensuite la session de l'assistant.
 - **Travailler à deux** : Nodal peut rester ouvert pendant que l'assistant
   travaille. L'affichage se met à jour dans la seconde qui suit chacune de
   ses écritures ; si vous êtes en train de taper, la mise à jour attend que

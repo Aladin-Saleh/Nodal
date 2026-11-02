@@ -20,6 +20,12 @@ import { QuickCaptureService } from './capture/quick-capture-service';
 import { getSqliteVersion } from './database/connection';
 import { createFileDialogs } from './file-dialogs';
 import { routeSenderByChannel } from './ipc/handler';
+import {
+  assistantConfigFiles,
+  claudeCodeProjects,
+  updateAssistantConfigs,
+  workspaceCodeRoots,
+} from './mcp-config-update';
 import { installMcpServer, MCP_SERVER_FILE_NAME } from './mcp-server-install';
 import { registerIpcHandlers } from './ipc/register';
 import { PreferencesStore, WindowStateStore } from './preferences-store';
@@ -67,12 +73,41 @@ function bootstrap(): void {
 
   // Installé : serveur MCP recopié vers un chemin stable à chaque démarrage
   // (voir mcp-server-install.ts). En développement : bundle de Vite.
+  const bundledMcpServer = path.join(
+    process.resourcesPath,
+    MCP_SERVER_FILE_NAME,
+  );
   const mcpServerPath = app.isPackaged
     ? installMcpServer(
-        path.join(process.resourcesPath, MCP_SERVER_FILE_NAME),
+        bundledMcpServer,
         path.join(app.getPath('userData'), 'mcp'),
       )
     : path.join(app.getAppPath(), '.vite', 'build', MCP_SERVER_FILE_NAME);
+
+  // Assistants configurés avec le chemin d'une version installée (Nodal
+  // 1.4.0 et avant) : basculés sur le chemin stable, sans action de
+  // l'utilisateur (voir mcp-config-update.ts).
+  const updateAssistants = () => {
+    if (!app.isPackaged || mcpServerPath === bundledMcpServer) return;
+    const home = app.getPath('home');
+    const files = assistantConfigFiles({
+      home,
+      appData: app.getPath('appData'),
+      projectDirs: [
+        ...claudeCodeProjects(home),
+        ...workspaceCodeRoots(recent.list().map((entry) => entry.filePath)),
+      ],
+    });
+    const changed = updateAssistantConfigs(
+      files,
+      // <racine>/app-X.Y.Z/resources → <racine>
+      path.dirname(path.dirname(process.resourcesPath)),
+      mcpServerPath,
+    );
+    if (changed.length > 0) {
+      console.info('[mcp] configuration des assistants mise à jour', changed);
+    }
+  };
 
   let appInfo: AppInfo | null = null;
   const getAppInfo = (): AppInfo =>
@@ -242,6 +277,7 @@ function bootstrap(): void {
     openWindow();
     capture.applyPreferences(preferences.get());
     setInterval(pollExternalChanges, EXTERNAL_CHANGE_POLL_MS);
+    setTimeout(updateAssistants, 0);
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openWindow();
