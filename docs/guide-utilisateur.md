@@ -346,13 +346,17 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   l'espace, un sous-arbre ou un voisinage. Les tailles sont comptées en tokens
   avec le tokenizer indiqué dans le manifest (o200k_base).
 - **Connecter un assistant IA (MCP)…** : permet à un assistant compatible
-  MCP (Claude Code, Claude Desktop, Cursor…) de consulter l'espace —
+  MCP (Claude Code, Gemini CLI, Codex, Claude Desktop, Cursor, VS Code)
+  de consulter l'espace —
   recherche, lecture des nœuds et documents, exploration du graphe — et, si
   la case « Autoriser l'assistant à enrichir l'espace » est cochée, de
   l'alimenter : créer des nœuds, ajouter ou compléter des documents, relier
-  des nœuds, poser des tags. L'assistant ne supprime jamais rien. La fenêtre
-  donne la commande `claude mcp add …` et le bloc JSON à copier dans la
-  configuration de l'assistant. Node.js 22.13 ou plus récent doit être
+  des nœuds, poser des tags. L'assistant ne supprime jamais rien. Choisissez
+  votre assistant dans la liste : la fenêtre affiche la commande à lancer
+  (`claude mcp add …`, `gemini mcp add …`, `codex mcp add …`) ou le bloc JSON
+  à coller dans son fichier de configuration, avec l'endroit où le mettre, et
+  le fichier d'instructions du projet à compléter (`CLAUDE.md`, `GEMINI.md`,
+  `AGENTS.md`…). Node.js 22.13 ou plus récent doit être
   installé. Après une mise à jour de Nodal ou un déplacement du fichier,
   refaites la configuration.
 - **Travailler à deux** : Nodal peut rester ouvert pendant que l'assistant

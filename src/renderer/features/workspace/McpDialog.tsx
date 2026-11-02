@@ -1,11 +1,13 @@
 import { useEffect, useId, useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { useClient } from '../../app/context';
-
-/** Nom du serveur dans la configuration de l'assistant. */
-const SERVER_NAME = 'nodal';
-
-const quote = (value: string) => `"${value.replaceAll('"', '\\"')}"`;
+import {
+  MCP_CLIENTS,
+  MCP_CLIENT_LABELS,
+  SERVER_NAME,
+  mcpSetup,
+  type McpClient,
+} from './mcp-clients';
 
 /**
  * Consignes à placer dans CLAUDE.md / AGENTS.md pour que l'assistant consulte
@@ -61,7 +63,8 @@ function CopyBlock({ label, text }: { label: string; text: string }) {
 }
 
 /**
- * Configuration d'un assistant IA (Claude Code, Claude Desktop, Cursor…)
+ * Configuration d'un assistant IA (Claude Code, Gemini CLI, Codex, Cursor…),
+ * choisi dans une liste,
  * pour qu'il interroge l'espace via le serveur MCP de Nodal et, si
  * l'utilisateur l'autorise, l'enrichisse (modifications journalisées).
  */
@@ -77,7 +80,9 @@ export function McpDialog({
   const client = useClient();
   const [serverPath, setServerPath] = useState<string | null>(null);
   const [allowWrites, setAllowWrites] = useState(true);
+  const [assistant, setAssistant] = useState<McpClient>('claude-code');
   const writesId = useId();
+  const assistantId = useId();
 
   useEffect(() => {
     let active = true;
@@ -90,20 +95,9 @@ export function McpDialog({
     };
   }, [client]);
 
-  const args = serverPath
-    ? [serverPath, workspaceFile, ...(allowWrites ? [] : ['--read-only'])]
-    : [];
-  const json =
-    serverPath &&
-    JSON.stringify(
-      {
-        mcpServers: {
-          [SERVER_NAME]: { command: 'node', args },
-        },
-      },
-      null,
-      2,
-    );
+  const setup = serverPath
+    ? mcpSetup(assistant, [serverPath, workspaceFile], !allowWrites)
+    : null;
 
   return (
     <Modal
@@ -122,6 +116,18 @@ export function McpDialog({
         l’affichage se met à jour quand l’assistant écrit. Node.js 22.13 ou plus
         récent doit être installé.
       </p>
+      <label htmlFor={assistantId}>Assistant</label>
+      <select
+        id={assistantId}
+        value={assistant}
+        onChange={(event) => setAssistant(event.target.value as McpClient)}
+      >
+        {MCP_CLIENTS.map((id) => (
+          <option key={id} value={id}>
+            {MCP_CLIENT_LABELS[id]}
+          </option>
+        ))}
+      </select>
       <label htmlFor={writesId} className="checkbox">
         <input
           id={writesId}
@@ -137,30 +143,31 @@ export function McpDialog({
           ? 'Rien n’est jamais supprimé ; chaque modification est listée dans « Activité IA » et peut y être annulée.'
           : 'L’assistant pourra seulement lire l’espace.'}
       </p>
-      {serverPath && json ? (
+      {setup ? (
         <>
           <CopyBlock
-            label="Claude Code (terminal)"
-            text={`claude mcp add ${SERVER_NAME} -- node ${args.map(quote).join(' ')}`}
+            label={`${MCP_CLIENT_LABELS[assistant]} — ${setup.label}`}
+            text={setup.text}
           />
-          <CopyBlock
-            label="Claude Desktop, Cursor… (fichier de configuration JSON)"
-            text={json}
-          />
+          <p className="muted">{setup.hint}</p>
           <p className="muted">
             Après une mise à jour ou un déplacement de Nodal, ou si le fichier
             de l’espace change de place, refaites cette configuration.
           </p>
-          <h3>Consulter Nodal d’abord</h3>
-          <p className="muted">
-            Ajoutez ces consignes au fichier d’instructions de votre projet pour
-            que l’assistant interroge Nodal avant de parcourir les fichiers ou
-            de répondre de mémoire.
-          </p>
-          <CopyBlock
-            label="CLAUDE.md (Claude Code) ou AGENTS.md (Codex, Cursor…)"
-            text={assistantInstructions(workspaceName, allowWrites)}
-          />
+          {setup.instructionsFile && (
+            <>
+              <h3>Consulter Nodal d’abord</h3>
+              <p className="muted">
+                Ajoutez ces consignes au fichier d’instructions de votre projet
+                pour que l’assistant interroge Nodal avant de parcourir les
+                fichiers ou de répondre de mémoire.
+              </p>
+              <CopyBlock
+                label={setup.instructionsFile}
+                text={assistantInstructions(workspaceName, allowWrites)}
+              />
+            </>
+          )}
         </>
       ) : (
         <p className="muted">Chargement…</p>

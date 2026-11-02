@@ -230,6 +230,9 @@ pièces jointes en BLOB).
     aperçu avant import (liens non résolus, éléments ignorés), sauvegarde
     automatique à côté du fichier, une seule transaction ; fichiers lus comme
     données, liens symboliques et dossiers cachés ignorés.
+  - « Connecter un assistant IA » : choix de l'assistant (Claude Code,
+    Gemini CLI, Codex, Claude Desktop, Cursor, VS Code) et commande ou
+    configuration correspondante, avec le fichier d'instructions du projet.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
