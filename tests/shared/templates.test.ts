@@ -23,6 +23,7 @@ describe('modèles par défaut', () => {
     ],
     ['data', ['Schéma', 'Origine', 'Consommateurs']],
     ['adr', ['Contexte', 'Décision', 'Conséquences', 'Alternatives']],
+    ['issue', ['Symptôme', 'Reproduction', 'Attendu', 'Cause', 'Correction']],
   ])('%s contient ses sections', (id, sections) => {
     const template = findTemplate(DEFAULT_TEMPLATES, id)!;
     expect(
@@ -42,8 +43,9 @@ describe('choix d’un modèle', () => {
   it('propose ceux du type d’abord', () => {
     const { own, others } = templatesFor(DEFAULT_TEMPLATES, 'data');
     expect(own.map((t) => t.id)).toEqual(['data']);
-    expect(others).toHaveLength(3);
-    expect(defaultTemplateFor(DEFAULT_TEMPLATES, 'concept')?.id).toBe('adr');
+    expect(others).toHaveLength(DEFAULT_TEMPLATES.length - 1);
+    expect(defaultTemplateFor(DEFAULT_TEMPLATES, 'decision')?.id).toBe('adr');
+    expect(defaultTemplateFor(DEFAULT_TEMPLATES, 'concept')).toBeNull();
     expect(defaultTemplateFor(DEFAULT_TEMPLATES, 'resource')).toBeNull();
   });
 

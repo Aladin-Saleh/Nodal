@@ -141,3 +141,122 @@ describe('migration 010 : ancrage aux fichiers du code', () => {
     });
   });
 });
+
+const insert = (sql: string) => db.exec(sql);
+const all = (sql: string) => db.prepare(sql).all();
+
+describe('migration 011 : nouveaux types de nœuds et de documents', () => {
+  it('reconstruit node et document à l’identique, contraintes et triggers compris', () => {
+    runMigrations(db, MIGRATIONS.slice(0, 10));
+    insert(
+      "INSERT INTO workspace VALUES ('w', 'W', NULL, 't', 't');" +
+        "INSERT INTO workspace VALUES ('w2', 'W2', NULL, 't', 't');" +
+        "INSERT INTO node (id, workspace_id, title, node_type, summary, position_z, code_reviewed_at, created_at, updated_at) VALUES ('p', 'w', 'Parent', 'concept', 'Résumé', 3, 'r', 't', 't');" +
+        "INSERT INTO node (id, workspace_id, parent_id, title, node_type, created_at, updated_at) VALUES ('c', 'w', 'p', 'Enfant', 'data', 't', 't');" +
+        "INSERT INTO document (id, node_id, title, content_type, language, body, created_at, updated_at) VALUES ('d', 'c', 'Doc', 'code', 'sql', 'SELECT 1', 't', 't');" +
+        "INSERT INTO relation_type (id, workspace_id, name) VALUES ('rt', 'w', 'utilise');" +
+        "INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, created_at, updated_at) VALUES ('e', 'w', 'p', 'c', 'rt', 't', 't');" +
+        "INSERT INTO link_suggestion_ignored VALUES ('p', 'c', 't');",
+    );
+
+    expect(runMigrations(db)).toBe(LATEST_SCHEMA_VERSION);
+    expect(db.prepare('PRAGMA foreign_keys').get()).toEqual({
+      foreign_keys: 1,
+    });
+    expect(all('PRAGMA foreign_key_check')).toEqual([]);
+    expect(
+      all(
+        'SELECT id, parent_id, node_type, summary, position_z, code_reviewed_at FROM node ORDER BY rowid',
+      ),
+    ).toEqual([
+      {
+        id: 'p',
+        parent_id: null,
+        node_type: 'concept',
+        summary: 'Résumé',
+        position_z: 3,
+        code_reviewed_at: 'r',
+      },
+      {
+        id: 'c',
+        parent_id: 'p',
+        node_type: 'data',
+        summary: null,
+        position_z: null,
+        code_reviewed_at: null,
+      },
+    ]);
+    expect(all('SELECT id, language, body FROM document')).toEqual([
+      { id: 'd', language: 'sql', body: 'SELECT 1' },
+    ]);
+
+    // Nouveaux types acceptés, les autres toujours refusés.
+    insert(
+      "INSERT INTO node (id, workspace_id, title, node_type, created_at, updated_at) VALUES ('f', 'w', 'Fonction', 'function', 't', 't');" +
+        "INSERT INTO document (id, node_id, title, content_type, body, created_at, updated_at) VALUES ('csv', 'f', 'Tableau', 'csv', 'a;b', 't', 't');",
+    );
+    expect(() =>
+      insert(
+        "INSERT INTO node (id, workspace_id, title, node_type, created_at, updated_at) VALUES ('x', 'w', 'X', 'service', 't', 't');",
+      ),
+    ).toThrow(/CHECK constraint failed/);
+    expect(() =>
+      insert(
+        "INSERT INTO document (id, node_id, title, content_type, language, created_at, updated_at) VALUES ('y', 'f', 'Y', 'csv', 'sql', 't', 't');",
+      ),
+    ).toThrow(/CHECK constraint failed/);
+
+    // Clés étrangères et triggers recréés.
+    expect(() =>
+      insert(
+        "INSERT INTO document (id, node_id, title, content_type, created_at, updated_at) VALUES ('z', 'ghost', 'Z', 'text', 't', 't');",
+      ),
+    ).toThrow(/FOREIGN KEY constraint failed/);
+    expect(() => insert("DELETE FROM node WHERE id = 'c'")).toThrow(
+      /FOREIGN KEY constraint failed/,
+    );
+    expect(() =>
+      insert(
+        "INSERT INTO node (id, workspace_id, parent_id, title, node_type, created_at, updated_at) VALUES ('o', 'w2', 'p', 'Autre', 'task', 't', 't');",
+      ),
+    ).toThrow(/même espace/);
+    expect(
+      all(
+        "SELECT kind, item_id FROM search_index WHERE search_index MATCH 'tableau OR fonction' ORDER BY kind",
+      ),
+    ).toEqual([
+      { kind: 'document', item_id: 'csv' },
+      { kind: 'node', item_id: 'f' },
+    ]);
+    insert(
+      "DELETE FROM edge; DELETE FROM document WHERE node_id = 'c'; DELETE FROM node WHERE id = 'c';",
+    );
+    expect(all('SELECT * FROM link_suggestion_ignored')).toEqual([]);
+  });
+});
+
+describe('disableForeignKeys', () => {
+  it('refuse une migration qui laisse une référence invalide et rétablit les clés étrangères', () => {
+    const migrations: Migration[] = [
+      {
+        version: 1,
+        name: 'tables',
+        sql: 'CREATE TABLE p (id TEXT PRIMARY KEY); CREATE TABLE c (p_id TEXT REFERENCES p (id));',
+      },
+      {
+        version: 2,
+        name: 'orphan',
+        disableForeignKeys: true,
+        sql: "INSERT INTO c VALUES ('ghost');",
+      },
+    ];
+    expect(() => runMigrations(db, migrations)).toThrowError(
+      expect.objectContaining({ code: 'MIGRATION_FAILED' }),
+    );
+    expect(getSchemaVersion(db)).toBe(1);
+    expect(db.prepare('SELECT count(*) AS n FROM c').get()).toEqual({ n: 0 });
+    expect(db.prepare('PRAGMA foreign_keys').get()).toEqual({
+      foreign_keys: 1,
+    });
+  });
+});

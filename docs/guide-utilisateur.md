@@ -1,9 +1,10 @@
 # Nodal — Guide d'utilisation
 
 Nodal est une base de connaissances techniques sous forme de graphe. Chaque
-**nœud** représente un concept, un composant, une donnée, une procédure ou une
-ressource ; il contient des **documents** (Markdown, texte, JSON, code,
-diagrammes Mermaid), des sous-nœuds et des pièces jointes. Les nœuds sont reliés
+**nœud** représente un concept, un composant, une donnée, une procédure, une
+ressource, une fonction, une règle, une décision, une exigence, une anomalie,
+une tâche, un jalon, un risque ou un acteur ; il contient des **documents**
+(Markdown, texte, JSON, code, diagrammes Mermaid, tableaux CSV), des sous-nœuds et des pièces jointes. Les nœuds sont reliés
 par des **relations** nommées, indépendantes de la hiérarchie.
 
 Tout reste sur votre poste : aucune connexion Internet n'est nécessaire et aucun
@@ -61,8 +62,11 @@ d'erreur.
 
 Chaque type de nœud a une forme et une couleur : Concept (sphère bleue),
 Composant (cube vert), Donnée (cylindre orange), Procédure (octaèdre violet),
-Ressource (cône turquoise), Générique (dodécaèdre gris). Les liens parent-enfant
-apparaissent en pointillés.
+Ressource (cône turquoise), Générique (dodécaèdre gris), Fonction (tétraèdre
+bleu), Règle (prisme hexagonal rose), Décision (pyramide indigo), Exigence
+(plaque vert foncé), Anomalie (nœud rouge), Tâche (prisme triangulaire jaune),
+Jalon (anneau cyan), Risque (icosaèdre bordeaux), Acteur (gélule brune). Les
+liens parent-enfant apparaissent en pointillés.
 
 - **Documents dans le graphe** : en sélectionnant un nœud, ses documents
   s'affichent en pages à côté de lui. Cliquez sur une page pour l'éditer ;
@@ -165,8 +169,8 @@ préférences le signalent : choisissez-en un autre.
 ## 5. Documents
 
 Un nœud contient une liste ordonnée de documents, chacun d'un seul type :
-**Markdown**, **texte**, **JSON**, **code** (avec langage) ou **diagramme
-Mermaid**. L'enregistrement est automatique.
+**Markdown**, **texte**, **JSON**, **code** (avec langage), **diagramme
+Mermaid** ou **tableau CSV**. L'enregistrement est automatique.
 
 - **Markdown** : modes _Édition_, _Côte à côte_, _Aperçu_. Les liens web
   s'ouvrent dans votre navigateur.
@@ -232,6 +236,9 @@ Quatre modèles sont fournis :
   **Mettre en forme** réindente le contenu sur demande uniquement.
 - **Mermaid** : le diagramme est rendu localement ; en cas d'erreur de
   syntaxe, le message s'affiche et le dernier rendu valide reste visible.
+- **CSV** : modes _Édition_, _Côte à côte_, _Aperçu_ ; l'aperçu affiche un
+  tableau dont la première ligne est l'en-tête. Le séparateur (virgule,
+  point-virgule ou tabulation) est détecté automatiquement.
 
 ### Fichiers du code
 

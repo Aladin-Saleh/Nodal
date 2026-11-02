@@ -474,6 +474,10 @@ mark {
   background: #da77f2;
 }
 
+.doc-csv {
+  background: #69db7c;
+}
+
 /* Lot 4 : éditeur riche et aperçus */
 
 .editor-toolbar {
@@ -525,7 +529,8 @@ mark {
 }
 
 .markdown-preview,
-.mermaid-preview {
+.mermaid-preview,
+.csv-preview {
   overflow: auto;
   padding: 12px 16px;
   line-height: 1.6;
@@ -585,6 +590,27 @@ mark {
   padding-left: 12px;
   color: var(--muted);
   border-left: 3px solid var(--border);
+}
+
+.csv-preview table {
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.csv-preview th,
+.csv-preview td {
+  padding: 4px 10px;
+  text-align: left;
+  white-space: pre-wrap;
+  vertical-align: top;
+  border: 1px solid var(--border);
+}
+
+.csv-preview th {
+  position: sticky;
+  top: -12px;
+  background: var(--surface-2);
 }
 
 .mermaid-preview {

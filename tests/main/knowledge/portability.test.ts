@@ -339,6 +339,22 @@ describe('découpage en fragments', () => {
     expect(json.map((piece) => piece.section)).toEqual(['$.a', '$.b']);
   });
 
+  it('découpe un CSV par groupes de lignes en répétant l’en-tête', async () => {
+    const csv = [
+      'nom;rôle',
+      ...Array.from({ length: 6 }, (_, i) => `n${i};"a\nb"`),
+    ].join('\n');
+    const pieces = chunkDocument(csv, 'csv', null, 12, count);
+    expect(pieces.length).toBeGreaterThan(1);
+    for (const piece of pieces)
+      expect(piece.content.startsWith('nom;rôle\n')).toBe(true);
+    expect(pieces[0]!.section).toMatch(/^lignes 2-\d+$/);
+    expect(pieces.at(-1)!.section).toMatch(/-7$/);
+    expect(pieces.flatMap((p) => p.content.split('\n').slice(1))).toHaveLength(
+      12,
+    );
+  });
+
   it('garde un diagramme Mermaid entier et respecte la taille maximale ailleurs', async () => {
     const diagram =
       'graph TD\n' +

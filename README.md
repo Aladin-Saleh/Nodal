@@ -2,7 +2,7 @@
 
 Application desktop Windows de base de connaissances techniques sous forme de
 graphe : nœuds hiérarchiques contenant des documents typés (Markdown, texte,
-JSON, code, Mermaid), reliés par des relations nommées. Locale, sans backend,
+JSON, code, Mermaid, CSV), reliés par des relations nommées. Locale, sans backend,
 le code stocké n'est jamais exécuté.
 
 Spécifications : [`docs/cahier_des_charges_techniques_knowledge_graph_v1_2.docx`](docs/).

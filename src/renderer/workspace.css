@@ -351,6 +351,42 @@ h3 {
   background: var(--type-resource);
 }
 
+.type-dot.type-function {
+  background: var(--type-function);
+}
+
+.type-dot.type-rule {
+  background: var(--type-rule);
+}
+
+.type-dot.type-decision {
+  background: var(--type-decision);
+}
+
+.type-dot.type-requirement {
+  background: var(--type-requirement);
+}
+
+.type-dot.type-issue {
+  background: var(--type-issue);
+}
+
+.type-dot.type-task {
+  background: var(--type-task);
+}
+
+.type-dot.type-milestone {
+  background: var(--type-milestone);
+}
+
+.type-dot.type-risk {
+  background: var(--type-risk);
+}
+
+.type-dot.type-actor {
+  background: var(--type-actor);
+}
+
 /* En-tête du nœud */
 
 .node-header {

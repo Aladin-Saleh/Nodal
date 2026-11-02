@@ -6,6 +6,7 @@ import {
   useState,
   type MouseEvent,
 } from 'react';
+import { parseCsv } from '../../../shared/csv';
 import {
   createMarkdownRenderer,
   isExternalLink,
@@ -49,6 +50,49 @@ export function MarkdownPreview({ source }: { source: string }) {
       // oxlint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: html }}
     />
+  );
+}
+
+/** Lignes affichées au plus : l'aperçu reste fluide sur un gros fichier. */
+export const CSV_PREVIEW_MAX_ROWS = 500;
+
+/** Aperçu d'un document CSV en tableau ; première ligne = en-tête. */
+export function CsvPreview({ source }: { source: string }) {
+  const { rows } = useMemo(() => parseCsv(source), [source]);
+  const [header, ...body] = rows;
+  if (!header) return <div className="csv-preview muted">Tableau vide.</div>;
+  const shown = body.slice(0, CSV_PREVIEW_MAX_ROWS);
+  const width = Math.max(header.length, ...shown.map((row) => row.length));
+  const cells = (row: string[]) =>
+    Array.from({ length: width }, (_, index) => row[index] ?? '');
+  return (
+    <div className="csv-preview">
+      <table>
+        <thead>
+          <tr>
+            {cells(header).map((cell, index) => (
+              <th key={index} scope="col">
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {cells(row).map((cell, index) => (
+                <td key={index}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {body.length > shown.length && (
+        <p className="muted" role="status">
+          {body.length - shown.length} ligne(s) de plus non affichée(s).
+        </p>
+      )}
+    </div>
   );
 }
 

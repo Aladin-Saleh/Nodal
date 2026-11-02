@@ -51,6 +51,8 @@ export function documentExtension(
       return 'json';
     case 'mermaid':
       return 'mmd';
+    case 'csv':
+      return 'csv';
     case 'code':
       return (language && CODE_EXTENSIONS[language]) ?? 'txt';
   }
@@ -124,8 +126,8 @@ Ce dossier est un export portable d'un espace de connaissances Nodal.
   types de relations, tags, métadonnées des documents et pièces jointes).
   Le champ "formatVersion" indique la version du format.
 - documents/ : un fichier par document, dans son format source
-  (.md Markdown, .txt texte, .json JSON, .mmd Mermaid, extension du langage
-  pour le code). Le contenu est copié à l'identique.
+  (.md Markdown, .txt texte, .json JSON, .mmd Mermaid, .csv CSV, extension
+  du langage pour le code). Le contenu est copié à l'identique.
 - attachments/<identifiant>/ : les pièces jointes, avec leur nom d'origine.
 
 Chaque fichier est référencé dans manifest.json par son chemin relatif et

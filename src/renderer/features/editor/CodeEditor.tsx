@@ -27,6 +27,7 @@ export function languageExtension(
       return json();
     case 'text':
     case 'mermaid':
+    case 'csv':
       return [];
     case 'code':
       switch (language) {

@@ -20,6 +20,28 @@ export function createNodeGeometry(type: NodeType): THREE.BufferGeometry {
       return new THREE.ConeGeometry(r, r * 1.9, 32);
     case 'generic':
       return new THREE.DodecahedronGeometry(r);
+    case 'function':
+      return new THREE.TetrahedronGeometry(r * 1.3);
+    case 'rule':
+      // Prisme hexagonal plat.
+      return new THREE.CylinderGeometry(r, r, r * 0.9, 6);
+    case 'decision':
+      // Pyramide à base carrée.
+      return new THREE.ConeGeometry(r * 1.1, r * 1.8, 4);
+    case 'requirement':
+      // Fiche : plaque mince.
+      return new THREE.BoxGeometry(r * 1.5, r * 1.9, r * 0.5);
+    case 'issue':
+      return new THREE.TorusKnotGeometry(r * 0.6, r * 0.22, 64, 8);
+    case 'task':
+      // Prisme triangulaire.
+      return new THREE.CylinderGeometry(r, r, r * 1.4, 3);
+    case 'milestone':
+      return new THREE.TorusGeometry(r * 0.8, r * 0.32, 12, 32);
+    case 'risk':
+      return new THREE.IcosahedronGeometry(r * 1.05);
+    case 'actor':
+      return new THREE.CapsuleGeometry(r * 0.6, r * 0.9, 8, 16);
   }
 }
 
@@ -54,6 +76,15 @@ export function readTheme(): GraphTheme {
       procedure: type('procedure', '#9c36b5'),
       resource: type('resource', '#0c8599'),
       generic: type('generic', '#868e96'),
+      function: type('function', '#1971c2'),
+      rule: type('rule', '#e64980'),
+      decision: type('decision', '#5f3dc4'),
+      requirement: type('requirement', '#087f5b'),
+      issue: type('issue', '#e03131'),
+      task: type('task', '#e8a400'),
+      milestone: type('milestone', '#22b8cf'),
+      risk: type('risk', '#a61e4d'),
+      actor: type('actor', '#8d5524'),
     },
   };
 }
@@ -140,6 +171,7 @@ const CARD_BADGES: Record<
   json: { text: 'JSON', color: '#fab005' },
   code: { text: 'CODE', color: '#38d9a9' },
   mermaid: { text: 'MMD', color: '#da77f2' },
+  csv: { text: 'CSV', color: '#69db7c' },
   add: { text: '+', color: '#5c7cfa' },
 };
 

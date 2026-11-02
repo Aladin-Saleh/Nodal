@@ -87,7 +87,7 @@ const count = (table: string) =>
   (db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n;
 
 describe('node', () => {
-  it('accepte exactement les six types de nœuds', () => {
+  it('accepte exactement les types de nœuds du domaine', () => {
     NODE_TYPES.forEach((type, index) =>
       insertNode(`n${index}`, 'w1', { nodeType: type }),
     );

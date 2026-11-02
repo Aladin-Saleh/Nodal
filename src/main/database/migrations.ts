@@ -10,6 +10,7 @@ import { migration007 } from './migrations/007-edge-from-link';
 import { migration008 } from './migrations/008-link-suggestion-ignored';
 import { migration009 } from './migrations/009-search-gaps';
 import { migration010 } from './migrations/010-code-anchors';
+import { migration011 } from './migrations/011-more-types';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -17,6 +18,12 @@ export interface Migration {
   version: number;
   name: string;
   sql: string;
+  /**
+   * Clés étrangères désactivées pendant la migration (reconstruction d'une
+   * table référencée) : PRAGMA foreign_keys est sans effet dans une
+   * transaction. Elles sont vérifiées avant le COMMIT.
+   */
+  disableForeignKeys?: boolean;
 }
 
 /** Liste ordonnée, versions contiguës à partir de 1. */
@@ -31,6 +38,7 @@ export const MIGRATIONS: readonly Migration[] = [
   migration008,
   migration009,
   migration010,
+  migration011,
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;
@@ -55,6 +63,13 @@ export function assertSchemaSupported(
   }
 }
 
+function foreignKeysEnabled(db: DatabaseSync): boolean {
+  const row = db.prepare('PRAGMA foreign_keys').get() as
+    | { foreign_keys: number }
+    | undefined;
+  return row?.foreign_keys === 1;
+}
+
 /**
  * Applique les migrations manquantes, chacune dans sa propre transaction :
  * en cas d'échec, le fichier reste à la dernière version cohérente.
@@ -70,9 +85,21 @@ export function runMigrations(
 
   for (const migration of migrations) {
     if (migration.version <= current) continue;
+    const foreignKeys = migration.disableForeignKeys
+      ? foreignKeysEnabled(db)
+      : false;
+    if (foreignKeys) db.exec('PRAGMA foreign_keys = OFF');
     try {
       inTransaction(db, () => {
         db.exec(migration.sql);
+        if (migration.disableForeignKeys) {
+          const violations = db.prepare('PRAGMA foreign_key_check').all();
+          if (violations.length > 0) {
+            throw new Error(
+              `${violations.length} référence(s) invalide(s) après la migration.`,
+            );
+          }
+        }
         // user_version fait partie de l'en-tête : il est annulé avec la transaction.
         db.exec(`PRAGMA user_version = ${Math.trunc(migration.version)}`);
       });
@@ -82,6 +109,8 @@ export function runMigrations(
         `La mise à jour du fichier vers le schéma ${migration.version} (${migration.name}) a échoué.`,
         { cause },
       );
+    } finally {
+      if (foreignKeys) db.exec('PRAGMA foreign_keys = ON');
     }
   }
   return getSchemaVersion(db);

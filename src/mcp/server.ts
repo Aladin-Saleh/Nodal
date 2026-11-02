@@ -65,7 +65,7 @@ import {
 // Le bloc CLAUDE.md / AGENTS.md (McpDialog) ne fait que déclencher la
 // consultation ; le mode d'emploi des outils est ici, une seule fois.
 const READ_INSTRUCTIONS = `Nodal : base de connaissances en nœuds hiérarchiques typés, avec documents
-(markdown, texte, json, code, mermaid) et relations nommées entre nœuds.
+(markdown, texte, json, code, mermaid, csv) et relations nommées entre nœuds.
 
 Réponses en TOON : \`clé: valeur\`, et pour une liste \`nom[N]{champ1,champ2}:\`
 puis une ligne par élément. Identifiants abrégés : réutilisez-les tels quels.
@@ -598,7 +598,9 @@ export function createNodalMcpServer(
         'Crée un nœud (sous parentId, ou à la racine), avec un résumé et des tags facultatifs ' +
         '(créés s’ils n’existent pas). Refusé si un nœud de même titre existe déjà au même endroit. ' +
         'Types : concept (notion, idée), component (élément d’un système), data (donnée, schéma), ' +
-        'procedure (marche à suivre), resource (référence externe), generic.',
+        'procedure (marche à suivre), resource (référence externe), function (fonction, méthode), ' +
+        'rule (règle métier, contrainte), decision (choix argumenté, ADR), requirement (exigence), ' +
+        'issue (bogue, anomalie), task (tâche), milestone (jalon), risk (risque), actor (personne, équipe, rôle), generic.',
       inputSchema: z.object({
         title: z.string().min(1).max(200),
         type: nodeType,
@@ -648,7 +650,7 @@ export function createNodalMcpServer(
       title: 'Ajouter un document',
       description:
         'Attache un document à un nœud : markdown (notes, explications), text, json, code ' +
-        '(avec language, ex. typescript, python, sql) ou mermaid (diagramme). ' +
+        '(avec language, ex. typescript, python, sql), mermaid (diagramme) ou csv (tableau, 1re ligne = en-tête). ' +
         'Dans un document markdown, [[Titre]] ou [[Titre]](id) crée un lien interne et une relation « est lié à ».',
       inputSchema: z.object({
         nodeId: id,

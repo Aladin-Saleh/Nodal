@@ -4,7 +4,11 @@
  * des migrations SQLite.
  */
 
-/** Les six types de nœuds, fixes en V1 (§5.2, §13). */
+/**
+ * Types de nœuds (§5.2, §13) : les six de la V1, puis ceux du développement
+ * (fonction, règle, décision, exigence, anomalie) et de la gestion de projet
+ * (tâche, jalon, risque, acteur), ajoutés par la migration 011.
+ */
 export const NODE_TYPES = [
   'concept',
   'component',
@@ -12,6 +16,15 @@ export const NODE_TYPES = [
   'procedure',
   'resource',
   'generic',
+  'function',
+  'rule',
+  'decision',
+  'requirement',
+  'issue',
+  'task',
+  'milestone',
+  'risk',
+  'actor',
 ] as const;
 export type NodeType = (typeof NODE_TYPES)[number];
 
@@ -22,6 +35,7 @@ export const CONTENT_TYPES = [
   'json',
   'code',
   'mermaid',
+  'csv',
 ] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
@@ -62,6 +76,15 @@ export const NODE_TYPE_LABELS: Record<NodeType, string> = {
   procedure: 'Procédure',
   resource: 'Ressource',
   generic: 'Générique',
+  function: 'Fonction',
+  rule: 'Règle',
+  decision: 'Décision',
+  requirement: 'Exigence',
+  issue: 'Anomalie',
+  task: 'Tâche',
+  milestone: 'Jalon',
+  risk: 'Risque',
+  actor: 'Acteur',
 };
 
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
@@ -70,6 +93,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   json: 'JSON',
   code: 'Code',
   mermaid: 'Diagramme Mermaid',
+  csv: 'Tableau CSV',
 };
 
 /** Langages proposés pour les documents de code (§6.4). */

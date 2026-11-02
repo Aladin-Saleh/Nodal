@@ -124,6 +124,13 @@ describe('TemplatesDialog', () => {
       'Composant',
       'Donnée',
       'Décision (ADR)',
+      'Fonction',
+      'Règle',
+      'Exigence',
+      'Anomalie',
+      'Tâche',
+      'Jalon',
+      'Risque',
       'Nouveau modèle',
     ]);
     expect(templates.at(-1)!.id).toBe('nouveau-modele');

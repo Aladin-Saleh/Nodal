@@ -264,6 +264,7 @@ describe('utilitaires d’export', () => {
   it('choisit l’extension selon le type et le langage', async () => {
     expect(documentExtension('markdown', null)).toBe('md');
     expect(documentExtension('mermaid', null)).toBe('mmd');
+    expect(documentExtension('csv', null)).toBe('csv');
     expect(documentExtension('code', 'typescript')).toBe('ts');
     expect(documentExtension('code', null)).toBe('txt');
   });

@@ -36,6 +36,15 @@
   --type-procedure: #9c36b5;
   --type-resource: #0c8599;
   --type-generic: #868e96;
+  --type-function: #1971c2;
+  --type-rule: #e64980;
+  --type-decision: #5f3dc4;
+  --type-requirement: #087f5b;
+  --type-issue: #e03131;
+  --type-task: #e8a400;
+  --type-milestone: #22b8cf;
+  --type-risk: #a61e4d;
+  --type-actor: #8d5524;
 
   /* Accent par défaut (bleu) ; remplacé par [data-accent]. */
   --accent: #3b5bdb;

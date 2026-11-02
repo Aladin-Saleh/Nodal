@@ -7,9 +7,11 @@
  *   indentée (fonctions, classes) ; SQL : instructions terminées par « ; » ;
  * - JSON : une entrée par clé ou élément de premier niveau (chemin JSON) ;
  * - Mermaid : un diagramme reste une unité ;
+ * - CSV : groupes de lignes, en-tête répété dans chaque fragment ;
  * - texte : paragraphes.
  * Les tailles sont mesurées en tokens par le compteur fourni.
  */
+import { csvRecords } from '../../shared/csv';
 import type { ContentType } from '../../shared/domain';
 
 /** Version de la stratégie : à incrémenter à chaque changement de découpage. */
@@ -228,6 +230,38 @@ function jsonBlocks(body: string): Block[] | null {
   return [{ text: body.trim(), section: '$' }];
 }
 
+/**
+ * CSV : lignes regroupées tant que la limite le permet, chacune précédée de
+ * l'en-tête ; section = numéros des lignes du fichier (en-tête = ligne 1).
+ */
+function csvChunks(
+  body: string,
+  maxTokens: number,
+  count: TokenCounter,
+): ChunkPiece[] {
+  const [header, ...rows] = csvRecords(body);
+  if (header === undefined) return [];
+  if (rows.length === 0) return [{ content: header, section: null }];
+  const pieces: ChunkPiece[] = [];
+  let current: string[] = [];
+  let first = 2;
+  const flush = (next: number) => {
+    pieces.push({
+      content: [header, ...current].join('\n'),
+      section: `lignes ${first}-${next - 1}`,
+    });
+    current = [];
+    first = next;
+  };
+  rows.forEach((row, index) => {
+    const candidate = [header, ...current, row].join('\n');
+    if (current.length > 0 && count(candidate) > maxTokens) flush(index + 2);
+    current.push(row);
+  });
+  flush(rows.length + 2);
+  return pieces;
+}
+
 /** Découpe un document en fragments d'au plus `maxTokens` (sauf unité indivisible). */
 export function chunkDocument(
   body: string,
@@ -255,6 +289,8 @@ export function chunkDocument(
           : [{ content: block.text, section: block.section }],
       );
     }
+    case 'csv':
+      return csvChunks(body, maxTokens, count);
     case 'text':
       return pack(paragraphs(body, null), maxTokens, count);
   }

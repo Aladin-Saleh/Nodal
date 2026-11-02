@@ -43,7 +43,14 @@ describe('modèles de documents', () => {
       'procedure',
       'component',
       'data',
-      'concept',
+      'decision',
+      'function',
+      'rule',
+      'requirement',
+      'issue',
+      'task',
+      'milestone',
+      'risk',
     ]);
   });
 

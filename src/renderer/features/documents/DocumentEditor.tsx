@@ -13,7 +13,11 @@ import {
 } from '../../app/context';
 import { CodeEditor } from '../editor/CodeEditor';
 import { useNodeLinks } from '../editor/node-links';
-import { MarkdownPreview, MermaidPreview } from '../editor/previews';
+import {
+  CsvPreview,
+  MarkdownPreview,
+  MermaidPreview,
+} from '../editor/previews';
 import {
   LiveNodeLinks,
   wikiLinkExtension,
@@ -37,7 +41,7 @@ export interface DocumentEditorProps {
 
 /**
  * Éditeur d'un document (§6.3 à §6.6) : CodeMirror avec coloration, aperçu
- * Markdown ou rendu Mermaid, mise en forme JSON explicite, copie. Le contenu
+ * Markdown, rendu Mermaid ou tableau CSV, mise en forme JSON explicite, copie. Le contenu
  * reste du texte inerte : rien n'est exécuté. Enregistrement automatique.
  * À remonter (prop `key`) quand le document change.
  */
@@ -139,7 +143,9 @@ function LoadedDocumentEditor({
 
   const isCode = document.contentType === 'code';
   const hasPreview =
-    document.contentType === 'markdown' || document.contentType === 'mermaid';
+    document.contentType === 'markdown' ||
+    document.contentType === 'mermaid' ||
+    document.contentType === 'csv';
   const syntaxError = document.contentType === 'json' ? jsonError(body) : null;
 
   const copy = async () => {
@@ -174,6 +180,8 @@ function LoadedDocumentEditor({
   const preview =
     document.contentType === 'markdown' ? (
       <MarkdownPreview source={body} />
+    ) : document.contentType === 'csv' ? (
+      <CsvPreview source={body} />
     ) : (
       <MermaidPreview source={body} />
     );
