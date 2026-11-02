@@ -20,6 +20,7 @@ import { QuickCaptureService } from './capture/quick-capture-service';
 import { getSqliteVersion } from './database/connection';
 import { createFileDialogs } from './file-dialogs';
 import { routeSenderByChannel } from './ipc/handler';
+import { installMcpServer, MCP_SERVER_FILE_NAME } from './mcp-server-install';
 import { registerIpcHandlers } from './ipc/register';
 import { PreferencesStore, WindowStateStore } from './preferences-store';
 import {
@@ -64,6 +65,15 @@ function bootstrap(): void {
   const workspaces = new WorkspaceService();
   const dialogs = createFileDialogs(getMainWindow);
 
+  // Installé : serveur MCP recopié vers un chemin stable à chaque démarrage
+  // (voir mcp-server-install.ts). En développement : bundle de Vite.
+  const mcpServerPath = app.isPackaged
+    ? installMcpServer(
+        path.join(process.resourcesPath, MCP_SERVER_FILE_NAME),
+        path.join(app.getPath('userData'), 'mcp'),
+      )
+    : path.join(app.getAppPath(), '.vite', 'build', MCP_SERVER_FILE_NAME);
+
   let appInfo: AppInfo | null = null;
   const getAppInfo = (): AppInfo =>
     (appInfo ??= {
@@ -73,9 +83,7 @@ function bootstrap(): void {
       chromeVersion: process.versions.chrome,
       nodeVersion: process.versions.node,
       sqliteVersion: getSqliteVersion(),
-      mcpServerPath: app.isPackaged
-        ? path.join(process.resourcesPath, 'nodal-mcp.cjs')
-        : path.join(app.getAppPath(), '.vite', 'build', 'nodal-mcp.cjs'),
+      mcpServerPath,
     });
 
   const closeWorkspace = () => {

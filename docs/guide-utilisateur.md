@@ -364,8 +364,13 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   à coller dans son fichier de configuration, avec l'endroit où le mettre, et
   le fichier d'instructions du projet à compléter (`CLAUDE.md`, `GEMINI.md`,
   `AGENTS.md`…). Node.js 22.13 ou plus récent doit être
-  installé. Après une mise à jour de Nodal ou un déplacement du fichier,
-  refaites la configuration.
+  installé. Le serveur est recopié à chaque démarrage de Nodal dans
+  `%APPDATA%\Nodal\mcp\` : après une mise à jour, la configuration reste
+  valable et l'assistant utilise le nouveau serveur, qui met à jour de
+  lui-même un espace d'une version précédente. Seul un déplacement du
+  fichier de l'espace oblige à refaire la configuration. Depuis Nodal 1.4.0
+  ou plus ancien, refaites-la une fois (l'ancien chemin contenait le numéro
+  de version).
 - **Travailler à deux** : Nodal peut rester ouvert pendant que l'assistant
   travaille. L'affichage se met à jour dans la seconde qui suit chacune de
   ses écritures ; si vous êtes en train de taper, la mise à jour attend que

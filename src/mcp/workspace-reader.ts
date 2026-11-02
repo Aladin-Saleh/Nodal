@@ -18,6 +18,7 @@ import {
 import {
   LATEST_SCHEMA_VERSION,
   getSchemaVersion,
+  runMigrations,
 } from '../main/database/migrations';
 import { inTransaction } from '../main/database/transaction';
 import type { ServiceContext } from '../main/knowledge/context';
@@ -50,6 +51,7 @@ function openDatabase(filePath: string, mode: AccessMode): DatabaseSync {
   // pouvoir les supprimer en se fermant. Le mode readOnly ne sert qu'en
   // repli, pour un fichier non modifiable.
   let db: DatabaseSync;
+  let writable = true;
   try {
     db = new DatabaseSync(filePath, { enableForeignKeyConstraints: true });
   } catch (cause) {
@@ -62,6 +64,7 @@ function openDatabase(filePath: string, mode: AccessMode): DatabaseSync {
     }
     try {
       db = new DatabaseSync(filePath, { readOnly: true });
+      writable = false;
     } catch (readCause) {
       throw new NodalError(
         'INVALID_WORKSPACE_FILE',
@@ -71,7 +74,6 @@ function openDatabase(filePath: string, mode: AccessMode): DatabaseSync {
     }
   }
   try {
-    if (mode === 'read') db.exec('PRAGMA query_only = ON');
     db.exec('PRAGMA trusted_schema = OFF');
     db.exec('PRAGMA foreign_keys = ON');
     db.exec(`PRAGMA busy_timeout = ${BUSY_TIMEOUT_MS}`);
@@ -93,14 +95,20 @@ function openDatabase(filePath: string, mode: AccessMode): DatabaseSync {
         );
       }
     }
-    // Le serveur ne migre jamais un fichier : un fichier ancien doit d'abord
-    // être ouvert une fois dans Nodal.
+    // Fichier d'une version précédente : mis à jour comme le ferait
+    // l'application à l'ouverture (même en lecture, et même pour un serveur
+    // --read-only : seule la structure change, pas le contenu). Sans cela, un
+    // serveur à jour refuserait les espaces pas encore rouverts dans Nodal.
     if (version < LATEST_SCHEMA_VERSION) {
-      throw new NodalError(
-        'INVALID_WORKSPACE_FILE',
-        'Ce fichier utilise un ancien schéma : ouvrez-le une fois dans Nodal pour le mettre à jour.',
-      );
+      if (!writable) {
+        throw new NodalError(
+          'INVALID_WORKSPACE_FILE',
+          'Ce fichier utilise un ancien schéma et ne peut pas être modifié : ouvrez-le une fois dans Nodal pour le mettre à jour.',
+        );
+      }
+      runMigrations(db);
     }
+    if (mode === 'read') db.exec('PRAGMA query_only = ON');
     return db;
   } catch (error) {
     db.close();

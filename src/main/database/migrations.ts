@@ -91,6 +91,9 @@ export function runMigrations(
     if (foreignKeys) db.exec('PRAGMA foreign_keys = OFF');
     try {
       inTransaction(db, () => {
+        // Un autre processus (application, serveur MCP) a pu appliquer la
+        // migration entre-temps : la version est relue sous verrou.
+        if (getSchemaVersion(db) >= migration.version) return;
         db.exec(migration.sql);
         if (migration.disableForeignKeys) {
           const violations = db.prepare('PRAGMA foreign_key_check').all();

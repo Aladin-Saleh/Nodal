@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { decode as decodeToon } from '@toon-format/toon';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -8,6 +9,13 @@ import {
   setAnchors,
   writeCodeRoots,
 } from '../../src/main/knowledge/anchor-service';
+import { NODAL_APPLICATION_ID } from '../../src/main/database/connection';
+import {
+  getSchemaVersion,
+  LATEST_SCHEMA_VERSION,
+  MIGRATIONS,
+  runMigrations,
+} from '../../src/main/database/migrations';
 import { AssistantChangeService } from '../../src/main/knowledge/assistant-change-service';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { EdgeService } from '../../src/main/knowledge/edge-service';
@@ -716,6 +724,33 @@ describe('fichier d’une version plus récente de Nodal', () => {
     expect(write.content[0]!.text).toContain('version plus récente de Nodal');
     expect(write.content[0]!.text).toContain('lecture seule');
     await client.close();
+  });
+});
+
+describe('fichier d’une version précédente de Nodal', () => {
+  it('est mis à jour par le serveur, même en lecture seule', async () => {
+    const { dir } = workspace();
+    const old = path.join(dir, 'ancien.nodal');
+    const db = new DatabaseSync(old);
+    db.exec(`PRAGMA application_id = ${NODAL_APPLICATION_ID}`);
+    db.exec('PRAGMA journal_mode = WAL');
+    runMigrations(db, MIGRATIONS.slice(0, LATEST_SCHEMA_VERSION - 1));
+    db.exec(
+      "INSERT INTO workspace VALUES ('w', 'Ancien', NULL, 't', 't');" +
+        "INSERT INTO node (id, workspace_id, title, node_type, summary, created_at, updated_at) VALUES ('n', 'w', 'Passerelle', 'component', 'Entrée HTTP', 't', 't');",
+    );
+    db.close();
+
+    const client = await connect(old);
+    const found = toon(
+      await client.call('nodal_search', { query: 'passerelle' }),
+    );
+    expect(found.nodeCount).toBe(1);
+    await client.close();
+
+    const after = new DatabaseSync(old);
+    expect(getSchemaVersion(after)).toBe(LATEST_SCHEMA_VERSION);
+    after.close();
   });
 });
 

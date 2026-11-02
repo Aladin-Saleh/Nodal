@@ -151,8 +151,9 @@ export function McpDialog({
           />
           <p className="muted">{setup.hint}</p>
           <p className="muted">
-            Après une mise à jour ou un déplacement de Nodal, ou si le fichier
-            de l’espace change de place, refaites cette configuration.
+            Les mises à jour de Nodal ne demandent rien : le serveur est
+            remplacé au même endroit. Si le fichier de l’espace change de place,
+            refaites cette configuration.
           </p>
           {setup.instructionsFile && (
             <>
