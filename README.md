@@ -233,6 +233,17 @@ pièces jointes en BLOB).
   - « Connecter un assistant IA » : choix de l'assistant (Claude Code,
     Gemini CLI, Codex, Claude Desktop, Cursor, VS Code) et commande ou
     configuration correspondante, avec le fichier d'instructions du projet.
+- **v1.5 — Types et mises à jour sans manipulation** :
+  - types de nœuds pour le développement et la gestion de projet :
+    fonction, règle, décision, exigence, anomalie, tâche, jalon, risque,
+    acteur (forme et couleur propres, modèles de documents) ; documents
+    CSV (aperçu en tableau, séparateur détecté, découpage pour LLM avec
+    en-tête répété) ; migration 011 (reconstruction de `node` et
+    `document`, clés étrangères vérifiées avant validation) ;
+  - serveur MCP recopié au démarrage dans `%APPDATA%\Nodal\mcp` (chemin
+    stable entre les versions), configurations d'assistants qui citent
+    l'ancien chemin versionné corrigées automatiquement, espaces d'une
+    version précédente mis à jour par le serveur lui-même.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
