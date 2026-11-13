@@ -54,17 +54,17 @@ describe('menuItems', () => {
   });
 });
 
-describe('MenuButton', () => {
-  function setup() {
-    const onSelect = vi.fn();
-    render(
-      <MenuButton label="Espace" items={[{ label: 'Tags…', onSelect }]}>
-        Espace
-      </MenuButton>,
-    );
-    return { onSelect, button: screen.getByRole('button', { name: 'Espace' }) };
-  }
+function setup() {
+  const onSelect = vi.fn();
+  render(
+    <MenuButton label="Espace" items={[{ label: 'Tags…', onSelect }]}>
+      Espace
+    </MenuButton>,
+  );
+  return { onSelect, button: screen.getByRole('button', { name: 'Espace' }) };
+}
 
+describe('MenuButton', () => {
   it('ouvre le menu au clic, choisit puis rend le focus au bouton', () => {
     const { onSelect, button } = setup();
     expect(button.getAttribute('aria-expanded')).toBe('false');

@@ -12,7 +12,8 @@ export default defineConfig({
       // `node:sqlite` n'existe qu'avec le préfixe `node:` et n'apparaît pas dans
       // `builtinModules` sous Node 22 : Forge ne l'externalise donc pas tout
       // seul. Il est fourni par le runtime Node embarqué dans Electron.
-      external: ['node:sqlite'],
+      // node-pty (terminal) : module natif chargé à l'exécution, hors du bundle.
+      external: ['node:sqlite', 'node-pty'],
     },
   },
 });

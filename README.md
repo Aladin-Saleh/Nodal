@@ -162,6 +162,14 @@ pièces jointes en BLOB).
     (`node nodal-mcp.cjs <espace> --context`) ajoute à chaque demande les
     nœuds et documents pertinents, installé depuis la même fenêtre.
 
+- **v1.6 — Ergonomie** :
+  - menus homogènes : barre supérieure réduite à Espace ▾ / Assistant IA ▾,
+    menu ⋯ du nœud identique au clic droit de l'arborescence, menu ⋯ du
+    document, barre du graphe sur une ligne avec zoom flottant ;
+  - terminal intégré (Ctrl + J) : node-pty + xterm.js, shell dans le dossier
+    de code de l'espace, `NODAL_WORKSPACE` défini ; node-pty est embarqué hors
+    de l'archive asar (`scripts/stage-node-pty.mjs`).
+
 - **v1.4 — Navigation** :
   - palette de commandes (`Ctrl+P`, `Ctrl+Maj+P` pour les actions seules) :
     nœuds par titre et chemin (correspondance approximative, sans accents)

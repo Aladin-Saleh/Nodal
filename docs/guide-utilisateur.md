@@ -8,7 +8,8 @@ une tâche, un jalon, un risque ou un acteur ; il contient des **documents**
 par des **relations** nommées, indépendantes de la hiérarchie.
 
 Tout reste sur votre poste : aucune connexion Internet n'est nécessaire et aucun
-contenu n'est envoyé à l'extérieur. Le code enregistré n'est jamais exécuté.
+contenu n'est envoyé à l'extérieur. Le code enregistré n'est jamais exécuté
+(le terminal intégré n'exécute que ce que vous y tapez).
 
 ---
 
@@ -461,7 +462,24 @@ Les fichiers sont lus comme des données, jamais exécutés ; les liens
 symboliques, les dossiers cachés (`.obsidian`, `.git`) et les notes non
 UTF-8 sont ignorés et listés dans le rapport.
 
-## 8. Préférences
+## 8. Terminal intégré
+
+Bouton **>\_** de la barre supérieure, **Ctrl + J** (ou Ctrl + \`), ou la
+palette « Ouvrir le terminal » : un terminal s'ouvre en bas de la fenêtre.
+
+- Le shell est PowerShell 7 s'il est installé, sinon Windows PowerShell. Il
+  démarre dans le premier **dossier de code** de l'espace (Paramètres de
+  l'espace), sinon dans le dossier du fichier `.nodal`.
+- La variable `NODAL_WORKSPACE` contient le chemin de l'espace ouvert : un
+  assistant lancé ici (`claude`, `gemini`…) ou un script peut s'en servir.
+- **Ctrl + C** copie la sélection (sans sélection : interrompt la commande),
+  **Ctrl + V** colle. Les raccourcis de Nodal (Ctrl + P, Ctrl + F…) vont au
+  shell tant que le terminal a le focus, sauf Ctrl + J qui le masque.
+- **Masquer** (×, Ctrl + J) garde la session ; **Redémarrer** lance un
+  nouveau shell. Faites glisser le bord supérieur pour changer la hauteur.
+  Les shells sont arrêtés à la fermeture de Nodal.
+
+## 9. Préférences
 
 Les préférences concernent l'application, quel que soit l'espace ouvert. On
 les ouvre avec **Ctrl + ,** ou le bouton **Préférences** de la barre d'état ;
@@ -488,7 +506,7 @@ chaque changement s'applique et s'enregistre aussitôt.
 La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 « Rétablir les valeurs par défaut » remet toutes les préférences à zéro.
 
-## 9. Raccourcis clavier
+## 10. Raccourcis clavier
 
 | Raccourci       | Action                                                 |
 | --------------- | ------------------------------------------------------ |
@@ -499,6 +517,7 @@ La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 | Ctrl + Maj + N  | nouveau nœud racine                                    |
 | Ctrl + F        | rechercher                                             |
 | Ctrl + S        | enregistrer immédiatement                              |
+| Ctrl + J        | afficher / masquer le terminal                         |
 | Ctrl + A        | sélectionner tous les nœuds affichés (graphe)          |
 | Échap           | vider la sélection ou la recherche, fermer une fenêtre |
 | F2              | renommer le nœud sélectionné                           |
@@ -510,7 +529,7 @@ La fenêtre retrouve aussi sa taille et sa position d'une session à l'autre.
 | Ctrl + = / -    | agrandir / réduire le texte (Ctrl + 0 : rétablir)      |
 | Ctrl+Maj+Espace | capture rapide (global, réglable dans les préférences) |
 
-## 10. Dépannage
+## 11. Dépannage
 
 - **« Le fichier de l'espace est verrouillé »** : le fichier est ouvert par un
   autre programme ou une autre fenêtre. Fermez-le puis réessayez.

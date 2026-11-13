@@ -22,6 +22,8 @@ export interface TopBarProps {
   view: ViewMode;
   onViewChange(view: ViewMode): void;
   exporting: boolean;
+  /** Terminal intégré affiché (bouton enfoncé). */
+  terminalOpen: boolean;
   /** Registre des actions : boutons et menus Espace / Assistant IA. */
   actions: readonly AppAction[];
 }
@@ -36,6 +38,7 @@ export function TopBar({
   view,
   onViewChange,
   exporting,
+  terminalOpen,
   actions,
 }: TopBarProps) {
   /** Bouton d'une action du registre (libellé court possible). */
@@ -104,6 +107,11 @@ export function TopBar({
         >
           Assistant IA
         </MenuButton>
+        {button('view.terminal', '>_', {
+          'aria-label': 'Terminal',
+          'aria-pressed': terminalOpen,
+          className: 'secondary terminal-toggle',
+        })}
         {button('app.help', '?', { 'aria-label': 'Aide (F1)' })}
       </div>
     </header>

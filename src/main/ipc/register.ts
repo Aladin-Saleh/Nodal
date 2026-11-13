@@ -18,6 +18,7 @@ import type {
 } from '../../shared/quick-capture';
 import type { FileDialogs } from '../file-dialogs';
 import { installContextHook } from '../context-hook-install';
+import type { TerminalService } from '../terminal/terminal-service';
 import { contextHookCommand } from '../../shared/context-hook';
 import { CodeAnchorService } from '../code/code-anchor-service';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
@@ -86,7 +87,14 @@ export interface IpcDependencies {
   isTrustedSender: SenderValidator;
   /** Capture rapide : fenêtre dédiée et raccourci global (main/index). */
   quickCapture: QuickCaptureControls;
+  /** Terminaux intégrés (node-pty). */
+  terminals: TerminalControls;
 }
+
+export type TerminalControls = Pick<
+  TerminalService,
+  'create' | 'write' | 'resize' | 'close'
+>;
 
 export interface QuickCaptureControls {
   target(): CaptureTarget | null;
@@ -245,6 +253,19 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return directory ? codeAnchors.addRoot(directory) : null;
     },
     'code:removeRoot': ({ path }) => codeAnchors.removeRoot(path),
+    'terminal:create': (size) => deps.terminals.create(size),
+    'terminal:write': ({ id, data }) => {
+      deps.terminals.write(id, data);
+      return null;
+    },
+    'terminal:resize': ({ id, cols, rows }) => {
+      deps.terminals.resize(id, cols, rows);
+      return null;
+    },
+    'terminal:close': ({ id }) => {
+      deps.terminals.close(id);
+      return null;
+    },
     'assistant:installContextHook': async ({ client }) => {
       const { filePath } = requireCurrent();
       const [root] = codeAnchors.getRoots().filter((item) => item.exists);

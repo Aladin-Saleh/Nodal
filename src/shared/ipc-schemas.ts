@@ -4,6 +4,11 @@
  * que toute propriété inconnue (objets stricts).
  */
 import { CONTEXT_HOOK_CLIENTS } from './context-hook';
+import {
+  TERMINAL_MAX_COLS,
+  TERMINAL_MAX_INPUT,
+  TERMINAL_MAX_ROWS,
+} from './terminal';
 import { z } from 'zod';
 import {
   ATTACHMENT_MAX_SIZE_LIMIT_BYTES,
@@ -332,6 +337,26 @@ export const ipcArgsSchemas = {
   'code:getRoots': noArgs,
   'code:addRoot': noArgs,
   'code:removeRoot': one(z.strictObject({ path: z.string().min(1).max(4096) })),
+  'terminal:create': one(
+    z.strictObject({
+      cols: z.number().int().min(1).max(TERMINAL_MAX_COLS),
+      rows: z.number().int().min(1).max(TERMINAL_MAX_ROWS),
+    }),
+  ),
+  'terminal:write': one(
+    z.strictObject({
+      id: z.string().min(1).max(20),
+      data: z.string().max(TERMINAL_MAX_INPUT),
+    }),
+  ),
+  'terminal:resize': one(
+    z.strictObject({
+      id: z.string().min(1).max(20),
+      cols: z.number().int().min(1).max(TERMINAL_MAX_COLS),
+      rows: z.number().int().min(1).max(TERMINAL_MAX_ROWS),
+    }),
+  ),
+  'terminal:close': one(z.strictObject({ id: z.string().min(1).max(20) })),
   'assistant:installContextHook': one(
     z.strictObject({ client: z.enum(CONTEXT_HOOK_CLIENTS) }),
   ),

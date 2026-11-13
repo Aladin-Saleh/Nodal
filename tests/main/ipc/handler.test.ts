@@ -180,6 +180,12 @@ function setup(pickedPath: string | null, confirmed = true) {
       open: vi.fn(),
       shortcutRegistered: vi.fn(() => true),
     },
+    terminals: {
+      create: vi.fn(() => ({ id: '1', shell: 'pwsh.exe', cwd: 'C:/' })),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    },
   });
   return { impl, workspaces, dialogs, recent, trash };
 }

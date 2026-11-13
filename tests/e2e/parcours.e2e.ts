@@ -297,4 +297,22 @@ describe('parcours principaux', () => {
     );
     await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();
   });
+
+  it('ouvre un terminal dans le dossier de l’espace, avec NODAL_WORKSPACE', async () => {
+    await page.getByRole('button', { name: 'Terminal' }).click();
+    const terminal = page.getByRole('region', { name: 'Terminal' });
+    await terminal
+      .locator('.xterm-rows')
+      .getByText(/PS .*>/)
+      .waitFor({
+        timeout: 20_000,
+      });
+    await page.keyboard.type(
+      'echo "e2e-$(Split-Path -Leaf $env:NODAL_WORKSPACE)"',
+    );
+    await page.keyboard.press('Enter');
+    await terminal.getByText(/^e2e-.*\.nodal\s*$/).waitFor();
+    await page.keyboard.press('Control+j');
+    await terminal.waitFor({ state: 'hidden' });
+  });
 });

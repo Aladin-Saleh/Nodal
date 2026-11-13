@@ -10,6 +10,7 @@ import type {
   NodalApi,
 } from '../../shared/ipc-contract';
 import type { AppPreferences } from '../../shared/preferences';
+import type { TerminalEvent } from '../../shared/terminal';
 
 export interface NodalClient {
   call<C extends IpcChannel>(
@@ -21,6 +22,7 @@ export interface NodalClient {
   onPreferencesChanged(
     listener: (preferences: AppPreferences) => void,
   ): () => void;
+  onTerminalEvent(listener: (event: TerminalEvent) => void): () => void;
 }
 
 export function createNodalClient(api: NodalApi): NodalClient {
@@ -35,6 +37,7 @@ export function createNodalClient(api: NodalApi): NodalClient {
     onFlushRequest: (listener) => api.onFlushRequest(listener),
     onExternalChange: (listener) => api.onExternalChange(listener),
     onPreferencesChanged: (listener) => api.onPreferencesChanged(listener),
+    onTerminalEvent: (listener) => api.onTerminalEvent(listener),
   };
 }
 

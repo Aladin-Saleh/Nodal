@@ -164,6 +164,7 @@ describe('actions de l’espace', () => {
     masking: true,
     canGoBack: false,
     canGoForward: true,
+    terminalOpen: false,
     savedViews: [{ id: 'v1', name: 'Infra' }],
   };
   const node: NodeSummary = {

@@ -4,6 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { stageNodePty } from './scripts/stage-node-pty.mjs';
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -13,15 +14,24 @@ const config: ForgeConfig = {
     icon: 'assets/icon',
     asar: true,
     appCopyright: 'Aladin',
-    // Serveur MCP exécuté par Node.js : il doit rester hors de l'archive asar.
-    extraResource: ['.vite/build/nodal-mcp.cjs'],
+    // Serveur MCP exécuté par Node.js, et node-pty (terminal : binaires
+    // natifs, worker) : hors de l'archive asar.
+    extraResource: ['.vite/build/nodal-mcp.cjs', '.native/node-pty'],
     win32metadata: {
       CompanyName: 'Aladin',
       ProductName: 'Nodal',
       FileDescription: 'Nodal — base de connaissances techniques',
     },
   },
-  rebuildConfig: {},
+  // node-pty fournit des binaires N-API, valables pour Electron : pas de
+  // recompilation (qui demanderait les outils de build C++).
+  rebuildConfig: { onlyModules: [] },
+  hooks: {
+    // Copie allégée de node-pty pour la plateforme visée (extraResource).
+    prePackage: async (_config, platform, arch) => {
+      stageNodePty(platform, arch);
+    },
+  },
   makers: [
     // Installateur Windows (§3.2).
     new MakerSquirrel({

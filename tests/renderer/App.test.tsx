@@ -132,6 +132,7 @@ function fakeClient(overrides: Handlers = {}) {
       preferenceListeners.add(listener);
       return () => preferenceListeners.delete(listener);
     },
+    onTerminalEvent: () => () => undefined,
     onExternalChange: (listener) => {
       externalListeners.add(listener);
       return () => externalListeners.delete(listener);

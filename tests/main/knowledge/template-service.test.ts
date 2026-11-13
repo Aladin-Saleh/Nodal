@@ -124,6 +124,12 @@ function implementations(service: WorkspaceService) {
       open: vi.fn(),
       shortcutRegistered: vi.fn(),
     },
+    terminals: {
+      create: vi.fn(() => ({ id: '1', shell: 'pwsh.exe', cwd: 'C:/' })),
+      write: vi.fn(),
+      resize: vi.fn(),
+      close: vi.fn(),
+    },
   });
 }
 

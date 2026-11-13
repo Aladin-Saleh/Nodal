@@ -74,6 +74,8 @@ export interface WorkspaceCommands {
   /** Historique de navigation : précédent (-1) ou suivant (1). */
   navigate(direction: -1 | 1): void;
   focusSearch(): void;
+  /** Affiche ou masque le terminal intégré. */
+  toggleTerminal(): void;
   openPalette(actionsOnly: boolean): void;
   save(): void;
   tags(): void;
@@ -107,6 +109,8 @@ export interface WorkspaceActionState {
   masking: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  /** Terminal intégré affiché. */
+  terminalOpen: boolean;
   /** Vues graphe enregistrées : une action « Vue : … » chacune. */
   savedViews: readonly { id: string; name: string }[];
 }
@@ -286,6 +290,19 @@ export function workspaceActions(
       ],
       enabled: true,
       run: commands.focusSearch,
+    },
+    {
+      id: 'view.terminal',
+      label: state.terminalOpen ? 'Masquer le terminal' : 'Ouvrir le terminal',
+      group: 'Vue',
+      // Ctrl+` : touche morte sur un clavier AZERTY, d'où Ctrl+J d'abord.
+      shortcuts: [
+        { key: 'j', ctrl: true },
+        { key: '`', ctrl: true },
+      ],
+      keywords: 'console shell powershell commande invite',
+      enabled: true,
+      run: commands.toggleTerminal,
     },
     {
       id: 'app.palette',

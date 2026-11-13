@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   app,
@@ -37,6 +38,7 @@ import {
 import { createMainWindow, getRendererIndexPath } from './window';
 import { RecentWorkspacesStore } from './workspace/recent-workspaces';
 import { WorkspaceService } from './workspace/workspace-service';
+import { loadNodePty, TerminalService } from './terminal/terminal-service';
 
 /** Délai laissé au renderer pour enregistrer avant de demander confirmation. */
 const FLUSH_TIMEOUT_MS = 3000;
@@ -108,6 +110,22 @@ function bootstrap(): void {
       console.info('[mcp] configuration des assistants mise à jour', changed);
     }
   };
+
+  // Terminal intégré : shell dans le premier dossier de code de l'espace,
+  // sinon dans le dossier de son fichier.
+  const terminals = new TerminalService({
+    pty: () => loadNodePty(app.isPackaged ? process.resourcesPath : null),
+    emit: (event) => mainWindow?.webContents.send(IPC_EVENTS.terminal, event),
+    cwd: () => {
+      const file = workspaces.getCurrent()?.filePath;
+      if (!file) return app.getPath('home');
+      const [root] = workspaceCodeRoots([file]).filter((dir) =>
+        fs.existsSync(dir),
+      );
+      return root ?? path.dirname(file);
+    },
+    workspaceFile: () => workspaces.getCurrent()?.filePath ?? null,
+  });
 
   let appInfo: AppInfo | null = null;
   const getAppInfo = (): AppInfo =>
@@ -273,6 +291,7 @@ function bootstrap(): void {
         createSenderValidator(capture.getWindow, isAppUrl),
       ),
       quickCapture: capture,
+      terminals,
     });
     openWindow();
     capture.applyPreferences(preferences.get());
@@ -291,6 +310,7 @@ function bootstrap(): void {
 
   // Checkpoint WAL + fermeture : il ne doit rester qu'un seul fichier .nodal.
   app.on('will-quit', () => {
+    terminals.closeAll();
     capture.release();
     closeWorkspace();
   });

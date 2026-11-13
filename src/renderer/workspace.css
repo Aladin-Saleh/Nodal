@@ -1220,3 +1220,78 @@ kbd.palette-detail {
 .import-details .path {
   overflow-wrap: anywhere;
 }
+
+/* Terminal intégré */
+
+.terminal-panel {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  min-height: 0;
+  background: #17181b;
+  border-top: 1px solid var(--border-strong);
+}
+
+.terminal-panel[hidden] {
+  display: none;
+}
+
+.terminal-resizer {
+  position: absolute;
+  top: -3px;
+  right: 0;
+  left: 0;
+  z-index: 3;
+  height: 6px;
+  cursor: row-resize;
+}
+
+.terminal-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 8px 4px 12px;
+  font-size: 12px;
+  color: #e6e7ea;
+  background: #1f2024;
+  border-bottom: 1px solid #2e3036;
+}
+
+.terminal-header .muted {
+  color: #9da2ab;
+}
+
+.terminal-header button.secondary {
+  padding: 2px 10px;
+  font-size: 12px;
+  color: #e6e7ea;
+  background: transparent;
+  border-color: #3b3e45;
+}
+
+.terminal-header button.secondary:hover {
+  background: rgb(255 255 255 / 8%);
+}
+
+.terminal-cwd {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-host {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 0 8px;
+}
+
+.terminal-toggle {
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+}
+
+.top-actions > .terminal-toggle[aria-pressed='true'] {
+  background: var(--accent-soft);
+}

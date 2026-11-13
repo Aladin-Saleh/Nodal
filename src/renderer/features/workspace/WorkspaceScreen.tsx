@@ -40,6 +40,7 @@ import { CenterPane } from './CenterPane';
 import { HealthDialog } from './HealthDialog';
 import { TopBar, type ViewMode } from './TopBar';
 import { TreePane } from './TreePane';
+import { TerminalPanel } from '../terminal/TerminalPanel';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
 import { canStep } from './nav-history';
 import { useStaleNodes } from './useStaleNodes';
@@ -148,6 +149,10 @@ function WorkspaceView({
   );
   /** Demande de focus sur la recherche (Ctrl+F). */
   const [searchFocus, setSearchFocus] = useState(0);
+  // Terminal : monté à la première ouverture, puis seulement masqué (la
+  // session du shell continue).
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalMounted, setTerminalMounted] = useState(false);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
   const [renamingId, setRenamingId] = useState<string | null>(null);
   /** Demande de centrage dans le graphe (même nœud : nouvelle demande). */
@@ -482,6 +487,10 @@ function WorkspaceView({
         reveal: (id) => ancestorIds(index, id),
       }),
     focusSearch: () => setSearchFocus((count) => count + 1),
+    toggleTerminal: () => {
+      setTerminalMounted(true);
+      setTerminalOpen((open) => !open);
+    },
     openPalette: (actionsOnly) => setPalette({ actionsOnly }),
     save: () => void tracker.flushAll(),
     tags: () => setDialog({ kind: 'tags' }),
@@ -516,6 +525,7 @@ function WorkspaceView({
     canGoBack: canStep(history, -1, (id) => index.byId.has(id)),
     canGoForward: canStep(history, 1, (id) => index.byId.has(id)),
     savedViews: graphViews.views,
+    terminalOpen,
   };
   const actions = [
     ...nodeActions(selected, actionState, commands),
@@ -603,8 +613,11 @@ function WorkspaceView({
         target instanceof HTMLTextAreaElement ||
         Boolean(target?.isContentEditable);
       const action = actionForKey(current, event, typing);
-      // Une fenêtre ouverte garde le clavier, sauf pour l'aide (F1).
+      // Une fenêtre ouverte garde le clavier, sauf pour l'aide (F1) ; le
+      // terminal aussi (Ctrl+F, Ctrl+P… vont au shell), sauf pour le masquer.
       if (!action || (blocked && action.id !== 'app.help')) return;
+      if (target?.closest('.terminal-panel') && action.id !== 'view.terminal')
+        return;
       event.preventDefault();
       action.run();
     };
@@ -661,6 +674,7 @@ function WorkspaceView({
           view={view}
           onViewChange={setView}
           exporting={exporting}
+          terminalOpen={terminalOpen}
           actions={actions}
         />
 
@@ -768,6 +782,16 @@ function WorkspaceView({
             </div>
           )}
         </div>
+
+        {terminalMounted && (
+          <ErrorBoundary area="le terminal">
+            <TerminalPanel
+              visible={terminalOpen}
+              onHide={() => setTerminalOpen(false)}
+              shortcut="Ctrl + J"
+            />
+          </ErrorBoundary>
+        )}
 
         <WorkspaceDialogs
           workspace={workspace}

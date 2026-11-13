@@ -10,6 +10,7 @@ import {
 } from '../../src/main/database/connection';
 import { createIpcHandler } from '../../src/main/ipc/handler';
 import { fromSystemError } from '../../src/shared/errors';
+import { ipcArgsSchemas } from '../../src/shared/ipc-schemas';
 import { useTempDir } from '../helpers/temp-dir';
 
 const tempDir = useTempDir();
@@ -78,6 +79,13 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
    * du code), par execFile sans shell, dans un unique fichier.
    */
   const GIT_HISTORY = path.join('src', 'main', 'code', 'git-history.ts');
+  /**
+   * Seconde exception, voulue par l'utilisateur : le terminal intégré lance
+   * le shell par défaut. Rien de stocké ni venant du renderer n'en choisit
+   * la commande, les arguments ou le dossier : le renderer n'envoie que des
+   * frappes et une taille.
+   */
+  const TERMINAL = path.join('src', 'main', 'terminal', 'terminal-service.ts');
 
   it('git est lancé sans shell, en un seul endroit, avec des arguments fixes', () => {
     const text = files.find(({ file }) => file === GIT_HISTORY)?.text ?? '';
@@ -86,6 +94,23 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
     expect(text).not.toMatch(/\bexec\(|\bexecSync\(|\bspawn\(|shell:\s*true/);
     // Les motifs passent toujours après `--`.
     expect(text).toMatch(/'--',\s*\n\s*\.\.\.patterns/);
+  });
+
+  it('le terminal ne lance que le shell par défaut, sans commande reçue', () => {
+    const text = files.find(({ file }) => file === TERMINAL)?.text ?? '';
+    // Shell sans argument ; taskkill seul autre programme, arguments fixes.
+    expect(text).toMatch(/\.spawn\(shell, \[\], forkOptions\)/);
+    expect(text.match(/\.spawn\(/g)).toHaveLength(1);
+    for (const call of text.match(/execFile(Sync)?\(\s*'[^']*'/g) ?? []) {
+      expect(call).toMatch(/'taskkill'$/);
+    }
+    expect(text).not.toMatch(/exec\(|execSync\(|shell:\s*true/);
+    // L'IPC n'accepte qu'une taille pour créer un terminal.
+    expect(
+      ipcArgsSchemas['terminal:create'].safeParse([
+        { cols: 80, rows: 24, command: 'calc.exe' },
+      ]).success,
+    ).toBe(false);
   });
 
   it.each([
@@ -97,7 +122,7 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
     ['contexte non isolé', /contextIsolation:\s*false/],
   ])('aucune trace de %s dans les sources', (_label, pattern) => {
     const offenders = files
-      .filter(({ file }) => file !== GIT_HISTORY)
+      .filter(({ file }) => file !== GIT_HISTORY && file !== TERMINAL)
       .filter(({ text }) => pattern.test(text))
       .map(({ file }) => file);
     expect(offenders).toEqual([]);

@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Electron-Forge
 out/
+
+# Modules natifs préparés pour le packaging (scripts/stage-node-pty.mjs)
+.native/

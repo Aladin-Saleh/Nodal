@@ -6,6 +6,7 @@
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
 import type { ContextHookClient } from './context-hook';
+import type { TerminalEvent, TerminalSession } from './terminal';
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
 import type { AppPreferences, PreferencesUpdate } from './preferences';
@@ -295,6 +296,17 @@ export interface IpcContract {
    * Contexte automatique : hook ajouté aux réglages d'un dossier de projet
    * choisi par le main ; chemin du fichier écrit, `null` si annulé.
    */
+  /** Terminal intégré : nouveau shell (dossier de code de l'espace). */
+  'terminal:create': {
+    args: [{ cols: number; rows: number }];
+    result: TerminalSession;
+  };
+  'terminal:write': { args: [{ id: string; data: string }]; result: null };
+  'terminal:resize': {
+    args: [{ id: string; cols: number; rows: number }];
+    result: null;
+  };
+  'terminal:close': { args: [{ id: string }]; result: null };
   'assistant:installContextHook': {
     args: [{ client: ContextHookClient }];
     result: { settingsFile: string } | null;
@@ -454,6 +466,10 @@ export const IPC_CHANNELS = [
   'code:addRoot',
   'code:removeRoot',
   'assistant:installContextHook',
+  'terminal:create',
+  'terminal:write',
+  'terminal:resize',
+  'terminal:close',
   'anchor:listForNode',
   'anchor:set',
   'anchor:pickFiles',
@@ -518,6 +534,8 @@ export const IPC_EVENTS = {
   externalChange: 'workspace:externalChange',
   /** Préférences modifiées hors du renderer (raccourci de zoom). */
   preferencesChanged: 'preferences:changed',
+  /** Sortie ou fin d'un terminal intégré. */
+  terminal: 'terminal:event',
 } as const;
 
 /** Enveloppe de réponse : le main ne laisse jamais remonter d'exception brute. */
@@ -535,6 +553,8 @@ export interface NodalApi {
   onFlushRequest(listener: () => void): () => void;
   /** Abonnement aux modifications externes de l'espace ; retourne le désabonnement. */
   onExternalChange(listener: () => void): () => void;
+  /** Abonnement aux sorties des terminaux intégrés. */
+  onTerminalEvent(listener: (event: TerminalEvent) => void): () => void;
   /** Abonnement aux changements de préférences venus du main. */
   onPreferencesChanged(
     listener: (preferences: AppPreferences) => void,

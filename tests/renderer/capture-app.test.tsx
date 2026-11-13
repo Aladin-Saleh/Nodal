@@ -25,6 +25,7 @@ function clientWith(target: CaptureTarget | null) {
   const client = {
     call,
     onFlushRequest: () => () => undefined,
+    onTerminalEvent: () => () => undefined,
     onExternalChange: () => () => undefined,
     onPreferencesChanged: () => () => undefined,
   } as unknown as NodalClient;
