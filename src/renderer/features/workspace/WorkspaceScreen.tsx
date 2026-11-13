@@ -17,7 +17,7 @@ import {
 } from '../../app/context';
 import { usePreferences } from '../../app/preferences';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { actionForKey, type PaletteNode } from '../commands/actions';
+import { actionForKey, menuItems, type PaletteNode } from '../commands/actions';
 import { CommandPalette } from '../commands/CommandPalette';
 import type { MarkdownImportPreview } from '../../../shared/markdown-import';
 import { MarkdownImportDialog } from './MarkdownImportDialog';
@@ -45,6 +45,7 @@ import { canStep } from './nav-history';
 import { useStaleNodes } from './useStaleNodes';
 import { useWorkspaceData } from './useWorkspaceData';
 import {
+  NODE_MENU,
   nodeActions,
   workspaceActions,
   type WorkspaceActionState,
@@ -701,11 +702,11 @@ function WorkspaceView({
               setDialog({ kind: 'new', parentId: null, position })
             }
             onRename={renameNode}
-            onMove={(node) =>
-              setDialog({ kind: 'move', nodes: [node], bulk: false })
-            }
-            onDuplicate={(node) => setDialog({ kind: 'duplicate', node })}
-            onDelete={(id) => void askDelete(id)}
+            nodeMenu={menuItems(
+              nodeActions(selected, actionState, commands),
+              NODE_MENU,
+              { omitDisabled: true, danger: ['node.delete'] },
+            )}
             onBulkMove={() =>
               setDialog({
                 kind: 'move',

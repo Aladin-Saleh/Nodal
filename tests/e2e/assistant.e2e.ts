@@ -116,7 +116,8 @@ describe('base partagée avec un assistant IA', () => {
     await page.getByRole('treeitem', { name: 'Kafka' }).waitFor();
     await page.getByText('Espace mis à jour par l’assistant IA.').waitFor();
 
-    await page.getByRole('button', { name: 'Activité IA' }).click();
+    await page.getByRole('button', { name: 'Assistant IA' }).click();
+    await page.getByRole('menuitem', { name: 'Activité IA…' }).click();
     const activity = page.getByRole('dialog', {
       name: 'Activité de l’assistant IA',
     });

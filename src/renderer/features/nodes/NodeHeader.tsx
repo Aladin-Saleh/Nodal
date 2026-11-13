@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { NODE_TYPE_LABELS, TITLE_MAX_LENGTH } from '../../../shared/domain';
 import type { NodeDetail } from '../../../shared/model';
+import type { ContextMenuItem } from '../../components/ContextMenu';
+import { MenuButton } from '../../components/MenuButton';
 import { AssistantBadge } from '../workspace/AssistantBadge';
 
 export interface NodeHeaderProps {
@@ -11,9 +13,8 @@ export interface NodeHeaderProps {
   onNavigate(id: string): void;
   /** Retourne `true` si le renommage a réussi. */
   onRename(title: string): Promise<boolean>;
-  onMove(): void;
-  onDuplicate(): void;
-  onDelete(): void;
+  /** Actions du nœud (même menu que le clic droit dans l'arbre). */
+  menu: readonly ContextMenuItem[];
   /** Valider un nœud ajouté par l'IA. */
   onValidate?(): void;
 }
@@ -25,9 +26,7 @@ export function NodeHeader({
   onTitleFocused,
   onNavigate,
   onRename,
-  onMove,
-  onDuplicate,
-  onDelete,
+  menu,
   onValidate,
 }: NodeHeaderProps) {
   const titleId = useId();
@@ -106,21 +105,16 @@ export function NodeHeader({
             Valider
           </button>
         )}
-        <div className="node-actions">
-          <button type="button" className="secondary" onClick={onMove}>
-            Déplacer…
-          </button>
-          <button type="button" className="secondary" onClick={onDuplicate}>
-            Dupliquer…
-          </button>
-          <button
-            type="button"
-            className="secondary danger-text"
-            onClick={onDelete}
-          >
-            Supprimer…
-          </button>
-        </div>
+        <MenuButton
+          label={`Actions sur « ${node.title} »`}
+          className="secondary icon-button"
+          caret={false}
+          alignRight
+          title="Actions du nœud"
+          items={menu}
+        >
+          ⋯
+        </MenuButton>
       </div>
     </header>
   );

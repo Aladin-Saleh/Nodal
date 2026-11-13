@@ -107,6 +107,51 @@ export function actionById(
   return actions.find((action) => action.id === id);
 }
 
+/** Séparateur entre deux groupes d'un menu. */
+export const MENU_SEPARATOR = '-';
+
+/** Élément de menu tiré d'une action (forme de `ContextMenuItem`). */
+export interface ActionMenuItem {
+  label: string;
+  onSelect(): void;
+  disabled?: boolean;
+  danger?: boolean;
+  shortcut?: string;
+  separator?: boolean;
+}
+
+/**
+ * Éléments d'un menu, dans l'ordre de `layout` (ids d'actions et
+ * `MENU_SEPARATOR`). Actions absentes omises ; inactives grisées, ou omises
+ * avec `omitDisabled`. Les ids de `danger` sont affichés en rouge.
+ */
+export function menuItems(
+  actions: readonly AppAction[],
+  layout: readonly string[],
+  options: { omitDisabled?: boolean; danger?: readonly string[] } = {},
+): ActionMenuItem[] {
+  const items: ActionMenuItem[] = [];
+  let separator = false;
+  for (const id of layout) {
+    if (id === MENU_SEPARATOR) {
+      separator = items.length > 0;
+      continue;
+    }
+    const action = actionById(actions, id);
+    if (!action || (options.omitDisabled && !action.enabled)) continue;
+    items.push({
+      label: action.label,
+      onSelect: action.run,
+      disabled: !action.enabled,
+      danger: options.danger?.includes(id),
+      shortcut: shortcutLabel(action),
+      separator,
+    });
+    separator = false;
+  }
+  return items;
+}
+
 // --- Palette -----------------------------------------------------------------
 
 /** Nœud proposé par la palette : titre et chemin de ses ancêtres. */

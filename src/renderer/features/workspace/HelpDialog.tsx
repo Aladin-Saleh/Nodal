@@ -107,9 +107,9 @@ export function HelpDialog({
         » ; glissez ensuite chaque capture à sa place. Modèles de documents :
         choisissez un modèle (Procédure, Composant, Donnée, Décision) en créant
         un nœud ou un document ; modifiez-les depuis la palette (« Modèles de
-        documents… »). Import Markdown / Obsidian : menu « Importer / exporter
-        », aperçu puis import sous une nouvelle racine, après une sauvegarde. Le
-        guide complet est fourni avec l’application (docs/guide-utilisateur.md).
+        documents… »). Import Markdown / Obsidian : menu « Espace », aperçu puis
+        import sous une nouvelle racine, après une sauvegarde. Le guide complet
+        est fourni avec l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

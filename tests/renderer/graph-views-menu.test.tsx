@@ -61,6 +61,7 @@ describe('GraphViewsMenu', () => {
 
   it('enregistre une nouvelle vue avec la caméra courante', async () => {
     const api = renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Vues' }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: 'Enregistrer comme nouvelle vue…' }),
     );
@@ -83,14 +84,17 @@ describe('GraphViewsMenu', () => {
     const active = view('v2', 'Données');
     const api = renderMenu({ active, modified: true });
     expect(screen.getByText('modifiée')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Vues' }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: 'Mettre à jour « Données »' }),
     );
     expect(api.update).toHaveBeenCalledWith('v2', camera);
+    fireEvent.click(screen.getByRole('button', { name: 'Vues' }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: 'Ouvrir cette vue avec l’espace' }),
     );
     expect(api.setDefault).toHaveBeenCalledWith('v2');
+    fireEvent.click(screen.getByRole('button', { name: 'Vues' }));
     fireEvent.click(
       screen.getByRole('menuitem', { name: 'Supprimer « Données »…' }),
     );

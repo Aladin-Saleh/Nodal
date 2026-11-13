@@ -202,7 +202,7 @@ describe('actions de l’espace', () => {
   it('alimentent la liste des raccourcis de l’aide', () => {
     const list = shortcutList(workspaceActions(state, commands));
     expect(list).toContainEqual(['Ctrl + P', 'Palette de commandes']);
-    expect(list).toContainEqual(['Ctrl + ,', 'Préférences']);
+    expect(list).toContainEqual(['Ctrl + ,', 'Préférences…']);
   });
 });
 

@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent,
+  type RefObject,
+} from 'react';
 
 export interface ContextMenuItem {
   label: string;
@@ -6,6 +12,10 @@ export interface ContextMenuItem {
   disabled?: boolean;
   /** Action destructrice (affichée en rouge). */
   danger?: boolean;
+  /** Raccourci clavier, affiché à droite. */
+  shortcut?: string;
+  /** Trait de séparation avant l'élément (début d'un groupe). */
+  separator?: boolean;
 }
 
 export interface ContextMenuProps {
@@ -15,6 +25,10 @@ export interface ContextMenuProps {
   label: string;
   items: readonly ContextMenuItem[];
   onClose(): void;
+  /** Élément dont un clic ne ferme pas le menu (son bouton d'ouverture). */
+  ignore?: RefObject<HTMLElement | null>;
+  /** `x` désigne le bord droit du menu (menu ouvert sous un bouton à droite). */
+  alignRight?: boolean;
 }
 
 /**
@@ -22,7 +36,15 @@ export interface ContextMenuProps {
  * focus ; flèches haut/bas, Début/Fin pour se déplacer, Entrée pour choisir,
  * Échap ou clic à l'extérieur pour fermer. Reste dans la fenêtre.
  */
-export function ContextMenu({ x, y, label, items, onClose }: ContextMenuProps) {
+export function ContextMenu({
+  x,
+  y,
+  label,
+  items,
+  onClose,
+  ignore,
+  alignRight = false,
+}: ContextMenuProps) {
   const menu = useRef<HTMLUListElement>(null);
   const close = useRef(onClose);
   useLayoutEffect(() => {
@@ -40,14 +62,18 @@ export function ContextMenu({ x, y, label, items, onClose }: ContextMenuProps) {
     const element = menu.current;
     if (!element) return;
     const { width, height } = element.getBoundingClientRect();
-    element.style.left = `${Math.max(0, Math.min(x, window.innerWidth - width - 4))}px`;
+    const left = alignRight ? x - width : x;
+    element.style.left = `${Math.max(0, Math.min(left, window.innerWidth - width - 4))}px`;
     element.style.top = `${Math.max(0, Math.min(y, window.innerHeight - height - 4))}px`;
     element.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  }, [x, y]);
+  }, [x, y, alignRight]);
 
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) close.current();
+      const target = event.target as Node;
+      if (menu.current?.contains(target) || ignore?.current?.contains(target))
+        return;
+      close.current();
     };
     const onBlur = () => close.current();
     window.addEventListener('pointerdown', onPointerDown, true);
@@ -56,7 +82,7 @@ export function ContextMenu({ x, y, label, items, onClose }: ContextMenuProps) {
       window.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+  }, [ignore]);
 
   const onKeyDown = (event: KeyboardEvent) => {
     const list = buttons();
@@ -98,7 +124,11 @@ export function ContextMenu({ x, y, label, items, onClose }: ContextMenuProps) {
       onContextMenu={(event) => event.preventDefault()}
     >
       {items.map((item) => (
-        <li key={item.label} role="none">
+        <li
+          key={item.label}
+          role="none"
+          className={item.separator ? 'menu-separated' : undefined}
+        >
           <button
             type="button"
             role="menuitem"
@@ -110,7 +140,12 @@ export function ContextMenu({ x, y, label, items, onClose }: ContextMenuProps) {
               item.onSelect();
             }}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {item.shortcut && (
+              <kbd className="menu-shortcut" aria-hidden="true">
+                {item.shortcut}
+              </kbd>
+            )}
           </button>
         </li>
       ))}

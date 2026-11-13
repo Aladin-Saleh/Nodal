@@ -4,8 +4,54 @@
  * clavier et l'aide. Les effets sont fournis par l'écran d'espace.
  */
 import type { NodeSummary } from '../../../shared/model';
-import type { AppAction } from '../commands/actions';
+import { MENU_SEPARATOR as SEP, type AppAction } from '../commands/actions';
 import type { ViewMode } from './TopBar';
+
+/** Menu « Espace » de la barre supérieure. */
+export const WORKSPACE_MENU = [
+  'workspace.tags',
+  'workspace.relationTypes',
+  'workspace.templates',
+  'workspace.settings',
+  SEP,
+  'workspace.quickCapture',
+  'workspace.inbox',
+  'workspace.health',
+  SEP,
+  'workspace.importMarkdown',
+  'workspace.export',
+  'workspace.exportLlm',
+  SEP,
+  'app.preferences',
+  'workspace.close',
+];
+
+/** Menu « Assistant IA » de la barre supérieure. */
+export const ASSISTANT_MENU = [
+  'workspace.mcp',
+  'workspace.activity',
+  'workspace.gaps',
+];
+
+/**
+ * Actions d'un nœud : menu contextuel de l'arbre et menu « ⋯ » de sa fiche
+ * (les inactives sont omises).
+ */
+export const NODE_MENU = [
+  'node.newChild',
+  'node.addDocument',
+  'node.rename',
+  'node.validate',
+  SEP,
+  'node.center',
+  'node.pathTo',
+  'node.toggleHidden',
+  'node.solo',
+  SEP,
+  'node.move',
+  'node.duplicate',
+  'node.delete',
+];
 
 /** Ce que l'écran d'espace sait faire ; chaque action en appelle un. */
 export interface WorkspaceCommands {
@@ -267,7 +313,7 @@ export function workspaceActions(
     },
     {
       id: 'workspace.tags',
-      label: 'Tags',
+      label: 'Tags…',
       group: 'Espace',
       keywords: 'gerer etiquettes',
       enabled: true,
@@ -283,14 +329,14 @@ export function workspaceActions(
     },
     {
       id: 'workspace.relationTypes',
-      label: 'Types de relations',
+      label: 'Types de relations…',
       group: 'Espace',
       enabled: true,
       run: commands.relationTypes,
     },
     {
       id: 'workspace.export',
-      label: 'Export portable (dossier + manifest)',
+      label: 'Export portable (dossier + manifest)…',
       group: 'Espace',
       keywords: 'exporter sauvegarde',
       enabled: !state.exporting,
@@ -322,7 +368,7 @@ export function workspaceActions(
     },
     {
       id: 'workspace.activity',
-      label: 'Activité IA',
+      label: 'Activité IA…',
       group: 'Espace',
       keywords: 'assistant journal annuler',
       enabled: true,
@@ -362,7 +408,7 @@ export function workspaceActions(
     },
     {
       id: 'workspace.settings',
-      label: 'Paramètres de l’espace',
+      label: 'Paramètres de l’espace…',
       group: 'Espace',
       enabled: true,
       run: commands.settings,
@@ -376,7 +422,7 @@ export function workspaceActions(
     },
     {
       id: 'app.preferences',
-      label: 'Préférences',
+      label: 'Préférences…',
       group: 'Application',
       keywords: 'theme couleur densite apparence',
       // Ctrl+, est géré par l'application (aussi hors d'un espace).

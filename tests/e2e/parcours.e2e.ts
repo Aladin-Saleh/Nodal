@@ -121,7 +121,9 @@ describe('parcours principaux', () => {
     await page.getByLabel('Nom de l’espace').fill('E2E');
     await page.getByRole('button', { name: 'Créer…' }).click();
     // Vue Graphe par défaut.
-    await page.getByRole('button', { name: 'Graphe', pressed: true }).waitFor();
+    await page
+      .getByRole('button', { name: 'Graphe', exact: true, pressed: true })
+      .waitFor();
 
     await createNode('Plateforme', 'Composant');
     await createNode('API', 'Composant', true);
@@ -142,7 +144,7 @@ describe('parcours principaux', () => {
   });
 
   it('ajoute des documents Markdown, code et Mermaid avec rendu', async () => {
-    await page.getByRole('button', { name: 'Documents' }).click();
+    await page.getByRole('button', { name: 'Documents', exact: true }).click();
     await addDocument(
       'Notes',
       'Markdown',
@@ -187,7 +189,7 @@ describe('parcours principaux', () => {
       .getByRole('combobox', { name: 'Rechercher dans l’espace' })
       .fill('commandes_secretes');
     await page.getByRole('option').filter({ hasText: 'API' }).click();
-    await page.getByRole('button', { name: 'Documents' }).click();
+    await page.getByRole('button', { name: 'Documents', exact: true }).click();
     for (const title of ['Notes', 'Requête', 'Flux']) {
       await page.getByRole('tab', { name: title }).waitFor();
     }
@@ -198,20 +200,21 @@ describe('parcours principaux', () => {
 
   it('crée un nœud avec le modèle de son type', async () => {
     await createNode('Déployer', 'Procédure', false, 'Procédure');
-    await page.getByRole('button', { name: 'Documents' }).click();
+    await page.getByRole('button', { name: 'Documents', exact: true }).click();
     await page.getByRole('tab', { name: 'Procédure' }).waitFor();
     await page.getByText('Retour arrière').first().waitFor();
   });
 
   it('exporte puis réimporte l’espace sans perte', async () => {
     await stubDialogs({ open: exportDir });
-    await page.getByText('Importer / exporter ▾').click();
+    await page.getByRole('button', { name: 'Espace', exact: true }).click();
     await page.getByRole('menuitem', { name: /Export portable/ }).click();
     await page.getByText(/Espace exporté dans/).waitFor();
     const [exported] = fs.readdirSync(exportDir);
     expect(exported).toBeDefined();
 
-    await page.getByRole('button', { name: 'Fermer l’espace' }).click();
+    await page.getByRole('button', { name: 'Espace', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Fermer l’espace' }).click();
     await stubDialogs({
       open: path.join(exportDir, exported!),
       save: importedFile,
@@ -246,7 +249,7 @@ describe('parcours principaux', () => {
     );
     fs.writeFileSync(path.join(vault, 'Accueil.md'), '# Accueil');
     await stubDialogs({ open: vault });
-    await page.getByText('Importer / exporter ▾').click();
+    await page.getByRole('button', { name: 'Espace', exact: true }).click();
     await page
       .getByRole('menuitem', { name: /Importer un dossier Markdown/ })
       .click();
@@ -265,7 +268,7 @@ describe('parcours principaux', () => {
   });
 
   it('donne la commande de l’assistant choisi (Gemini CLI)', async () => {
-    await page.getByText('Importer / exporter ▾').click();
+    await page.getByRole('button', { name: 'Assistant IA' }).click();
     await page
       .getByRole('menuitem', { name: /Connecter un assistant IA/ })
       .click();

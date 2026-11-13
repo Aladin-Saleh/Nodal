@@ -31,6 +31,8 @@ import { useViewDispatch, useViewState } from '../workspace/view-state-context';
 import { EdgeCard } from './EdgeCard';
 import { Graph3DView, type Graph3DViewHandle } from './Graph3DView';
 import { GraphViewsMenu } from './GraphViewsMenu';
+import type { ContextMenuItem } from '../../components/ContextMenu';
+import { MenuButton } from '../../components/MenuButton';
 import type { GraphViewsApi } from '../workspace/useGraphViewPersistence';
 
 export interface GraphPanelProps {
@@ -316,6 +318,32 @@ export function GraphPanel({
     ? (graph.nodes.find((node) => node.id === selectedId)?.title ?? null)
     : null;
 
+  const layoutMenu: ContextMenuItem[] = [
+    {
+      label: selectedCollapsed
+        ? 'Déplier le nœud sélectionné'
+        : 'Replier le nœud sélectionné',
+      disabled: !canCollapseSelected,
+      onSelect: () =>
+        selectedId && setCollapsed(toggled(collapsed, selectedId)),
+    },
+    {
+      label: 'Tout replier (une vue par branche)',
+      disabled: parents.size === 0,
+      onSelect: collapseAll,
+    },
+    {
+      label: 'Tout déplier',
+      disabled: collapsed.size === 0,
+      onSelect: () => setCollapsed(new Set()),
+    },
+    {
+      label: 'Disposer automatiquement',
+      separator: true,
+      onSelect: () => view.current?.relayout(),
+    },
+  ];
+
   return (
     <section className="graph-panel" aria-label="Graphe">
       <div className="graph-toolbar">
@@ -359,8 +387,11 @@ export function GraphPanel({
         )}
 
         <details className="filters">
-          <summary>
+          <summary className="menu-button">
             Filtres{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            <span className="menu-caret" aria-hidden="true">
+              ▾
+            </span>
           </summary>
           <div className="filters-panel">
             <fieldset>
@@ -470,77 +501,10 @@ export function GraphPanel({
           </div>
         </details>
 
-        {/* L'élément reste quand l'aide est masquée : il pousse les boutons à droite. */}
-        <span className="graph-help muted" title={GRAPH_HELP}>
-          {preferences.showGraphHints ? GRAPH_HELP : ''}
-        </span>
-
-        <div className="segmented" role="group" aria-label="Repliage">
-          <button
-            type="button"
-            disabled={!canCollapseSelected}
-            title={
-              canCollapseSelected
-                ? selectedCollapsed
-                  ? 'Afficher les descendants du nœud sélectionné'
-                  : 'Masquer les descendants du nœud sélectionné'
-                : 'Sélectionnez un nœud qui a des enfants'
-            }
-            onClick={() =>
-              selectedId && setCollapsed(toggled(collapsed, selectedId))
-            }
-          >
-            {selectedCollapsed ? 'Déplier' : 'Replier'}
-          </button>
-          <button
-            type="button"
-            title="Replier chaque racine : une vue d’ensemble par branche"
-            disabled={parents.size === 0}
-            onClick={collapseAll}
-          >
-            Tout replier
-          </button>
-          <button
-            type="button"
-            disabled={collapsed.size === 0}
-            onClick={() => setCollapsed(new Set())}
-          >
-            Tout déplier
-          </button>
-        </div>
-        <button
-          type="button"
-          className="secondary"
-          title="Disposition automatique des nœuds affichés"
-          onClick={() => view.current?.relayout()}
-        >
-          Disposer
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="Zoom avant"
-          onClick={() => view.current?.zoom(1.25)}
-        >
-          +
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="Zoom arrière"
-          onClick={() => view.current?.zoom(0.8)}
-        >
-          −
-        </button>
-        <button
-          type="button"
-          className="secondary"
-          aria-label="Recentrer"
-          title="Recentrer"
-          onClick={() => view.current?.fit()}
-        >
-          ⤢
-        </button>
+        <span className="toolbar-spacer" />
+        <MenuButton label="Disposition" alignRight items={layoutMenu}>
+          Disposition
+        </MenuButton>
       </div>
 
       {(visible.maskedCount ?? 0) > 0 && (
@@ -681,6 +645,35 @@ export function GraphPanel({
             onClose={() => setSelectedEdgeId(null)}
           />
         )}
+        {preferences.showGraphHints && (
+          <p className="graph-help muted">{GRAPH_HELP}</p>
+        )}
+        <div className="graph-zoom" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            aria-label="Zoom avant"
+            title="Zoom avant"
+            onClick={() => view.current?.zoom(1.25)}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom arrière"
+            title="Zoom arrière"
+            onClick={() => view.current?.zoom(0.8)}
+          >
+            −
+          </button>
+          <button
+            type="button"
+            aria-label="Recentrer"
+            title="Recentrer"
+            onClick={() => view.current?.fit()}
+          >
+            ⤢
+          </button>
+        </div>
         <ul className="graph-legend" aria-label="Légende">
           {NODE_TYPES.map((type) => (
             <li key={type}>

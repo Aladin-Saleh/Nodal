@@ -126,8 +126,7 @@ input[type='checkbox'] {
   gap: 2px;
 }
 
-.top-actions > button.secondary,
-.top-actions > .export-menu > summary {
+.top-actions > button.secondary {
   padding: 6px 10px;
   color: var(--text);
   background: transparent;
@@ -135,15 +134,8 @@ input[type='checkbox'] {
 }
 
 .top-actions > button.secondary:not(:disabled):hover,
-.top-actions > .export-menu > summary:hover,
-.top-actions > .export-menu[open] > summary {
+.top-actions > button[aria-expanded='true'] {
   background: var(--hover);
-}
-
-/* Fermer l'espace : séparé des autres actions. */
-.top-actions > button.secondary:last-child {
-  margin-left: 6px;
-  border-color: var(--border-strong);
 }
 
 .segmented {
@@ -230,22 +222,12 @@ h3 {
 
 .graph-legend,
 .filters-panel,
-.export-menu-panel,
 .search-results {
   box-shadow: var(--shadow-md);
 }
 
 .graph-legend {
   border-radius: var(--radius);
-}
-
-.export-menu-panel button.secondary {
-  background: transparent;
-  border-color: transparent;
-}
-
-.export-menu-panel button.secondary:not(:disabled):hover {
-  background: var(--hover);
 }
 
 /* Modales */
@@ -491,8 +473,7 @@ h3 {
   padding: 4px 10px;
 }
 
-:root[data-density='compact'] .top-actions > button.secondary,
-:root[data-density='compact'] .top-actions > .export-menu > summary {
+:root[data-density='compact'] .top-actions > button.secondary {
   padding: 4px 8px;
 }
 

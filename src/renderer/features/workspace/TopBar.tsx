@@ -1,8 +1,14 @@
-import type { MouseEvent } from 'react';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type { SearchHit } from '../../../shared/model';
-import { actionById, shortcutLabel, type AppAction } from '../commands/actions';
+import { MenuButton } from '../../components/MenuButton';
+import {
+  actionById,
+  menuItems,
+  shortcutLabel,
+  type AppAction,
+} from '../commands/actions';
 import { SearchBox } from '../search/SearchBox';
+import { ASSISTANT_MENU, WORKSPACE_MENU } from './workspace-actions';
 
 export type ViewMode = 'documents' | 'graph';
 
@@ -16,13 +22,9 @@ export interface TopBarProps {
   view: ViewMode;
   onViewChange(view: ViewMode): void;
   exporting: boolean;
-  /** Registre des actions : boutons et menu Exporter. */
+  /** Registre des actions : boutons et menus Espace / Assistant IA. */
   actions: readonly AppAction[];
 }
-
-/** Ferme le menu déroulant qui contient l'élément cliqué. */
-const closeMenu = (event: MouseEvent<HTMLElement>) =>
-  event.currentTarget.closest('details')?.removeAttribute('open');
 
 /** En-tête de l'espace : nom, recherche, choix de la vue et actions. */
 export function TopBar({
@@ -51,25 +53,6 @@ export function TopBar({
         {...extra}
       >
         {label ?? action.label}
-      </button>
-    );
-  };
-  /** Élément du menu Exporter : ferme le menu puis lance l'action. */
-  const menuItem = (id: string) => {
-    const action = actionById(actions, id);
-    if (!action) return null;
-    return (
-      <button
-        type="button"
-        role="menuitem"
-        className="secondary"
-        disabled={!action.enabled}
-        onClick={(event) => {
-          closeMenu(event);
-          action.run();
-        }}
-      >
-        {action.label}
       </button>
     );
   };
@@ -105,27 +88,23 @@ export function TopBar({
         </button>
       </div>
       <div className="top-actions">
-        {button('workspace.tags')}
-        {button('workspace.relationTypes')}
-        <details className="export-menu">
-          <summary
-            className={exporting ? 'disabled' : undefined}
-            aria-disabled={exporting}
-          >
-            {exporting ? 'Export…' : 'Importer / exporter ▾'}
-          </summary>
-          <div className="export-menu-panel" role="menu">
-            {menuItem('workspace.importMarkdown')}
-            {menuItem('workspace.export')}
-            {menuItem('workspace.exportLlm')}
-            {menuItem('workspace.mcp')}
-          </div>
-        </details>
-        {button('workspace.activity')}
-        {button('workspace.health', 'Santé')}
-        {button('workspace.settings', 'Paramètres')}
+        <MenuButton
+          label="Espace"
+          alignRight
+          items={menuItems(actions, WORKSPACE_MENU, {
+            danger: ['workspace.close'],
+          })}
+        >
+          {exporting ? 'Export…' : 'Espace'}
+        </MenuButton>
+        <MenuButton
+          label="Assistant IA"
+          alignRight
+          items={menuItems(actions, ASSISTANT_MENU)}
+        >
+          Assistant IA
+        </MenuButton>
         {button('app.help', '?', { 'aria-label': 'Aide (F1)' })}
-        {button('workspace.close')}
       </div>
     </header>
   );

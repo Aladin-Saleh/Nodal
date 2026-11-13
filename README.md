@@ -155,7 +155,7 @@ pièces jointes en BLOB).
   - Nodal détecte les écritures d'un autre processus (`PRAGMA data_version`,
     chaque seconde) et recharge l'affichage, après la fin d'une saisie en
     cours le cas échéant ;
-  - configuration prête à copier : menu Export → « Connecter un assistant IA
+  - configuration prête à copier : menu Assistant IA → « Connecter un assistant IA
     (MCP)… », avec un bloc de consignes CLAUDE.md / AGENTS.md pour que
     l'assistant consulte Nodal avant de parcourir les fichiers.
 
@@ -189,7 +189,7 @@ pièces jointes en BLOB).
     sans accents, hors code et liens, titres courts ou génériques ignorés)
     sans relation existante ; relier, convertir en lien ou ignorer (refus
     mémorisés, migration 008) ; calcul par nœud, sans scan de la base ;
-  - santé de la base (bouton « Santé », palette) : nœuds sans résumé,
+  - santé de la base (menu Espace, palette) : nœuds sans résumé,
     documents vides, nœuds isolés, liens cassés, doublons probables,
     ajouts de l'IA à relire, chacun avec son action ; sujets à documenter :
     recherches MCP sans résultat (requête, date, nombre ; migration 009),
@@ -223,7 +223,7 @@ pièces jointes en BLOB).
     portable ; MCP : champ `template` de `nodal_create_node` et de
     l'opération `createNode` de `nodal_apply`.
   - import d'un dossier Markdown / coffre Obsidian dans l'espace ouvert
-    (menu « Importer / exporter », palette) : dossiers → hiérarchie sous une
+    (menu « Espace », palette) : dossiers → hiérarchie sous une
     nouvelle racine, notes → nœuds et documents, front-matter (titre, type,
     résumé, tags, alias), liens `[[Note#Titre|texte]]` et `[texte](note.md)`
     → liens `[[node:…]]` et relations, fichiers référencés → pièces jointes ;

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { ContextMenu } from '../../components/ContextMenu';
-import type { AppAction } from '../commands/actions';
+import { menuItems, type AppAction } from '../commands/actions';
 import { maskedNodeIds } from '../graph/graph-model';
 import { NodeTree } from '../nodes/NodeTree';
 import { siblingsOf, type DropMove, type TreeIndex } from '../nodes/tree';
 import { useViewDispatch, useViewState } from './view-state-context';
+import { NODE_MENU } from './workspace-actions';
 
 export interface TreePaneProps {
   index: TreeIndex;
@@ -23,21 +24,6 @@ export interface TreePaneProps {
   /** Nœuds à la documentation possiblement obsolète. */
   stale?: ReadonlySet<string>;
 }
-
-/** Actions du menu contextuel, dans cet ordre (les inactives sont omises). */
-const CONTEXT_MENU_ACTIONS = [
-  'node.newChild',
-  'node.rename',
-  'node.toggleHidden',
-  'node.solo',
-  'node.center',
-  'node.pathTo',
-  'node.validate',
-  'node.addDocument',
-  'node.move',
-  'node.duplicate',
-  'node.delete',
-];
 
 /** Remet le focus sur la ligne d'un nœud (après le menu contextuel). */
 function focusRow(id: string) {
@@ -153,19 +139,9 @@ export function TreePane({
             setMenu(null);
             focusRow(menu.id);
           }}
-          items={CONTEXT_MENU_ACTIONS.flatMap((actionId) => {
-            const action = actionsForNode(menu.id).find(
-              (candidate) => candidate.id === actionId,
-            );
-            return action?.enabled
-              ? [
-                  {
-                    label: action.label,
-                    danger: action.id === 'node.delete',
-                    onSelect: action.run,
-                  },
-                ]
-              : [];
+          items={menuItems(actionsForNode(menu.id), NODE_MENU, {
+            omitDisabled: true,
+            danger: ['node.delete'],
           })}
         />
       )}

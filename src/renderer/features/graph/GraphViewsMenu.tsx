@@ -1,7 +1,9 @@
-import { useId, useState, type FormEvent, type MouseEvent } from 'react';
+import { useId, useState, type FormEvent } from 'react';
 import { GRAPH_VIEW_NAME_MAX_LENGTH } from '../../../shared/domain';
 import type { GraphCamera } from '../../../shared/model';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import type { ContextMenuItem } from '../../components/ContextMenu';
+import { MenuButton } from '../../components/MenuButton';
 import { Modal } from '../../components/Modal';
 import type { GraphViewsApi } from '../workspace/useGraphViewPersistence';
 
@@ -51,25 +53,6 @@ function ViewNameDialog({
   );
 }
 
-const closeMenu = (event: MouseEvent<HTMLElement>) =>
-  event.currentTarget.closest('details')?.removeAttribute('open');
-
-/** Élément du menu « Vues » : ferme le menu puis agit. */
-const item = (label: string, onSelect: () => void, disabled = false) => (
-  <button
-    type="button"
-    role="menuitem"
-    className="secondary"
-    disabled={disabled}
-    onClick={(event) => {
-      closeMenu(event);
-      onSelect();
-    }}
-  >
-    {label}
-  </button>
-);
-
 type Dialog = { kind: 'create' } | { kind: 'rename' } | { kind: 'delete' };
 
 /**
@@ -87,6 +70,39 @@ export function GraphViewsMenu({
   const selectId = useId();
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const { views, active, modified } = api;
+  const items: ContextMenuItem[] = [
+    {
+      label: 'Enregistrer comme nouvelle vue…',
+      onSelect: () => setDialog({ kind: 'create' }),
+    },
+  ];
+  if (active) {
+    items.push(
+      {
+        label: `Mettre à jour « ${active.name} »`,
+        separator: true,
+        onSelect: () => void api.update(active.id, getCamera()),
+      },
+      {
+        label: `Renommer « ${active.name} »…`,
+        onSelect: () => setDialog({ kind: 'rename' }),
+      },
+      active.isDefault
+        ? {
+            label: 'Ne plus ouvrir cette vue par défaut',
+            onSelect: () => void api.setDefault(null),
+          }
+        : {
+            label: 'Ouvrir cette vue avec l’espace',
+            onSelect: () => void api.setDefault(active.id),
+          },
+      {
+        label: `Supprimer « ${active.name} »…`,
+        danger: true,
+        onSelect: () => setDialog({ kind: 'delete' }),
+      },
+    );
+  }
 
   return (
     <div className="graph-views">
@@ -117,41 +133,13 @@ export function GraphViewsMenu({
           modifiée
         </span>
       )}
-      <details className="filters">
-        <summary aria-label="Gérer les vues">Vues ▾</summary>
-        <div className="filters-panel view-menu-panel" role="menu">
-          {item('Enregistrer comme nouvelle vue…', () =>
-            setDialog({ kind: 'create' }),
-          )}
-          {active && (
-            <>
-              {item(
-                `Mettre à jour « ${active.name} »`,
-                () => void api.update(active.id, getCamera()),
-              )}
-              {item(`Renommer « ${active.name} »…`, () =>
-                setDialog({ kind: 'rename' }),
-              )}
-              {active.isDefault
-                ? item(
-                    'Ne plus ouvrir cette vue par défaut',
-                    () => void api.setDefault(null),
-                  )
-                : item(
-                    'Ouvrir cette vue avec l’espace',
-                    () => void api.setDefault(active.id),
-                  )}
-              {item(`Supprimer « ${active.name} »…`, () =>
-                setDialog({ kind: 'delete' }),
-              )}
-            </>
-          )}
-          <p className="muted">
-            Une vue garde la portée, les filtres, les nœuds masqués et repliés
-            et la position de la caméra. ★ : vue ouverte avec l’espace.
-          </p>
-        </div>
-      </details>
+      <MenuButton
+        label="Gérer les vues"
+        title="Une vue garde la portée, les filtres, les nœuds masqués et repliés et la position de la caméra. ★ : vue ouverte avec l’espace."
+        items={items}
+      >
+        Vues
+      </MenuButton>
 
       {dialog?.kind === 'create' && (
         <ViewNameDialog

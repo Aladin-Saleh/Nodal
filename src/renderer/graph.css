@@ -146,6 +146,7 @@
   position: absolute;
   bottom: 10px;
   left: 10px;
+  max-width: calc(100% - 72px);
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -234,12 +235,48 @@
 }
 
 .graph-help {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  max-width: min(520px, 60%);
+  margin: 0;
   font-size: 11px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+/* Zoom : boutons flottants sur le graphe */
+
+.graph-zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.graph-zoom button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 15px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.graph-zoom button + button {
+  border-top: 1px solid var(--border);
+}
+
+.graph-zoom button:hover {
+  background: var(--hover);
 }
 
 /* Recherche (§6.9) */
@@ -633,50 +670,6 @@ mark {
 
 /* Lot 5 : export, rapports */
 
-.export-menu {
-  position: relative;
-}
-
-.export-menu summary {
-  padding: 8px 14px;
-  color: var(--text);
-  cursor: pointer;
-  list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.export-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.export-menu summary.disabled {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.export-menu-panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 280px;
-  padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
-}
-
-.export-menu-panel button {
-  align-self: stretch;
-  text-align: left;
-}
-
 .report-list {
   display: flex;
   flex-direction: column;
@@ -927,8 +920,17 @@ kbd {
   box-shadow: var(--shadow-md);
 }
 
+.context-menu .menu-separated {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
 .context-menu button {
-  display: block;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
   padding: 6px 10px;
   font-size: 13px;
@@ -943,6 +945,36 @@ kbd {
 .context-menu button:focus-visible {
   background: var(--hover);
   outline: none;
+}
+
+.menu-shortcut {
+  padding: 0;
+  font-family: inherit;
+  background: none;
+  border: 0;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Bouton qui ouvre un menu (MenuButton) */
+
+.menu-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.menu-caret {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.icon-button {
+  min-width: 32px;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .context-menu button.danger-text {
@@ -982,13 +1014,4 @@ kbd {
 .graph-view-modified {
   font-size: 12px;
   font-style: italic;
-}
-
-.view-menu-panel {
-  gap: 4px;
-  width: 280px;
-}
-
-.view-menu-panel button {
-  text-align: left;
 }

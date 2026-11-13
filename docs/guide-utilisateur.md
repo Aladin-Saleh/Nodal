@@ -35,10 +35,17 @@ sauvegarder comme n'importe quel fichier (application fermée).
 - **Créer** : sur l'accueil, saisissez un nom puis **Créer…** et choisissez
   l'emplacement du fichier.
 - **Ouvrir** : **Ouvrir…**, ou un clic sur un espace de la liste des récents.
-- **Renommer, décrire, supprimer** : bouton **Paramètres**. La suppression
-  place le fichier dans la corbeille de Windows (récupérable).
-- **Fermer** : bouton **Fermer l'espace**. Les modifications en cours sont
-  enregistrées automatiquement.
+- **Renommer, décrire, supprimer** : menu **Espace ▾** › **Paramètres de
+  l’espace…**. La suppression place le fichier dans la corbeille de Windows
+  (récupérable).
+- **Fermer** : menu **Espace ▾** › **Fermer l'espace**. Les modifications en
+  cours sont enregistrées automatiquement.
+
+La barre supérieure regroupe les actions en deux menus : **Espace ▾** (tags,
+types de relations, modèles, paramètres, capture rapide, boîte de réception,
+santé de la base, import / export, préférences, fermer) et **Assistant IA ▾**
+(connecter un assistant, activité IA, sujets à documenter). **?** ouvre
+l’aide. Toutes ces actions sont aussi dans la palette (Ctrl + Maj + P).
 
 L'état d'enregistrement s'affiche au centre de la barre d'état (en bas) :
 _Enregistré_, _Modifications en attente…_, _Enregistrement…_ ou un message
@@ -46,19 +53,19 @@ d'erreur.
 
 ## 3. Le graphe (vue par défaut)
 
-| Action                                  | Geste                                              |
-| --------------------------------------- | -------------------------------------------------- |
-| Faire pivoter la vue                    | glisser dans le vide                               |
-| Déplacer la vue                         | glisser avec le bouton droit                       |
-| Zoomer                                  | molette, ou boutons **+** / **−**                  |
-| Recadrer tout le graphe                 | bouton **⤢**                                       |
-| Sélectionner un nœud (zoom + documents) | clic                                               |
-| Ouvrir la fiche dans la vue Documents   | double-clic sur le nœud                            |
-| **Créer un nœud à cet endroit**         | double-clic dans le vide                           |
-| **Relier deux nœuds**                   | glisser d'un nœud vers un autre                    |
-| Déplacer un nœud                        | Maj + glisser                                      |
-| Sélection multiple                      | Ctrl + clic, ou Ctrl + A (tous les nœuds affichés) |
-| Vider la sélection                      | Échap                                              |
+| Action                                  | Geste                                               |
+| --------------------------------------- | --------------------------------------------------- |
+| Faire pivoter la vue                    | glisser dans le vide                                |
+| Déplacer la vue                         | glisser avec le bouton droit                        |
+| Zoomer                                  | molette, ou boutons **+** / **−** (en bas à droite) |
+| Recadrer tout le graphe                 | bouton **⤢** (en bas à droite)                      |
+| Sélectionner un nœud (zoom + documents) | clic                                                |
+| Ouvrir la fiche dans la vue Documents   | double-clic sur le nœud                             |
+| **Créer un nœud à cet endroit**         | double-clic dans le vide                            |
+| **Relier deux nœuds**                   | glisser d'un nœud vers un autre                     |
+| Déplacer un nœud                        | Maj + glisser                                       |
+| Sélection multiple                      | Ctrl + clic, ou Ctrl + A (tous les nœuds affichés)  |
+| Vider la sélection                      | Échap                                               |
 
 Chaque type de nœud a une forme et une couleur : Concept (sphère bleue),
 Composant (cube vert), Donnée (cylindre orange), Procédure (octaèdre violet),
@@ -132,9 +139,13 @@ liens parent-enfant apparaissent en pointillés.
   bas d’une ligne pour le placer avant ou après elle, au milieu pour le ranger
   dedans. Un trait ou un cadre montre où il ira ; un nœud ne peut pas être
   déposé dans l’un de ses propres descendants.
-- **Menu contextuel** (clic droit, touche Menu ou Maj + F10) : nouveau
-  sous-nœud, renommer, masquer / afficher dans le graphe, centrer dans le
-  graphe, ajouter un document, valider (si l’IA l’a ajouté), supprimer.
+- **Menu contextuel** (clic droit, touche Menu ou Maj + F10) et bouton
+  **⋯** de la fiche du nœud (le même menu) : nouveau sous-nœud, ajouter un
+  document, renommer, valider (si l’IA l’a ajouté), centrer dans le graphe,
+  chemin vers…, masquer / afficher dans le graphe, branche seule, déplacer,
+  dupliquer, supprimer.
+- **Documents** : le bouton **⋯** à droite des onglets déplace le document
+  affiché avant / après les autres ou le supprime.
 - **Panneau de propriétés** (droite) : type, **parent** (pour passer un nœud
   en racine ou le rattacher à un autre), résumé, couleur, documents,
   relations, tags, pièces jointes.
@@ -313,7 +324,7 @@ document. Échap efface la recherche.
 
 ### Santé de la base
 
-Bouton **Santé** (en haut de l'espace) ou palette « Santé de la base… » :
+Menu **Espace ▾** › **Santé de la base…** ou palette :
 un rapport, calculé à la demande, de ce qui mérite attention, avec le nombre
 de cas et, pour chacun, l'action qui permet de corriger :
 
@@ -334,7 +345,7 @@ relance l'analyse.
 
 ## 7. Sauvegarde, export et import
 
-Menu **Exporter ▾** et bouton **Paramètres** :
+Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
 
 - **Créer une sauvegarde…** (Paramètres) : copie cohérente du fichier `.nodal`,
   même pendant l'édition. La sauvegarde s'ouvre comme n'importe quel espace.
@@ -380,7 +391,7 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   votre saisie soit enregistrée. Si vous modifiez le même texte que
   l'assistant au même moment, votre version est conservée — la sienne reste
   dans le journal.
-- **Activité IA** (en haut de l'espace) : liste les modifications faites par
+- **Activité IA** (menu **Assistant IA ▾**) : liste les modifications faites par
   l'assistant, avec la date et le nom de l'assistant. « Afficher » ouvre le
   nœud concerné, « Annuler » rétablit l'état d'avant. L'annulation est
   refusée si l'élément a été retouché depuis (par vous ou par l'assistant) :
@@ -398,8 +409,8 @@ Menu **Exporter ▾** et bouton **Paramètres** :
   l’IA, non validé » du graphe montre ce qui reste à relire.
 - **Sujets à documenter** : quand une recherche de l'assistant ne trouve
   rien, Nodal note la requête (seulement la requête, sa date et le nombre de
-  fois ; jamais en lecture seule). Bouton **Santé** en haut de l'espace, ou
-  palette « Sujets à documenter… » : **Créer un nœud** propose un nouveau
+  fois ; jamais en lecture seule). Menu **Assistant IA ▾** › **Sujets à
+  documenter…**, ou la palette : **Créer un nœud** propose un nouveau
   nœud à ce titre (le sujet quitte la liste une fois le nœud créé),
   **Ignorer** l'écarte. L'assistant voit aussi cette liste (outil
   `nodal_health`) quand vous lui demandez d'enrichir la base.
@@ -417,7 +428,7 @@ Menu **Exporter ▾** et bouton **Paramètres** :
 
 ### Importer un dossier Markdown ou un coffre Obsidian
 
-Menu **Importer / exporter ▾** → **Importer un dossier Markdown /
+Menu **Espace ▾** → **Importer un dossier Markdown /
 Obsidian…** (ou la palette). Choisissez le dossier : Nodal le lit, sans rien
 écrire, et affiche un aperçu (dossiers, notes, liens, pièces jointes, liens
 non résolus, éléments ignorés). **Importer** :

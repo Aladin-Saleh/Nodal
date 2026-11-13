@@ -445,9 +445,8 @@ describe('App', () => {
     });
     render(<App client={client} />);
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Fermer l’espace' }),
-    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Espace' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Fermer l’espace' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Créer un espace' }),
@@ -471,9 +470,7 @@ describe('Préférences', () => {
       'workspace:openRecent': () => workspace,
     });
     render(<App client={client} />);
-    expect(
-      await screen.findByRole('button', { name: 'Fermer l’espace' }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('button', { name: 'Espace' })).toBeTruthy();
     expect(call).toHaveBeenCalledWith('workspace:openRecent', { id: 'r1' });
   });
 

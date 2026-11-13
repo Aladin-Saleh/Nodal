@@ -12,6 +12,7 @@ import type { DocumentSummary } from '../../../shared/model';
 import { useClient, useRunner, useSaveTracker } from '../../app/context';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Modal } from '../../components/Modal';
+import { MenuButton } from '../../components/MenuButton';
 import { TemplateSelect, useTemplates } from '../templates/TemplateSelect';
 import { DocumentEditor } from './DocumentEditor';
 
@@ -110,39 +111,39 @@ export function DocumentsPanel({
         >
           + Document
         </button>
+        {selected && (
+          <MenuButton
+            label={`Actions sur le document « ${selected.title} »`}
+            className="secondary icon-button"
+            caret={false}
+            alignRight
+            title="Actions du document"
+            items={[
+              {
+                label: 'Déplacer avant',
+                disabled: position <= 0,
+                onSelect: () => void shift(-1),
+              },
+              {
+                label: 'Déplacer après',
+                disabled: position === documents.length - 1,
+                onSelect: () => void shift(1),
+              },
+              {
+                label: 'Supprimer le document…',
+                danger: true,
+                separator: true,
+                onSelect: () => setPendingDelete(selected),
+              },
+            ]}
+          >
+            ⋯
+          </MenuButton>
+        )}
       </div>
 
       {selected ? (
         <>
-          <div className="toolbar" aria-label="Actions sur le document">
-            <button
-              type="button"
-              className="secondary"
-              disabled={position <= 0}
-              onClick={() => void shift(-1)}
-              title="Déplacer avant"
-              aria-label="Déplacer le document avant"
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={position === documents.length - 1}
-              onClick={() => void shift(1)}
-              title="Déplacer après"
-              aria-label="Déplacer le document après"
-            >
-              →
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => setPendingDelete(selected)}
-            >
-              Supprimer le document
-            </button>
-          </div>
           <DocumentEditor
             key={`${selected.id}:${revision}`}
             documentId={selected.id}

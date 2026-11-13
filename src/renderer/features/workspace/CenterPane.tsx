@@ -1,5 +1,6 @@
 import type { NodeType } from '../../../shared/domain';
 import type { NodeSummary } from '../../../shared/model';
+import type { ContextMenuItem } from '../../components/ContextMenu';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { DocumentsPanel } from '../documents/DocumentsPanel';
 import { GraphPanel } from '../graph/GraphPanel';
@@ -27,9 +28,8 @@ export interface CenterPaneProps {
   onNew(parentId: string | null): void;
   onCreateAt(position: { x: number; y: number; z: number }): void;
   onRename(title: string): Promise<boolean>;
-  onMove(node: NodeSummary): void;
-  onDuplicate(node: NodeSummary): void;
-  onDelete(id: string): void;
+  /** Menu « ⋯ » de la fiche du nœud sélectionné. */
+  nodeMenu: readonly ContextMenuItem[];
   onBulkMove(): void;
   onBulkSetType(nodeType: NodeType): void;
   onBulkDelete(): void;
@@ -56,9 +56,7 @@ export function CenterPane({
   onNew,
   onCreateAt,
   onRename,
-  onMove,
-  onDuplicate,
-  onDelete,
+  nodeMenu,
   onBulkMove,
   onBulkSetType,
   onBulkDelete,
@@ -106,9 +104,7 @@ export function CenterPane({
             onTitleFocused={onRenameFocused}
             onNavigate={onSelect}
             onRename={onRename}
-            onMove={() => onMove(selected)}
-            onDuplicate={() => onDuplicate(selected)}
-            onDelete={() => onDelete(selected.id)}
+            menu={nodeMenu}
             onValidate={() => onValidate([selected.id])}
           />
           <ErrorBoundary area="les documents">
