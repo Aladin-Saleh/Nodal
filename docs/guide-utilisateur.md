@@ -419,6 +419,16 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou
   Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
   ou de répondre de mémoire.
+- **Contexte automatique** (Claude Code, Gemini CLI) : dans la même
+  fenêtre, **Installer dans un projet…** ajoute un hook aux réglages du
+  dossier choisi (`.claude/settings.local.json` ou `.gemini/settings.json`,
+  le reste du fichier est conservé). À chaque demande, avant de répondre,
+  l'assistant reçoit alors les nœuds et documents de l'espace qui
+  correspondent aux mots de la demande (au plus 5 nœuds et environ 1 000
+  tokens ; rien si aucun ne correspond, ni pour une commande « / »). Plus
+  besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,
+  copiez le bloc proposé dans `~/.claude/settings.json` (ou
+  `~/.gemini/settings.json`). Le hook ne fait que lire l'espace.
 - **Fichiers du code** : avant de modifier des fichiers, l'assistant demande
   à Nodal les nœuds qui les documentent (outil `nodal_for_files`) ; après,
   il met ces nœuds à jour et y ancre les nouveaux fichiers (opération

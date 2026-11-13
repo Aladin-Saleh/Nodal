@@ -32,6 +32,8 @@ export interface FileDialogs {
   pickMarkdownFolder(): Promise<string | null>;
   /** Dossier de code associé à l'espace ; `null` si annulé. */
   pickCodeRoot(): Promise<string | null>;
+  /** Dossier d'un projet où installer le contexte automatique ; `null` si annulé. */
+  pickProjectFolder(defaultPath: string | null): Promise<string | null>;
   /** Fichiers du code à ancrer à un nœud ; liste vide si annulé. */
   pickAnchorFiles(defaultPath: string | null): Promise<string[]>;
   /** Emplacement d'un fichier .nodal (nouvel espace importé, sauvegarde). */
@@ -127,6 +129,15 @@ export function createFileDialogs(
     async pickCodeRoot() {
       const result = await open({
         title: 'Choisir un dossier de code',
+        properties: ['openDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickProjectFolder(defaultPath) {
+      const result = await open({
+        title: 'Choisir le dossier du projet où l’assistant est lancé',
+        ...(defaultPath && { defaultPath }),
         properties: ['openDirectory'],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);

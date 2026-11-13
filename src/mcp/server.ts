@@ -133,7 +133,7 @@ export interface NodalMcpServerOptions {
  * brut (hors TOON, pour ne pas l'échapper) — entier, ou les sections
  * trouvées, chacune avec sa position pour lire la suite.
  */
-function formatFoundDocument(doc: FoundDocument): string {
+export function formatFoundDocument(doc: FoundDocument): string {
   const kind = doc.language
     ? `${doc.contentType}, ${doc.language}`
     : doc.contentType;

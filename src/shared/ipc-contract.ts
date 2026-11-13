@@ -5,6 +5,7 @@
  * rester léger dans le bundle preload. Les schémas de validation sont dans
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
+import type { ContextHookClient } from './context-hook';
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
 import type { AppPreferences, PreferencesUpdate } from './preferences';
@@ -290,6 +291,14 @@ export interface IpcContract {
   /** Choix d'un dossier par le main ; `null` si annulé. */
   'code:addRoot': { args: []; result: CodeRootInfo[] | null };
   'code:removeRoot': { args: [{ path: string }]; result: CodeRootInfo[] };
+  /**
+   * Contexte automatique : hook ajouté aux réglages d'un dossier de projet
+   * choisi par le main ; chemin du fichier écrit, `null` si annulé.
+   */
+  'assistant:installContextHook': {
+    args: [{ client: ContextHookClient }];
+    result: { settingsFile: string } | null;
+  };
   /** Motifs ancrés au nœud, fichiers trouvés, obsolescence éventuelle. */
   'anchor:listForNode': { args: [IdInput]; result: NodeAnchors };
   /** Remplace les motifs ancrés ; renvoie la liste normalisée. */
@@ -444,6 +453,7 @@ export const IPC_CHANNELS = [
   'code:getRoots',
   'code:addRoot',
   'code:removeRoot',
+  'assistant:installContextHook',
   'anchor:listForNode',
   'anchor:set',
   'anchor:pickFiles',

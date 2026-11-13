@@ -158,6 +158,9 @@ pièces jointes en BLOB).
   - configuration prête à copier : menu Assistant IA → « Connecter un assistant IA
     (MCP)… », avec un bloc de consignes CLAUDE.md / AGENTS.md pour que
     l'assistant consulte Nodal avant de parcourir les fichiers.
+  - contexte automatique (Claude Code, Gemini CLI) : un hook
+    (`node nodal-mcp.cjs <espace> --context`) ajoute à chaque demande les
+    nœuds et documents pertinents, installé depuis la même fenêtre.
 
 - **v1.4 — Navigation** :
   - palette de commandes (`Ctrl+P`, `Ctrl+Maj+P` pour les actions seules) :

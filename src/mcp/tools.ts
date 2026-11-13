@@ -5,6 +5,7 @@
  * d'en-tête, puis une ligne par élément) au lieu de répéter chaque clé.
  */
 import type { ContentType, NodeType } from '../shared/domain';
+import type { SearchHit } from '../shared/model';
 import { chunkDocument } from '../main/knowledge/chunking';
 import { NodalError } from '../shared/errors';
 import { notFound } from '../main/knowledge/context';
@@ -296,7 +297,7 @@ export interface FoundDocument {
   sections: FoundSection[];
 }
 
-const normalize = (text: string) =>
+export const normalize = (text: string) =>
   text
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
@@ -305,7 +306,7 @@ const escapeRegExp = (text: string) =>
   text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Mots cherchés, en préfixes sans accents (comme la recherche plein texte). */
-function termPatterns(query: string): RegExp[] {
+export function termPatterns(query: string): RegExp[] {
   const words = normalize(query).match(/[\p{L}\p{N}_]+/gu) ?? [];
   return [...new Set(words)].map(
     (word) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(word)}`, 'u'),
@@ -401,12 +402,14 @@ function matchingSections(
 export function search(
   ctx: ReadContext,
   input: { query: string; limit: number; maxChars: number },
+  /** Tri ou filtre des nœuds trouvés, avant la limite (contexte automatique). */
+  select: (hits: SearchHit[]) => SearchHit[] = (hits) => hits,
 ) {
   const service = new SearchService(() => ctx);
   let hits = service.search(input.query);
   const allTerms = hits.length > 0;
   if (!allTerms) hits = service.search(input.query, { matchAll: false });
-  hits = hits.slice(0, input.limit);
+  hits = select(hits).slice(0, input.limit);
   const outline = loadOutline(ctx);
   const summaryOf = ctx.db.prepare('SELECT summary FROM node WHERE id = ?');
   const documents = new DocumentService(() => ctx);

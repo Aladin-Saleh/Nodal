@@ -17,6 +17,8 @@ import type {
   CaptureTarget,
 } from '../../shared/quick-capture';
 import type { FileDialogs } from '../file-dialogs';
+import { installContextHook } from '../context-hook-install';
+import { contextHookCommand } from '../../shared/context-hook';
 import { CodeAnchorService } from '../code/code-anchor-service';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
 import { AttachmentService } from '../knowledge/attachment-service';
@@ -243,6 +245,19 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return directory ? codeAnchors.addRoot(directory) : null;
     },
     'code:removeRoot': ({ path }) => codeAnchors.removeRoot(path),
+    'assistant:installContextHook': async ({ client }) => {
+      const { filePath } = requireCurrent();
+      const [root] = codeAnchors.getRoots().filter((item) => item.exists);
+      const directory = await dialogs.pickProjectFolder(root?.path ?? null);
+      if (!directory) return null;
+      const command = contextHookCommand(
+        deps.getAppInfo().mcpServerPath,
+        filePath,
+      );
+      return {
+        settingsFile: installContextHook(directory, client, command),
+      };
+    },
     'anchor:listForNode': ({ id }) => codeAnchors.listForNode(id),
     'anchor:set': ({ nodeId, patterns }) =>
       codeAnchors.setAnchors(nodeId, patterns),

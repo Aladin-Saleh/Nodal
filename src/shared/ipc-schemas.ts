@@ -3,6 +3,7 @@
  * arguments : tout argument manquant, en trop ou mal typé est refusé, ainsi
  * que toute propriété inconnue (objets stricts).
  */
+import { CONTEXT_HOOK_CLIENTS } from './context-hook';
 import { z } from 'zod';
 import {
   ATTACHMENT_MAX_SIZE_LIMIT_BYTES,
@@ -331,6 +332,9 @@ export const ipcArgsSchemas = {
   'code:getRoots': noArgs,
   'code:addRoot': noArgs,
   'code:removeRoot': one(z.strictObject({ path: z.string().min(1).max(4096) })),
+  'assistant:installContextHook': one(
+    z.strictObject({ client: z.enum(CONTEXT_HOOK_CLIENTS) }),
+  ),
   'anchor:listForNode': one(idInput),
   'anchor:set': one(
     z.strictObject({

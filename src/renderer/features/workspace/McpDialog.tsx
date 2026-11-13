@@ -1,6 +1,14 @@
 import { useEffect, useId, useState } from 'react';
 import { Modal } from '../../components/Modal';
-import { useClient } from '../../app/context';
+import { useClient, useRunner } from '../../app/context';
+import {
+  CONTEXT_HOOK_EVENT,
+  CONTEXT_HOOK_SETTINGS_FILE,
+  contextHookCommand,
+  contextHookSnippet,
+  isContextHookClient,
+  type ContextHookClient,
+} from '../../../shared/context-hook';
 import {
   MCP_CLIENTS,
   MCP_CLIENT_LABELS,
@@ -36,6 +44,72 @@ export function assistantInstructions(
     );
   }
   return lines.join('\n');
+}
+
+/** Réglages globaux de l'assistant, pour une installation à la main. */
+const USER_SETTINGS_FILE: Record<ContextHookClient, string> = {
+  'claude-code': '~/.claude/settings.json',
+  'gemini-cli': '~/.gemini/settings.json',
+};
+
+/**
+ * Contexte automatique : un hook de l'assistant ajoute à chaque demande les
+ * nœuds et documents pertinents, sans qu'il faille lui dire de consulter Nodal.
+ */
+function ContextHookSection({
+  assistant,
+  serverPath,
+  workspaceFile,
+}: {
+  assistant: ContextHookClient;
+  serverPath: string;
+  workspaceFile: string;
+}) {
+  const client = useClient();
+  const run = useRunner();
+  const [installed, setInstalled] = useState<string | null>(null);
+  const install = async () => {
+    const result = await run(() =>
+      client.call('assistant:installContextHook', { client: assistant }),
+    );
+    if (result) setInstalled(result.settingsFile);
+  };
+  return (
+    <>
+      <h3>Contexte automatique (recommandé)</h3>
+      <p className="muted">
+        À chaque demande, avant de répondre, l’assistant reçoit les nœuds et
+        documents de cet espace qui correspondent aux mots de la demande
+        (environ 1 000 tokens au plus, rien si aucun ne correspond) : plus
+        besoin de lui dire de consulter Nodal. Hook «{' '}
+        {CONTEXT_HOOK_EVENT[assistant]} », ajouté à{' '}
+        {CONTEXT_HOOK_SETTINGS_FILE[assistant]} dans le dossier du projet
+        choisi.
+      </p>
+      <div className="mcp-hook-actions">
+        <button type="button" onClick={() => void install()}>
+          Installer dans un projet…
+        </button>
+        {installed && (
+          <span className="muted" role="status">
+            Ajouté à {installed}. Relancez l’assistant dans ce dossier.
+          </span>
+        )}
+      </div>
+      <details className="mcp-manual">
+        <summary>
+          Pour tous vos projets ({USER_SETTINGS_FILE[assistant]})
+        </summary>
+        <CopyBlock
+          label={`${USER_SETTINGS_FILE[assistant]} — à fusionner avec les réglages présents`}
+          text={contextHookSnippet(
+            assistant,
+            contextHookCommand(serverPath, workspaceFile),
+          )}
+        />
+      </details>
+    </>
+  );
 }
 
 function CopyBlock({ label, text }: { label: string; text: string }) {
@@ -155,6 +229,13 @@ export function McpDialog({
             remplacé au même endroit. Si le fichier de l’espace change de place,
             refaites cette configuration.
           </p>
+          {serverPath && isContextHookClient(assistant) && (
+            <ContextHookSection
+              assistant={assistant}
+              serverPath={serverPath}
+              workspaceFile={workspaceFile}
+            />
+          )}
           {setup.instructionsFile && (
             <>
               <h3>Consulter Nodal d’abord</h3>

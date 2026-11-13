@@ -267,7 +267,7 @@ describe('parcours principaux', () => {
     ).toBe(true);
   });
 
-  it('donne la commande de l’assistant choisi (Gemini CLI)', async () => {
+  it('donne la commande de l’assistant choisi et installe le contexte automatique (Gemini CLI)', async () => {
     await page.getByRole('button', { name: 'Assistant IA' }).click();
     await page
       .getByRole('menuitem', { name: /Connecter un assistant IA/ })
@@ -280,6 +280,21 @@ describe('parcours principaux', () => {
       .selectOption({ label: 'Gemini CLI' });
     await dialog.getByText(/^gemini mcp add nodal node "/).waitFor();
     await dialog.getByText('GEMINI.md').waitFor();
+
+    // Contexte automatique : hook BeforeAgent ajouté au projet choisi.
+    const project = path.join(work, 'Projet');
+    fs.mkdirSync(project);
+    await stubDialogs({ open: project });
+    await dialog
+      .getByRole('button', { name: 'Installer dans un projet…' })
+      .click();
+    await dialog.getByText(/Ajouté à .*settings\.json/).waitFor();
+    const settings = JSON.parse(
+      fs.readFileSync(path.join(project, '.gemini', 'settings.json'), 'utf8'),
+    );
+    expect(settings.hooks.BeforeAgent[0].hooks[0].command).toMatch(
+      /nodal-mcp\.cjs" ".*\.nodal" --context$/,
+    );
     await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();
   });
 });

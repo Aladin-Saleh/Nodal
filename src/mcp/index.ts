@@ -3,6 +3,10 @@
  *
  *   node nodal-mcp.cjs "C:\chemin\vers\espace.nodal" [--read-only]
  *
+ * Avec --context, il ne sert pas le protocole : il lit une demande (hook
+ * d'assistant, JSON sur stdin) et écrit le contexte à y ajouter
+ * (context-hook.ts).
+ *
  * Il n'est pas lancé par l'exécutable Electron : sous Windows, le processus
  * principal d'Electron écrit une ligne vide sur stdout au démarrage, ce qui
  * corromprait le flux JSON-RPC.
@@ -10,11 +14,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
+import { contextHookOutput } from './context-hook';
 import { createNodalMcpServer } from './server';
 
 declare const NODAL_VERSION: string;
 
-const USAGE = 'Usage : node nodal-mcp.cjs <fichier.nodal> [--read-only]';
+const USAGE =
+  'Usage : node nodal-mcp.cjs <fichier.nodal> [--read-only | --context]';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -28,6 +34,14 @@ async function main(): Promise<void> {
   if (!file) {
     console.error(USAGE);
     process.exitCode = 2;
+    return;
+  }
+  if (args.includes('--context')) {
+    const output = contextHookOutput(
+      path.resolve(file),
+      fs.readFileSync(0, 'utf8'),
+    );
+    if (output) process.stdout.write(output);
     return;
   }
   // stdout est réservé au protocole : tout diagnostic part sur stderr.

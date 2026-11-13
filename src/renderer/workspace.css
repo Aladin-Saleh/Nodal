@@ -605,6 +605,19 @@ input[type='color'] {
 
 /* Configuration MCP */
 
+.mcp-hook-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.mcp-manual summary {
+  margin-top: 8px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
 .mcp-snippet {
   margin: 12px 0;
   border: 1px solid var(--border);
