@@ -13,12 +13,12 @@ const config: ForgeConfig = {
     // Icône de l'exécutable (extension ajoutée selon la plateforme).
     icon: 'assets/icon',
     asar: true,
-    appCopyright: 'Aladin',
+    appCopyright: "© 2026 Aladin SALEH — Aladinvention's Software",
     // Serveur MCP exécuté par Node.js, et node-pty (terminal : binaires
     // natifs, worker) : hors de l'archive asar.
     extraResource: ['.vite/build/nodal-mcp.cjs', '.native/node-pty'],
     win32metadata: {
-      CompanyName: 'Aladin',
+      CompanyName: "Aladinvention's Software",
       ProductName: 'Nodal',
       FileDescription: 'Nodal — base de connaissances techniques',
     },
@@ -38,6 +38,9 @@ const config: ForgeConfig = {
       name: 'Nodal',
       setupExe: 'NodalSetup.exe',
       setupIcon: 'assets/icon.ico',
+      authors: 'Aladin SALEH',
+      // Animation pendant l'installation : scripts/generate-installer-gif.mjs.
+      loadingGif: 'assets/installer.gif',
     }),
     // Archive portable exécutable sans installation.
     new MakerZIP({}, ['win32', 'darwin', 'linux']),

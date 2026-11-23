@@ -4,6 +4,7 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  Menu,
   nativeTheme,
   session,
   shell,
@@ -15,6 +16,7 @@ import {
   type AppPreferences,
   type PreferencesUpdate,
 } from '../shared/preferences';
+import { buildAppMenu } from './app-menu';
 import { createAppUrlMatcher } from './app-url';
 import { CaptureController } from './capture/capture-controller';
 import { QuickCaptureService } from './capture/quick-capture-service';
@@ -277,6 +279,7 @@ function bootstrap(): void {
 
   void app.whenReady().then(() => {
     applySessionSecurity(session.defaultSession);
+    Menu.setApplicationMenu(buildAppMenu(getMainWindow));
     registerIpcHandlers(ipcMain, {
       workspaces,
       recent,

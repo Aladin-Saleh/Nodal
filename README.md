@@ -264,6 +264,10 @@ pièces jointes en BLOB).
     documents pertinents ; installation depuis « Connecter un assistant » ;
   - terminal intégré (`Ctrl+J`) : xterm.js et node-pty, shell ouvert dans
     le dossier de code de l'espace, variable `NODAL_WORKSPACE` définie.
+- **v1.6.1 — À propos et installateur** :
+  - menu « Help → À propos de Nodal » (rôle, version, auteur, contact) ;
+  - animation de l'installateur (« Aladinvention's Software » en art
+    ASCII et golem), générée par `npx electron scripts/generate-installer-gif.mjs`.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
@@ -341,7 +345,8 @@ scripts/       génération de l'icône
 Les artefacts sont produits dans `out/make/` : `squirrel.windows/x64/NodalSetup.exe`
 (installation pour l'utilisateur courant, sans droits administrateur) et
 `zip/win32/x64/Nodal-win32-x64-<version>.zip` (version portable). L'icône est
-générée par `node scripts/generate-icon.mjs` (`assets/`). L'exécutable n'est
+générée par `node scripts/generate-icon.mjs` (`assets/`), l'animation de
+l'installateur par `npx electron scripts/generate-installer-gif.mjs`. L'exécutable n'est
 pas signé : Windows SmartScreen affiche un avertissement au premier lancement.
 
 Prérequis : Node ≥ 22.13 (pour `node:sqlite` dans les tests).
