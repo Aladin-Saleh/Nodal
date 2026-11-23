@@ -255,6 +255,15 @@ pièces jointes en BLOB).
     stable entre les versions), configurations d'assistants qui citent
     l'ancien chemin versionné corrigées automatiquement, espaces d'une
     version précédente mis à jour par le serveur lui-même.
+- **v1.6 — Menus, contexte automatique et terminal** :
+  - menus homogènes (« Espace ▾ », « Assistant IA ▾ », « ⋯ » du nœud et
+    des documents) tirés du registre d'actions ; barre du graphe sur une
+    ligne, zoom flottant ;
+  - contexte automatique pour Claude Code et Gemini CLI : un hook
+    (mode `--context` du serveur MCP) ajoute à chaque demande les nœuds et
+    documents pertinents ; installation depuis « Connecter un assistant » ;
+  - terminal intégré (`Ctrl+J`) : xterm.js et node-pty, shell ouvert dans
+    le dossier de code de l'espace, variable `NODAL_WORKSPACE` définie.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
