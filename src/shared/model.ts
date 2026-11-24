@@ -277,6 +277,8 @@ export interface VaultExportResult {
 export interface MergeSide {
   id: string;
   title: string;
+  /** Pour distinguer deux titres identiques. */
+  parentTitle: string | null;
   hasSummary: boolean;
   documents: number;
   /** Taille totale des documents. */

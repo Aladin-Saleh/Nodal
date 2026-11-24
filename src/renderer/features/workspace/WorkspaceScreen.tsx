@@ -348,7 +348,7 @@ function WorkspaceView({
     relationsChanged();
     select(keepId);
     reportInfo(
-      `Nœuds fusionnés (${done.links} liens redirigés). Sauvegarde : ${done.backupPath}`,
+      `Nœuds fusionnés (${done.links} ${done.links > 1 ? 'liens redirigés' : 'lien redirigé'}). Sauvegarde : ${done.backupPath}`,
     );
   };
 

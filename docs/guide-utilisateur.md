@@ -134,7 +134,7 @@ liens parent-enfant apparaissent en pointillés.
   (« %% Schéma généré par Nodal ») pour le garder tel que vous l’avez modifié.
 - Dans le graphe, une relation **incertaine** est en tirets longs.
 - **Fusionner avec…** (même menu, ou santé de la base) : choisissez le nœud à
-  garder (Nodal propose celui que vous avez validé, sinon le plus fourni).
+  garder (Nodal propose le plus fourni).
   Il reçoit les documents, sous-nœuds, relations, pièces jointes, tags,
   fichiers ancrés et leçons de l’autre, sans que rien chez lui soit
   remplacé ; un second résumé devient un document, et les liens `[[…]]` sont

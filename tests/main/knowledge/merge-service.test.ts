@@ -184,6 +184,12 @@ describe('fusion de nœuds', () => {
     doc(rich, 'D', 'x');
     expect(mergePreview(context(), poor, rich).keepId).toBe(rich);
     expect(mergePreview(context(), rich, poor).keepId).toBe(rich);
+    // Même ajouté par l'IA : un nœud vide ne remplace pas un nœud fourni.
+    context().db.exec(
+      `INSERT INTO assistant_change (id, workspace_id, created_at, action, entity_id, summary)
+       SELECT 'c', workspace_id, created_at, 'create_node', id, 'x' FROM node WHERE id = '${rich}'`,
+    );
+    expect(mergePreview(context(), poor, rich).keepId).toBe(rich);
     // À égalité : le plus ancien.
     const twin = node('Z');
     expect(mergePreview(context(), twin, poor).keepId).toBe(poor);

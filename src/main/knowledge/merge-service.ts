@@ -54,6 +54,7 @@ function sideOf(ctx: ServiceContext, id: string): MergeSide {
   return {
     id,
     title: row.title,
+    parentTitle: row.parent_id ? nodeRow(ctx, row.parent_id).title : null,
     hasSummary: Boolean(row.summary?.trim()),
     documents: count('SELECT count(*) AS n FROM document WHERE node_id = :id'),
     chars: count(
@@ -70,8 +71,8 @@ function sideOf(ctx: ServiceContext, id: string): MergeSide {
 }
 
 /**
- * Les deux nœuds, et celui à garder : validé plutôt qu'ajouté par l'IA, puis
- * le plus fourni (pas le titre le plus court), enfin le plus ancien.
+ * Les deux nœuds, et celui à garder : le plus fourni (pas le titre le plus
+ * court), puis validé plutôt qu'ajouté par l'IA, enfin le plus ancien.
  */
 export function mergePreview(
   ctx: ServiceContext,
@@ -95,16 +96,16 @@ export function mergePreview(
     side.children +
     side.attachments;
   const [a, b] = [first, second];
-  const byOrigin =
-    Number(pending.has(a.id)) - Number(pending.has(b.id)) ||
-    richness(b) - richness(a);
+  const better =
+    richness(b) - richness(a) ||
+    Number(pending.has(a.id)) - Number(pending.has(b.id));
   const oldest = ctx.db
     .prepare(
       'SELECT id FROM node WHERE id IN (?, ?) ORDER BY created_at, rowid LIMIT 1',
     )
     .get(firstId, secondId) as { id: string };
   let keepId = oldest.id;
-  if (byOrigin !== 0) keepId = byOrigin < 0 ? a.id : b.id;
+  if (better !== 0) keepId = better < 0 ? a.id : b.id;
   return { first, second, keepId };
 }
 

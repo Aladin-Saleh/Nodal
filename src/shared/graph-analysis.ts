@@ -358,7 +358,8 @@ export function suggestedQuestions(
           ),
         );
         others.delete(own);
-        others.delete(nodeId);
+        // Ni lui-même, ni un de ses ancêtres.
+        for (const id of lineage(byId, nodeId)) others.delete(id);
         const branches = [...others].filter((id) => id !== null);
         if (branches.length === 0) return [];
         return [

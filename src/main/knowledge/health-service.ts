@@ -207,7 +207,9 @@ export const HEALTH_CHECKS: HealthCheck[] = [
           const other = byId.get(b)!;
           return issue('duplicate', byId.get(a)!, {
             otherNodeId: other.id,
-            detail: other.title,
+            detail: other.parent_id
+              ? `${other.title} (dans « ${byId.get(other.parent_id)?.title ?? '?'} »)`
+              : `${other.title} (à la racine)`,
           });
         });
     },

@@ -12,6 +12,7 @@ it('propose un nœud à garder, modifiable avant de fusionner', async () => {
   const side = (id: string, title: string) => ({
     id,
     title,
+    parentTitle: 'Architecture',
     hasSummary: true,
     documents: 2,
     chars: 10,
@@ -40,7 +41,7 @@ it('propose un nœud à garder, modifiable avant de fusionner', async () => {
       />
     </ServicesProvider>,
   );
-  expect(await screen.findByText(/« Serveur MCP » disparaît/)).toBeTruthy();
+  expect(await screen.findByText(/« Serveur MCP »\) disparaît/)).toBeTruthy();
   fireEvent.click(screen.getByRole('radio', { name: /^Serveur MCP/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Fusionner' }));
   expect(onSubmit).toHaveBeenCalledWith('a', 'b');

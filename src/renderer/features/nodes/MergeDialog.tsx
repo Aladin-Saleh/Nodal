@@ -88,16 +88,21 @@ export function MergeDialog({
                 <span>
                   {side.title}
                   <br />
-                  <span className="muted">{describe(side)}</span>
+                  <span className="muted">
+                    {side.parentTitle
+                      ? `dans « ${side.parentTitle} »`
+                      : 'à la racine'}{' '}
+                    : {describe(side)}
+                  </span>
                 </span>
               </label>
             ))}
           </fieldset>
           <p>
-            « {drop?.title} » disparaît ; ses documents, sous-nœuds, relations,
-            pièces jointes, tags et fichiers ancrés passent au nœud gardé, et
-            les liens qui le visent sont redirigés. Rien de ce que le nœud gardé
-            contient déjà n’est remplacé.
+            L’autre (« {drop?.title} ») disparaît ; ses documents, sous-nœuds,
+            relations, pièces jointes, tags et fichiers ancrés passent au nœud
+            gardé, et les liens qui le visent sont redirigés. Rien de ce que le
+            nœud gardé contient déjà n’est remplacé.
           </p>
           <p className="muted">
             L’espace est d’abord sauvegardé à côté de son fichier.
