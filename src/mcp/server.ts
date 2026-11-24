@@ -22,6 +22,8 @@ import {
   ANALYZE_DEFAULT_LIMIT,
   findPath,
   impact,
+  lessons,
+  lessonsOf,
   health,
   HEALTH_MCP_LIMIT,
   readDocument,
@@ -35,7 +37,11 @@ import {
   staleRow,
   type AnchorCheck,
 } from './tools';
-import { findStaleNodes, snapshotsAfterWrite } from '../main/code/code-check';
+import {
+  currentFingerprints,
+  findStaleNodes,
+  snapshotsAfterWrite,
+} from '../main/code/code-check';
 import {
   listAnchoredNodes,
   saveSnapshot,
@@ -51,6 +57,8 @@ import {
   operationSchema,
   type Operation,
 } from './apply-tool';
+import { LESSON_OUTCOMES } from '../shared/lessons';
+import { saveLessonFiles } from '../main/knowledge/lesson-service';
 import { IMPACT_DEFAULT_DEPTH, IMPACT_MAX_DEPTH } from '../shared/graph-impact';
 import { PATH_DEFAULT_DEPTH, PATH_MAX_DEPTH } from '../shared/graph-path';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
@@ -104,7 +112,10 @@ détail dans des documents, relations avec les types existants. Plusieurs
 écritures : nodal_apply (un appel, une transaction). Rien n'est supprimé ;
 tout est journalisé et annulable par l'utilisateur. Après avoir modifié du
 code : mettez ses nœuds à jour, ancrez les nouveaux fichiers (op anchor) et
-déclarez relus ceux que stale signale, si vous les avez lus (op review).`;
+déclarez relus ceux que stale signale, si vous les avez lus (op review).
+Piste sans issue, réponse corrigée par l'utilisateur, ou nœuds qui ont vraiment
+servi : notez-le (op lesson), une fois par question ; lessons dans une réponse :
+ce qu'il ne faut pas refaire ; memory : nœuds déjà éprouvés ou contestés.`;
 
 const READ_ONLY_INSTRUCTIONS = `
 
@@ -332,6 +343,10 @@ export function createNodalMcpServer(
           const ids = data.result.nodes.map((node) => node.id);
           return {
             ...data,
+            result: {
+              ...data.result,
+              ...lessonsOf(ctx, codeRootsOf(ctx), ids, input.query),
+            },
             check: anchorCheck(ctx, codeRootsOf(ctx), ids),
           };
         });
@@ -367,6 +382,10 @@ export function createNodalMcpServer(
           const data = getNode(ctx, input.id);
           return {
             ...data,
+            result: {
+              ...data.result,
+              ...lessonsOf(ctx, codeRootsOf(ctx), [input.id]),
+            },
             check: anchorCheck(ctx, codeRootsOf(ctx), [input.id]),
           };
         });
@@ -540,9 +559,15 @@ export function createNodalMcpServer(
     },
     async (args): Promise<CallToolResult> => {
       try {
-        const found = call(args, 'read', (ctx, input: typeof args) =>
-          forFiles(ctx, input, codeRootsOf(ctx)),
-        );
+        const found = call(args, 'read', (ctx, input: typeof args) => {
+          const roots = codeRootsOf(ctx);
+          const data = forFiles(ctx, input, roots);
+          const ids = data.check.nodes.map((node) => node.nodeId);
+          return {
+            ...data,
+            result: { ...data.result, ...lessonsOf(ctx, roots, ids) },
+          };
+        });
         const stale = await staleOf(found.check);
         return withDocuments({
           result: { ...found.result, ...staleField(stale) },
@@ -633,6 +658,27 @@ export function createNodalMcpServer(
     run(analyze),
   );
 
+  server.registerTool(
+    'nodal_lessons',
+    {
+      title: 'Leçons du travail passé',
+      description:
+        'Ce qu’ont donné des recherches passées : dead_end (impasse, à ne pas refaire), corrected (l’utilisateur ' +
+        'a corrigé : note dit ce qui est juste), useful (nœuds qui ont servi). stale : le code a changé depuis, ' +
+        'à revérifier. Les leçons liées aux nœuds trouvés sont déjà jointes à nodal_search, nodal_get_node et ' +
+        'nodal_for_files.',
+      inputSchema: z.object({
+        query: z.string().max(500).optional().describe('Mots-clés'),
+        outcome: z.enum(LESSON_OUTCOMES).optional(),
+        limit: z.number().int().min(1).max(100).default(20),
+      }),
+      annotations: READ_ONLY,
+    },
+    run((ctx, args: Parameters<typeof lessons>[1]) =>
+      lessons(ctx, args, codeRootsOf(ctx)),
+    ),
+  );
+
   if (options.readOnly) return server;
 
   /**
@@ -694,6 +740,31 @@ export function createNodalMcpServer(
     }
   };
 
+  /** Code documenté par les nœuds d'une leçon, tel qu'il est maintenant. */
+  const recordLessonCode = async (
+    roots: readonly string[],
+    anchored: readonly AnchoredNode[],
+    noted: readonly { id: string; nodeIds: string[] }[],
+  ) => {
+    const ids = new Set(noted.flatMap((lesson) => lesson.nodeIds));
+    const nodes = anchored.filter((node) => ids.has(node.nodeId));
+    if (nodes.length === 0) return;
+    try {
+      const files = await currentFingerprints(roots, nodes);
+      withWorkspace(
+        options.workspaceFile,
+        (ctx) => {
+          for (const lesson of noted)
+            for (const nodeId of lesson.nodeIds)
+              saveLessonFiles(ctx, lesson.id, nodeId, files.get(nodeId) ?? {});
+        },
+        'write',
+      );
+    } catch {
+      // Leçon sans suivi du code.
+    }
+  };
+
   /** Exécute une écriture (une transaction, journalisée) et encode son résultat. */
   const write =
     <A>(change: (ctx: WriteContext, args: A) => object) =>
@@ -701,6 +772,7 @@ export function createNodalMcpServer(
       try {
         const client = server.server.getClientVersion()?.name ?? null;
         const reviewed = new Map<string, string[]>();
+        const noted: { id: string; nodeIds: string[] }[] = [];
         let codeRoots: string[] = [];
         let before: AnchoredNode[] = [];
         let after: AnchoredNode[] = [];
@@ -710,12 +782,13 @@ export function createNodalMcpServer(
             codeRoots.length > 0 ? listAnchoredNodes(ctx) : [];
           before = withSnapshots(ctx, anchored());
           const result = change(
-            { ...ctx, client, codeRoots, reviewed },
+            { ...ctx, client, codeRoots, reviewed, lessons: noted },
             resolved,
           );
           after = anchored();
           return result;
         });
+        await recordLessonCode(codeRoots, after, noted);
         const stale = await recordCodeState(codeRoots, before, after, reviewed);
         return {
           content: [{ type: 'text', text: encodeToon({ ...data, ...stale }) }],
@@ -862,7 +935,8 @@ export function createNodalMcpServer(
         'createNode, updateNode, addDocument, updateDocument, link, tag — mêmes champs que les outils ' +
         'unitaires, plus op — et anchor (nodeId, add/remove : fichiers du code, chemins ou motifs glob ' +
         'comme src/mcp/**, à ancrer au nœud) et review (nodeId, files : fichiers ancrés relus, que la ' +
-        'documentation du nœud reflète désormais). stale dans la réponse : fichiers modifiés que rien ne dit relus. ' +
+        'documentation du nœud reflète désormais), lesson (question, outcome useful | dead_end | corrected, ' +
+        'nodeIds consultés, note : ce qu’a donné une recherche ; corrected exige note). stale dans la réponse : fichiers modifiés que rien ne dit relus. ' +
         'Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
         'la n-ième opération (ex. nodeId: "$1"). Renvoie l’identifiant de chaque élément touché. ' +
         'À préférer dès qu’il y a plusieurs choses à enregistrer.',

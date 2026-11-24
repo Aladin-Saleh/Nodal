@@ -52,6 +52,8 @@ describe('createNodalDatabase', () => {
         'document',
         'edge',
         'graph_view',
+        'lesson',
+        'lesson_node',
         'link_suggestion_ignored',
         'node',
         'node_anchor',

@@ -15,6 +15,7 @@ import { DocumentService } from './document-service';
 import { EdgeService } from './edge-service';
 import { NodeService } from './node-service';
 import { listAnchors, setAnchors, undoReview } from './anchor-service';
+import { deleteLesson } from './lesson-service';
 import { asRow, asRows } from './rows';
 import { listNodeTags } from './tag-service';
 
@@ -44,6 +45,7 @@ export interface ChangeStates {
     before: { reviewedAt: string | null; snapshot: CodeSnapshot | null };
     after: { reviewedAt: string };
   };
+  lesson: { before: null; after: { id: string } };
 }
 
 export type ChangeEntry = {
@@ -302,6 +304,9 @@ export class AssistantChangeService {
           );
           break;
         }
+        case 'lesson':
+          deleteLesson(ctx, row.entity_id);
+          break;
         case 'review': {
           const current = asRow<{ code_reviewed_at: string | null }>(
             ctx.db

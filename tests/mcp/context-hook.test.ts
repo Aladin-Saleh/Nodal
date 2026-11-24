@@ -16,6 +16,7 @@ import {
   setAnchors,
   writeCodeRoots,
 } from '../../src/main/knowledge/anchor-service';
+import { recordLesson } from '../../src/main/knowledge/lesson-service';
 import { toolFiles } from '../../src/mcp/file-hook';
 import { useTempDir } from '../helpers/temp-dir';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
@@ -192,6 +193,32 @@ describe('contexte automatique (hook)', () => {
     } finally {
       fs.rmSync(state, { force: true });
     }
+  });
+});
+
+describe('leçons dans le contexte', () => {
+  it('rappelle une impasse proche de la demande, une fois par session', () => {
+    const { context } = workspace();
+    recordLesson(context(), {
+      question: 'Contourner le verrou Squirrel par variable',
+      outcome: 'dead_end',
+      nodeIds: [],
+      note: 'La variable est ignorée.',
+      client: null,
+    });
+    const session = `lecons-${file}`;
+    const ask = () =>
+      contextFor('comment contourner le verrou squirrel', undefined, session);
+    try {
+      const hook = ask();
+      expect(hook?.additionalContext).toContain('La variable est ignorée.');
+      expect(hook?.additionalContext).toContain('pistes déjà essayées');
+      expect(ask()).toBeNull();
+    } finally {
+      fs.rmSync(contextSessionFile(session, file), { force: true });
+    }
+    // Un seul mot commun d'une longue demande : rien.
+    expect(contextFor('écris une variable globale en rust')).toBeNull();
   });
 });
 

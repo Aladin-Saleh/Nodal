@@ -444,6 +444,18 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   nœud à ce titre (le sujet quitte la liste une fois le nœud créé),
   **Ignorer** l'écarte. L'assistant voit aussi cette liste (outil
   `nodal_health`) quand vous lui demandez d'enrichir la base.
+- **Leçons de l’assistant** (menu **Assistant IA ▾**) : ce qu’ont donné ses
+  recherches. Il note une **impasse** (à ne pas refaire), une réponse
+  **corrigée** par vous, ou les nœuds qui ont été **utiles** (opération
+  `lesson`, annulable). Une impasse ou une correction lui est rappelée avec
+  les nœuds concernés et, si le contexte automatique est installé, quand
+  votre demande s’en approche (3 au plus, une fois par session). Un nœud
+  utile pour deux questions (ou deux jours) et jamais contredit est dit sûr ;
+  le poids d’une leçon diminue de moitié tous les 30 jours. Si le code ancré
+  à ses nœuds change (60 fichiers suivis au plus par nœud), elle est marquée
+  « à revérifier » et ne compte plus dans ce bilan. 1 000 leçons sont gardées
+  au plus ; elles ne sont ni exportées ni cherchées, et les secrets
+  reconnaissables y sont masqués.
 - **Consulter Nodal d'abord** : la fenêtre « Connecter un assistant IA »
   fournit un bloc de consignes à coller dans le fichier d'instructions de
   votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou

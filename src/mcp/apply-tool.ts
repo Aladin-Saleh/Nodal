@@ -12,10 +12,17 @@
 import * as z from 'zod';
 import { CONTENT_TYPES, NODE_TYPES } from '../shared/domain';
 import { ANCHORS_MAX_PER_NODE } from '../shared/code-anchors';
+import {
+  LESSON_NODES_MAX,
+  LESSON_NOTE_MAX_LENGTH,
+  LESSON_OUTCOMES,
+  LESSON_QUESTION_MAX_LENGTH,
+} from '../shared/lessons';
 import { NodalError } from '../shared/errors';
 import type { ShortIds } from './short-ids';
 import {
   addDocument,
+  addLesson,
   anchorFiles,
   createNode,
   link,
@@ -97,6 +104,13 @@ export const operationSchema = z.discriminatedUnion('op', [
     nodeId: target,
     files: anchorPaths.min(1),
   }),
+  z.object({
+    op: z.literal('lesson'),
+    question: z.string().min(1).max(LESSON_QUESTION_MAX_LENGTH),
+    outcome: z.enum(LESSON_OUTCOMES),
+    nodeIds: z.array(target).max(LESSON_NODES_MAX).optional(),
+    note: z.string().max(LESSON_NOTE_MAX_LENGTH).optional(),
+  }),
 ]);
 
 export type Operation = z.infer<typeof operationSchema>;
@@ -154,6 +168,8 @@ export function applyOperations(
         const value = resolved[field];
         if (typeof value === 'string') resolved[field] = resolve(value);
       }
+      if (operation.op === 'lesson')
+        resolved.nodeIds = operation.nodeIds?.map(resolve);
       const { id, documentId } = run(ctx, resolved as Operation);
       produced.push(id);
       results.push({
@@ -213,6 +229,10 @@ function run(
     case 'review': {
       const { op: _op, ...input } = operation;
       return { id: reviewFiles(ctx, input).nodeId };
+    }
+    case 'lesson': {
+      const { op: _op, ...input } = operation;
+      return { id: addLesson(ctx, input).id };
     }
   }
 }

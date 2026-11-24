@@ -37,6 +37,7 @@ import { MaintenanceService } from '../knowledge/maintenance-service';
 import { GraphService } from '../knowledge/graph-service';
 import { GraphViewService } from '../knowledge/graph-view-service';
 import { listBacklinks } from '../knowledge/link-service';
+import { deleteLesson, listLessons } from '../knowledge/lesson-service';
 import { listAnchoredNodes } from '../knowledge/anchor-service';
 import { findInbox } from '../knowledge/inbox-service';
 import {
@@ -526,6 +527,15 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     }),
     'assistant:undo': ({ id }) => {
       assistantChanges.undo(id);
+      return null;
+    },
+    'lesson:list': () =>
+      listLessons(
+        context(),
+        codeAnchors.getRoots().map((root) => root.path),
+      ),
+    'lesson:delete': ({ id }) => {
+      deleteLesson(context(), id);
       return null;
     },
     'workspace:export': async () => {

@@ -101,6 +101,16 @@ export async function fileFingerprint(file: string): Promise<string | null> {
   }
 }
 
+/** Comme fileFingerprint, sans attendre ni cache (quelques fichiers). */
+export function fileFingerprintSync(file: string): string | null {
+  try {
+    if (!fs.lstatSync(file).isFile()) return null;
+    return contentFingerprint(fs.readFileSync(file), path.basename(file));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Le fichier a-t-il exactement le contenu d'un objet git (aux fins de ligne
  * près) ? Calculé ici : aucun processus git par fichier.

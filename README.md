@@ -283,6 +283,8 @@ pièces jointes en BLOB).
   - impact d’un changement (menu du nœud, `nodal_impact` pour un nœud ou des
     fichiers), chemin le plus parlant à longueur égale, relations
     superflues, cycles et questions (santé de la base, `nodal_analyze`) ;
+  - mémoire de travail de l’assistant : impasses, corrections et nœuds utiles
+    (migration 013, opération `lesson`, `nodal_lessons`, menu Assistant IA) ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

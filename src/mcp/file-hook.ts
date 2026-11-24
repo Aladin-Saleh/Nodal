@@ -13,7 +13,7 @@ import {
   withSnapshots,
   type AnchoredNode,
 } from '../main/knowledge/anchor-service';
-import { contentFingerprint } from '../main/code/fingerprint';
+import { fileFingerprintSync } from '../main/code/fingerprint';
 import { asRows } from '../main/knowledge/rows';
 import { recordReads } from './read-proof';
 import { codeRootsFor, nodePaths } from './tools';
@@ -100,15 +100,6 @@ export interface FileNode {
   changed: string;
 }
 
-/** Empreinte lue sans attendre (le hook ne lit que quelques fichiers). */
-function fingerprintNow(file: string): string | null {
-  try {
-    return contentFingerprint(fs.readFileSync(file), path.basename(file));
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Nœuds ancrés à ces fichiers, les plus précis d'abord, avec les chemins
  * relatifs concernés. `keep` écarte ceux déjà donnés dans la session. Les
@@ -141,7 +132,7 @@ export function fileNodes(
   const anchored = new Set(all.flatMap((match) => match.paths));
   for (const name of anchored) {
     const target = targets.get(name)!;
-    target.content = fingerprintNow(target.file);
+    target.content = fileFingerprintSync(target.file);
   }
   recordReads(
     workspaceFile,

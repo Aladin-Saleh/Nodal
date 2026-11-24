@@ -30,6 +30,7 @@ export const WORKSPACE_MENU = [
 export const ASSISTANT_MENU = [
   'workspace.mcp',
   'workspace.activity',
+  'workspace.lessons',
   'workspace.gaps',
 ];
 
@@ -91,6 +92,8 @@ export interface WorkspaceCommands {
   exportLlm(): void;
   connectAssistant(): void;
   activity(): void;
+  /** Mémoire de travail de l'assistant. */
+  lessons(): void;
   /** Santé de la base (`gaps` : sujets à documenter). */
   health(focus: 'all' | 'gaps'): void;
   /** Fenêtre de capture rapide (comme le raccourci global). */
@@ -401,6 +404,14 @@ export function workspaceActions(
       keywords: 'assistant journal annuler',
       enabled: true,
       run: commands.activity,
+    },
+    {
+      id: 'workspace.lessons',
+      label: 'Leçons de l’assistant…',
+      group: 'Espace',
+      keywords: 'assistant memoire impasse correction utile',
+      enabled: true,
+      run: commands.lessons,
     },
     {
       id: 'workspace.health',

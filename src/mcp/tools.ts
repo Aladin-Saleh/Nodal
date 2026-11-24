@@ -19,6 +19,13 @@ import { assistantCreations } from '../main/knowledge/assistant-origin';
 import { asRows } from '../main/knowledge/rows';
 import { SearchService } from '../main/knowledge/search-service';
 import { TagService } from '../main/knowledge/tag-service';
+import { listLessons } from '../main/knowledge/lesson-service';
+import {
+  currentLessons,
+  nodeVerdict,
+  type Lesson,
+  type LessonOutcome,
+} from '../shared/lessons';
 import { readAnalysisGraph } from '../main/knowledge/analysis-service';
 import {
   bridges,
@@ -1012,6 +1019,106 @@ export function analyze(ctx: ReadContext, input: { limit?: number }) {
       .map((cycle) =>
         [...cycle, cycle[0]!].map((id) => title.get(id)).join(' → '),
       ),
+  };
+}
+
+// --- Mémoire de travail ---------------------------------------------------
+
+/** Leçons jointes au plus à une réponse. */
+export const LESSONS_LIMIT = 3;
+
+/** Ligne compacte d'une leçon ; `stale` seulement s'il y en a. */
+export function lessonRows(lessons: readonly Lesson[]) {
+  const anyStale = lessons.some((lesson) => lesson.stale);
+  return lessons.map((lesson) => ({
+    outcome: lesson.outcome,
+    question: lesson.question,
+    note: lesson.note,
+    nodes: lesson.nodes.map((node) => node.title).join(', '),
+    date: lesson.createdAt.slice(0, 10),
+    ...(anyStale ? { stale: lesson.stale } : {}),
+  }));
+}
+
+/** Nombre de mots de la requête présents dans la leçon. */
+export function lessonOverlap(
+  lesson: Pick<Lesson, 'key' | 'note'>,
+  patterns: readonly RegExp[],
+): number {
+  const text = `${lesson.key} ${normalize(lesson.note ?? '')}`;
+  return patterns.filter((pattern) => pattern.test(text)).length;
+}
+
+/**
+ * Leçons à rappeler avec des nœuds : leurs impasses et corrections, les plus
+ * proches de la requête d'abord, et le bilan des nœuds déjà éprouvés. Vide
+ * (aucun champ) s'il n'y a rien à en dire.
+ */
+export function lessonsOf(
+  ctx: ReadContext,
+  roots: readonly string[],
+  nodeIds: readonly string[],
+  query = '',
+) {
+  const wanted = new Set(nodeIds);
+  const lessons = listLessons(ctx, roots, (lesson) =>
+    lesson.nodes.some((node) => wanted.has(node.id)),
+  );
+  if (lessons.length === 0) return {};
+  const patterns = termPatterns(query);
+  const warnings = currentLessons(lessons)
+    .filter((lesson) => lesson.outcome !== 'useful')
+    .map((lesson) => ({ lesson, overlap: lessonOverlap(lesson, patterns) }))
+    .toSorted((a, b) => b.overlap - a.overlap)
+    .slice(0, LESSONS_LIMIT)
+    .map(({ lesson }) => lesson);
+  const now = new Date(ctx.now());
+  const memory = nodeIds.flatMap((id) => {
+    const verdict = nodeVerdict(
+      lessons.filter((lesson) => lesson.nodes.some((node) => node.id === id)),
+      now,
+    );
+    // Utile une seule fois : pas encore une indication.
+    return verdict &&
+      (verdict.status === 'trusted' || verdict.status === 'contested')
+      ? [
+          {
+            id,
+            status: verdict.status,
+            useful: verdict.useful,
+            negative: verdict.negative,
+            // Positif : les avis récents penchent vers « utile ».
+            score: Math.round(verdict.score * 100) / 100,
+          },
+        ]
+      : [];
+  });
+  return {
+    ...(memory.length > 0 ? { memory } : {}),
+    ...(warnings.length > 0 ? { lessons: lessonRows(warnings) } : {}),
+  };
+}
+
+/** Leçons de l'espace, filtrées par mots et par issue. */
+export function lessons(
+  ctx: ReadContext,
+  input: { query?: string; outcome?: LessonOutcome; limit?: number },
+  roots: readonly string[],
+) {
+  const patterns = termPatterns(input.query ?? '');
+  const found = currentLessons(
+    listLessons(
+      ctx,
+      roots,
+      (lesson) =>
+        (!input.outcome || lesson.outcome === input.outcome) &&
+        (patterns.length === 0 || lessonOverlap(lesson, patterns) > 0),
+    ),
+  ).toSorted((a, b) => lessonOverlap(b, patterns) - lessonOverlap(a, patterns));
+  const limit = input.limit ?? 20;
+  return {
+    count: found.length,
+    lessons: lessonRows(found.slice(0, limit)),
   };
 }
 

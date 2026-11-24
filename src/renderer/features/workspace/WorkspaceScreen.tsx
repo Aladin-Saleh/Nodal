@@ -520,6 +520,7 @@ function WorkspaceView({
     exportLlm: () => openOverlay('llmExport', true),
     connectAssistant: () => openOverlay('mcp', true),
     activity: () => openOverlay('activity', true),
+    lessons: () => openOverlay('lessons', true),
     health: (focus) => openOverlay('health', focus),
     quickCapture: () => void client.call('capture:open').catch(reportError),
     openInbox: () =>

@@ -12,6 +12,7 @@ import { migration009 } from './migrations/009-search-gaps';
 import { migration010 } from './migrations/010-code-anchors';
 import { migration011 } from './migrations/011-more-types';
 import { migration012 } from './migrations/012-code-state';
+import { migration013 } from './migrations/013-lessons';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -41,6 +42,7 @@ export const MIGRATIONS: readonly Migration[] = [
   migration010,
   migration011,
   migration012,
+  migration013,
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;

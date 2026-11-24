@@ -398,6 +398,30 @@ export async function findStaleNodes(
   return (await checkCode(roots, nodes, options)).stale;
 }
 
+/** Empreintes actuelles des fichiers ancrés à des nœuds, par clé d'état. */
+export async function currentFingerprints(
+  roots: readonly string[],
+  nodes: readonly Pick<AnchoredNode, 'nodeId' | 'patterns'>[],
+  options: CodeCheckOptions = {},
+): Promise<Map<string, Record<string, string>>> {
+  const usable = await existingRoots(roots);
+  const checked = await Promise.all(
+    usable.map((root) => CheckedRoot.open(root, options.run ?? runGit)),
+  );
+  const result = new Map<string, Record<string, string>>();
+  for (const node of nodes) {
+    const files: Record<string, string> = {};
+    for (const root of checked) {
+      for (const file of (await root.files(node.patterns)).keys()) {
+        const print = await fileFingerprint(root.absolute(file));
+        if (print) files[root.key(file)] = print;
+      }
+    }
+    result.set(node.nodeId, files);
+  }
+  return result;
+}
+
 /** Fichier ancré au moment d'une écriture. */
 export interface WrittenFile {
   relative: string;

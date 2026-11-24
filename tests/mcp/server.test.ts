@@ -285,6 +285,86 @@ describe('nodal_path', () => {
   });
 });
 
+describe('mémoire de travail', () => {
+  it('note des leçons, les rappelle avec les nœuds, annulables', async () => {
+    const { context } = workspace();
+    const client = await connect(file, false);
+    const note = (extra: object) =>
+      client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'lesson',
+            question: 'Le déploiement passe par Jenkins ?',
+            nodeIds: [short(ids.api)],
+            ...extra,
+          },
+        ],
+      });
+    expect((await note({ outcome: 'corrected' })).isError).toBe(true);
+    toon(await note({ outcome: 'corrected', note: 'Non, par la CI.' }));
+    const found = toon(await client.call('nodal_search', { query: 'API' }));
+    expect(found.lessons).toEqual([
+      {
+        outcome: 'corrected',
+        question: 'Le déploiement passe par Jenkins ?',
+        note: 'Non, par la CI.',
+        nodes: 'API',
+        date: expect.stringMatching(/^20/),
+      },
+    ]);
+    expect(found.memory).toBeUndefined();
+    // Un nœud sans leçon : aucun champ.
+    expect(
+      toon(await client.call('nodal_get_node', { id: ids.other })).lessons,
+    ).toBeUndefined();
+
+    for (const question of ['Où est Redis ?', 'Qui lit le cache ?'])
+      toon(await note({ question, outcome: 'useful', nodeIds: [ids.redis] }));
+    const node = toon(await client.call('nodal_get_node', { id: ids.redis }));
+    expect(node.memory).toMatchObject([
+      { id: short(ids.redis), status: 'trusted', useful: 2 },
+    ]);
+    expect(node.lessons).toBeUndefined();
+
+    const all = toon(await client.call('nodal_lessons', { query: 'jenkins' }));
+    expect(all).toMatchObject({ count: 1 });
+    const journal = new AssistantChangeService(context);
+    const entry = journal
+      .list()
+      .find((change) => change.summary.includes('Jenkins'))!;
+    journal.undo(entry.id);
+    expect(
+      toon(await client.call('nodal_lessons', { query: 'jenkins' })).count,
+    ).toBe(0);
+    await client.close();
+  });
+
+  it('une leçon devient périmée quand le code ancré change', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    setAnchors(context(), ids.api, ['src/api/**']);
+    const client = await connect(file, false);
+    toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'lesson',
+            question: 'Contourner le cache',
+            outcome: 'dead_end',
+            nodeIds: [ids.api],
+          },
+        ],
+      }),
+    );
+    const lesson = async () =>
+      toon(await client.call('nodal_lessons', {})).lessons[0];
+    expect((await lesson()).stale).toBeUndefined();
+    fs.writeFileSync(path.join(root, 'src', 'api', 'server.ts'), 'autre');
+    expect((await lesson()).stale).toBe(true);
+    await client.close();
+  });
+});
+
 describe('nodal_impact et nodal_analyze', () => {
   it('liste ce qui dépend d’un nœud ou d’un fichier', async () => {
     const { context } = workspace();
@@ -338,6 +418,7 @@ describe('serveur MCP', () => {
       'nodal_get_node',
       'nodal_health',
       'nodal_impact',
+      'nodal_lessons',
       'nodal_neighborhood',
       'nodal_overview',
       'nodal_path',

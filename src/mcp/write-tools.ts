@@ -30,6 +30,8 @@ import { EdgeService } from '../main/knowledge/edge-service';
 import { NodeService } from '../main/knowledge/node-service';
 import { RelationTypeService } from '../main/knowledge/relation-type-service';
 import { asRow, asRows } from '../main/knowledge/rows';
+import { recordLesson } from '../main/knowledge/lesson-service';
+import { LESSON_OUTCOME_LABELS, type LessonOutcome } from '../shared/lessons';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
 import { requireTemplate } from '../main/knowledge/template-service';
@@ -64,6 +66,8 @@ export interface WriteContext extends ReadContext {
   codeRoots?: string[];
   /** Fichiers déclarés relus pendant l'appel, par nœud. */
   reviewed?: Map<string, string[]>;
+  /** Leçons notées pendant l'appel, avec leurs nœuds. */
+  lessons?: { id: string; nodeIds: string[] }[];
 }
 
 /** Valide une valeur avec les règles de l'application (mêmes messages). */
@@ -489,4 +493,32 @@ export function reviewFiles(
     ...files,
   ]);
   return { nodeId: input.nodeId };
+}
+
+/** Note ce qu'a donné une recherche (mémoire de travail). */
+export function addLesson(
+  ctx: WriteContext,
+  input: {
+    question: string;
+    outcome: LessonOutcome;
+    nodeIds?: string[];
+    note?: string;
+  },
+) {
+  const nodeIds = input.nodeIds ?? [];
+  const id = recordLesson(ctx, { ...input, nodeIds, client: ctx.client });
+  const { question } = ctx.db
+    .prepare('SELECT question FROM lesson WHERE id = ?')
+    .get(id) as { question: string };
+  recordAssistantChange(ctx, {
+    action: 'lesson',
+    nodeId: nodeIds[0] ?? id,
+    entityId: id,
+    summary: `Leçon (${LESSON_OUTCOME_LABELS[input.outcome]}) : ${question}`,
+    client: ctx.client,
+    before: null,
+    after: { id },
+  });
+  ctx.lessons?.push({ id, nodeIds });
+  return { id };
 }

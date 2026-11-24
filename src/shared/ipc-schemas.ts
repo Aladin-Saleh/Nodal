@@ -453,6 +453,8 @@ export const ipcArgsSchemas = {
   'markdownImport:cancel': noArgs,
   'assistant:listChanges': noArgs,
   'assistant:undo': one(idInput),
+  'lesson:list': noArgs,
+  'lesson:delete': one(idInput),
   'assistant:validateNodes': one(
     z.strictObject({ ids: z.array(idSchema).min(1).max(10_000) }),
   ),

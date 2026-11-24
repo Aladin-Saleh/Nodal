@@ -6,6 +6,7 @@
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
 import type { ContextHookClient } from './context-hook';
+import type { Lesson } from './lessons';
 import type { TerminalEvent, TerminalSession, TerminalShell } from './terminal';
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
@@ -417,6 +418,9 @@ export interface IpcContract {
   /** Journal des modifications d'un assistant IA (MCP), plus récentes d'abord. */
   'assistant:listChanges': { args: []; result: AssistantChange[] };
   'assistant:undo': { args: [IdInput]; result: null };
+  /** Mémoire de travail : leçons notées par un assistant. */
+  'lesson:list': { args: []; result: Lesson[] };
+  'lesson:delete': { args: [IdInput]; result: null };
   /** Valide des nœuds ajoutés par l'IA ; renvoie combien l'étaient pas encore. */
   'assistant:validateNodes': {
     args: [{ ids: string[] }];
@@ -526,6 +530,8 @@ export const IPC_CHANNELS = [
   'workspace:checkIntegrity',
   'assistant:listChanges',
   'assistant:undo',
+  'lesson:list',
+  'lesson:delete',
   'assistant:validateNodes',
 ] as const satisfies readonly IpcChannel[];
 

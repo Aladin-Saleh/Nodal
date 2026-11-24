@@ -23,6 +23,7 @@ import {
 import type { TreeIndex } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
+import { LessonsDialog } from './LessonsDialog';
 import { AssistantActivityDialog } from './AssistantActivityDialog';
 import type { AppAction } from '../commands/actions';
 import { HelpDialog } from './HelpDialog';
@@ -58,6 +59,7 @@ export interface Overlays {
   llmExport: boolean;
   mcp: boolean;
   activity: boolean;
+  lessons: boolean;
   editingDocumentId: string | null;
   addingDocumentFor: string | null;
 }
@@ -68,6 +70,7 @@ export const NO_OVERLAYS: Overlays = {
   llmExport: false,
   mcp: false,
   activity: false,
+  lessons: false,
   editingDocumentId: null,
   addingDocumentFor: null,
 };
@@ -152,6 +155,16 @@ export function WorkspaceDialogs({
             onRelationsChanged();
           }}
           onClose={() => onCloseOverlay('activity')}
+        />
+      )}
+      {overlays.lessons && (
+        <LessonsDialog
+          key={`lessons:${data.externalRevision}`}
+          onNavigate={(id) => {
+            onCloseOverlay('lessons');
+            onSelect(id);
+          }}
+          onClose={() => onCloseOverlay('lessons')}
         />
       )}
       {overlays.mcp && (

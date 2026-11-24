@@ -39,7 +39,18 @@ import {
 import { fileNodes, toolFiles } from './file-hook';
 import { formatFoundDocument } from './server';
 import { loadShortIds, shortenIds } from './short-ids';
-import { normalize, search, termPatterns, type FoundDocument } from './tools';
+import { listLessons } from '../main/knowledge/lesson-service';
+import { currentLessons, type Lesson } from '../shared/lessons';
+import {
+  codeRootsFor,
+  lessonOverlap,
+  lessonRows,
+  LESSONS_LIMIT,
+  normalize,
+  search,
+  termPatterns,
+  type FoundDocument,
+} from './tools';
 import { withWorkspace, type ReadContext } from './workspace-reader';
 
 /** Contenu de documents ajouté au plus (≈ 1 000 tokens). */
@@ -193,6 +204,38 @@ function contextBlock(
 }
 
 /**
+ * Impasses et corrections proches de la demande, pas encore rappelées dans la
+ * session : elles en partagent au moins deux mots (un, si elle n'en a que
+ * deux), qu'un nœud soit trouvé ou non.
+ */
+function promptLessons(
+  ctx: ReadContext,
+  roots: readonly string[],
+  keywords: readonly string[],
+  session: ContextSession | null,
+): Lesson[] {
+  const patterns = termPatterns(keywords.join(' '));
+  const required = keywords.length >= 3 ? 2 : 1;
+  const found = listLessons(
+    ctx,
+    roots,
+    (lesson) => lessonOverlap(lesson, patterns) >= required,
+  );
+  return currentLessons(found)
+    .filter((lesson) => lesson.outcome !== 'useful')
+    .toSorted((a, b) => lessonOverlap(b, patterns) - lessonOverlap(a, patterns))
+    .slice(0, LESSONS_LIMIT)
+    .filter((lesson) => {
+      if (!session) return true;
+      const key = `lesson:${lesson.id}`;
+      const version = `${lesson.createdAt}:${lesson.stale}`;
+      if (alreadySent(session, key, version, true)) return false;
+      session.sent[key] = { version, full: true, prompt: session.prompt };
+      return true;
+    });
+}
+
+/**
  * Texte à ajouter au contexte pour cette demande, ou `null` si rien de
  * pertinent (demande sans mot-clé, commande « / », aucun nœud assez proche).
  */
@@ -201,6 +244,7 @@ export function promptContext(
   prompt: string,
   maxChars = CONTEXT_MAX_CHARS,
   session: ContextSession | null = null,
+  roots: readonly string[] = [],
 ): string | null {
   // Le chemin en tête (« /home/… ») n'est pas une commande.
   if (promptText(prompt).startsWith('/')) return null;
@@ -220,7 +264,8 @@ export function promptContext(
       return chosen.filter((hit) => keep(hit.nodeId, hit.matches.length > 0));
     },
   );
-  if (found.result.nodes.length === 0) return null;
+  const lessons = promptLessons(ctx, roots, keywords, session);
+  if (found.result.nodes.length === 0 && lessons.length === 0) return null;
 
   // La requête est rappelée en clair dans l'en-tête ; le budget manquant ne
   // sert qu'à un appel d'outil.
@@ -228,8 +273,17 @@ export function promptContext(
   return contextBlock(
     ctx,
     `Base Nodal « ${ctx.workspace.name} » : extraits trouvés automatiquement pour cette demande (mots : ${keywords.join(', ')}). ` +
-      'Partez-en ; approfondissez avec nodal_get_node / nodal_read_document, ou nodal_search si ce n’est pas le bon sujet.',
-    { result, documents: found.documents },
+      'Partez-en ; approfondissez avec nodal_get_node / nodal_read_document, ou nodal_search si ce n’est pas le bon sujet.' +
+      (lessons.length > 0
+        ? ' lessons : pistes déjà essayées sans succès, ou réponses corrigées par l’utilisateur.'
+        : ''),
+    {
+      result:
+        lessons.length > 0
+          ? { ...result, lessons: lessonRows(lessons) }
+          : result,
+      documents: found.documents,
+    },
   );
 }
 
@@ -341,7 +395,13 @@ export function contextHookOutput(
             session,
             EDIT_TOOLS.test(textOr(input.tool_name, '')),
           )
-        : promptContext(ctx, prompt as string, maxChars, session),
+        : promptContext(
+            ctx,
+            prompt as string,
+            maxChars,
+            session,
+            codeRootsFor(ctx, workspaceFile, projectRootOf(cwd)),
+          ),
     );
     if (file && session && (context || !isTool))
       writeContextSession(file, session);
