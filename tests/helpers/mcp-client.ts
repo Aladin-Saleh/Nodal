@@ -14,11 +14,13 @@ export async function connect(
   workspaceFile: string,
   readOnly = true,
   projectRoot: string | null = null,
+  allTools = true,
 ) {
   const server = createNodalMcpServer({
     workspaceFile,
     version: 'test',
     readOnly,
+    allTools,
     projectRoot,
   });
   const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
@@ -56,6 +58,9 @@ export async function connect(
   return {
     init,
     listTools: () => request('tools/list', {}),
+    listPrompts: () => request('prompts/list', {}),
+    getPrompt: (name: string, args: Record<string, unknown>) =>
+      request('prompts/get', { name, arguments: args }),
     call: async (name: string, args: Record<string, unknown> = {}) =>
       (await request('tools/call', {
         name,

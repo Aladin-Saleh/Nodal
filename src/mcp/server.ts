@@ -19,7 +19,6 @@ import {
   neighborhood,
   overview,
   analyze,
-  ANALYZE_DEFAULT_LIMIT,
   findPath,
   impact,
   lessons,
@@ -49,6 +48,7 @@ import {
   type AnchoredNode,
 } from '../main/knowledge/anchor-service';
 import { isGlobPattern } from '../shared/code-anchors';
+import { registerPrompts } from './prompts';
 import { provenReads } from './read-proof';
 import type { StaleNode } from '../shared/code-anchors';
 import {
@@ -149,6 +149,11 @@ export interface NodalMcpServerOptions {
   version: string;
   /** N'expose que les outils de lecture. */
   readOnly?: boolean;
+  /**
+   * Expose aussi les outils d'écriture unitaires (créer un nœud, relier…),
+   * que nodal_apply réunit : 6 définitions de moins à charger par défaut.
+   */
+  allTools?: boolean;
   /**
    * Dossier du projet (dépôt git) d'où le client a lancé le serveur :
    * dossier de code par défaut quand l'espace n'en déclare aucun.
@@ -501,7 +506,8 @@ export function createNodalMcpServer(
       description:
         'Ce qui manque ou cloche dans la base : compteurs, puis une table issues (nœuds sans résumé, ' +
         'documents vides, nœuds isolés, liens [[…]] cassés, doublons probables, ajouts de l’IA à relire) ' +
-        'et gaps, les recherches restées sans résultat (sujets à documenter). Pour entretenir ou enrichir la base.',
+        'et gaps, les recherches restées sans résultat (sujets à documenter). Pour entretenir ou enrichir la base. ' +
+        'graph: true : analyse du graphe à la place (questions, connexions éloignées, nœuds charnières).',
       inputSchema: z.object({
         limit: z
           .number()
@@ -510,11 +516,16 @@ export function createNodalMcpServer(
           .max(100)
           .default(HEALTH_MCP_LIMIT)
           .describe('Lignes au plus par vérification'),
+        graph: z.boolean().default(false),
       }),
       annotations: READ_ONLY,
     },
     async (args): Promise<CallToolResult> => {
       try {
+        if (args.graph) {
+          const graph = call(args, 'read', analyze);
+          return { content: [{ type: 'text', text: encodeToon(graph) }] };
+        }
         // Nœuds ancrés d'abord (identifiants complets), vérifiés hors connexion.
         const check = withWorkspace(options.workspaceFile, (ctx) =>
           anchorCheck(ctx, codeRootsOf(ctx)),
@@ -537,7 +548,7 @@ export function createNodalMcpServer(
       description:
         'Nœuds ancrés à des fichiers du code (chemins absolus, ou relatifs au dossier de code), ' +
         'au format de nodal_search : chemin, résumé, fichiers concernés, puis leurs documents courts ' +
-        '(dans la limite de maxChars ; les autres dans otherDocuments). notAnchored : fichiers sans nœud ; ' +
+        '(dans la limite de maxChars ; les autres dans otherDocuments). affected : nœuds qui en dépendent ; notAnchored : fichiers sans nœud ; ' +
         'stale : nœuds dont des fichiers ont changé depuis leur dernière mise à jour (aussi signalés par ' +
         'nodal_search et nodal_get_node). À appeler avant de modifier ces fichiers.',
       inputSchema: z.object({
@@ -640,27 +651,6 @@ export function createNodalMcpServer(
   );
 
   server.registerTool(
-    'nodal_analyze',
-    {
-      title: 'Analyse du graphe',
-      description:
-        'Ce que la forme du graphe suggère de regarder : questions, connexions entre branches éloignées, ' +
-        'nœuds charnières (share : part des plus courts chemins), relations superflues, cycles de dépendance.',
-      inputSchema: z.object({
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(50)
-          .default(ANALYZE_DEFAULT_LIMIT)
-          .describe('Lignes au plus par rubrique'),
-      }),
-      annotations: READ_ONLY,
-    },
-    run(analyze),
-  );
-
-  server.registerTool(
     'nodal_lessons',
     {
       title: 'Leçons du travail passé',
@@ -681,7 +671,10 @@ export function createNodalMcpServer(
     ),
   );
 
-  if (options.readOnly) return server;
+  if (options.readOnly) {
+    registerPrompts(server, true);
+    return server;
+  }
 
   /**
    * Après une écriture, hors de sa transaction : relève l'état du code des
@@ -799,6 +792,38 @@ export function createNodalMcpServer(
         return failure(error);
       }
     };
+
+  server.registerTool(
+    'nodal_apply',
+    {
+      title: 'Écriture groupée',
+      description:
+        'Écrit dans la base : liste d’opérations, dans l’ordre, en une transaction (tout ou rien). ' +
+        'createNode (refusé si un nœud de même titre existe au même endroit ; types : concept, component, data, ' +
+        'procedure, resource, function, rule, decision, requirement, issue, task, milestone, risk, actor, generic ; ' +
+        'template : modèle de document, ex. « Décision (ADR) »), updateNode (parentId null : racine), addDocument, ' +
+        'updateDocument (append par défaut), link (type de relation existant ; description : pourquoi ; confidence : ' +
+        'certain = écrit dans la source, probable = déduit, uncertain = à vérifier ; evidence : source et quote, ' +
+        'citation vérifiée dans le fichier ; sans preuve, certain devient probable ; relation déjà là : la preuve s’y ' +
+        'ajoute), tag, anchor (fichiers du code, chemins ou motifs comme src/mcp/**), review (fichiers ancrés relus, ' +
+        'que la documentation reflète), lesson (ce qu’a donné une recherche ; corrected exige note). Un identifiant peut ' +
+        'être $n, l’élément de la n-ième opération. stale dans la réponse : fichiers modifiés que rien ne dit relus.',
+      inputSchema: z.object({
+        operations: z
+          .array(operationSchema)
+          .min(1)
+          .max(APPLY_MAX_OPERATIONS)
+          .describe('Opérations, exécutées dans l’ordre'),
+      }),
+      annotations: OVERWRITING,
+    },
+    write((ctx, args: { operations: Operation[] }) =>
+      applyOperations(ctx, args.operations, loadShortIds(ctx)),
+    ),
+  );
+
+  registerPrompts(server, false);
+  if (!options.allTools) return server;
 
   server.registerTool(
     'nodal_create_node',
@@ -931,34 +956,6 @@ export function createNodalMcpServer(
       annotations: OVERWRITING,
     },
     write(tagNode),
-  );
-
-  server.registerTool(
-    'nodal_apply',
-    {
-      title: 'Écriture groupée',
-      description:
-        'Applique dans l’ordre une liste d’opérations, en une seule transaction (tout ou rien) : ' +
-        'createNode, updateNode, addDocument, updateDocument, link, tag — mêmes champs que les outils ' +
-        'unitaires, plus op — et anchor (nodeId, add/remove : fichiers du code, chemins ou motifs glob ' +
-        'comme src/mcp/**, à ancrer au nœud) et review (nodeId, files : fichiers ancrés relus, que la ' +
-        'documentation du nœud reflète désormais), lesson (question, outcome useful | dead_end | corrected, ' +
-        'nodeIds consultés, note : ce qu’a donné une recherche ; corrected exige note). stale dans la réponse : fichiers modifiés que rien ne dit relus. ' +
-        'Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
-        'la n-ième opération (ex. nodeId: "$1"). Renvoie l’identifiant de chaque élément touché. ' +
-        'À préférer dès qu’il y a plusieurs choses à enregistrer.',
-      inputSchema: z.object({
-        operations: z
-          .array(operationSchema)
-          .min(1)
-          .max(APPLY_MAX_OPERATIONS)
-          .describe('Opérations, exécutées dans l’ordre'),
-      }),
-      annotations: OVERWRITING,
-    },
-    write((ctx, args: { operations: Operation[] }) =>
-      applyOperations(ctx, args.operations, loadShortIds(ctx)),
-    ),
   );
 
   return server;

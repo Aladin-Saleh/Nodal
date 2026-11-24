@@ -166,7 +166,7 @@ export function createNode(
     throw new NodalError(
       'CONFLICT',
       `Un nœud ${quoted(title)} existe déjà à cet endroit (id ${twin.id}). ` +
-        'Complétez-le avec nodal_update_node / nodal_add_document, ou passez allowDuplicate: true.',
+        'Complétez-le (updateNode, addDocument), ou passez allowDuplicate: true.',
     );
   }
   const nodes = new NodeService(() => ctx);

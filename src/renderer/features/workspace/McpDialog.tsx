@@ -115,6 +115,37 @@ function ContextHookSection({
   );
 }
 
+/** Skill : mode d'emploi de Nodal, lu par l'assistant seulement quand il sert. */
+function SkillSection() {
+  const client = useClient();
+  const run = useRunner();
+  const [file, setFile] = useState<string | null>(null);
+  const install = async () => {
+    const result = await run(() => client.call('assistant:installSkill'));
+    if (result) setFile(result.file);
+  };
+  return (
+    <>
+      <h3>Skill</h3>
+      <p className="muted">
+        Mode d’emploi de Nodal (.claude/skills/nodal) : quand le consulter, quoi
+        vérifier avant une modification, quoi enregistrer après. Commande /nodal
+        ; l’assistant le charge aussi de lui-même quand il en a besoin.
+      </p>
+      <div className="mcp-hook-actions">
+        <button type="button" onClick={() => void install()}>
+          Installer le skill dans un projet…
+        </button>
+        {file && (
+          <span className="muted" role="status">
+            Écrit dans {file}.
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
 function CopyBlock({ label, text }: { label: string; text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -239,6 +270,7 @@ export function McpDialog({
               workspaceFile={workspaceFile}
             />
           )}
+          {assistant === 'claude-code' && <SkillSection />}
           {setup.instructionsFile && (
             <>
               <h3>Consulter Nodal d’abord</h3>

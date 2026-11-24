@@ -282,13 +282,16 @@ pièces jointes en BLOB).
     que pour les fichiers qu'elle a lus (hook, ou opération `review`) ;
   - impact d’un changement (menu du nœud, `nodal_impact` pour un nœud ou des
     fichiers), chemin le plus parlant à longueur égale, relations
-    superflues, cycles et questions (santé de la base, `nodal_analyze`) ;
+    superflues, cycles et questions (santé de la base, `nodal_health`) ;
   - mémoire de travail de l’assistant : impasses, corrections et nœuds utiles
     (migration 013, opération `lesson`, `nodal_lessons`, menu Assistant IA) ;
   - qualité (migration 014) : faux doublons écartés, fusion de nœuds avec
     sauvegarde, confiance et preuves vérifiées des relations ;
   - vues : schéma Mermaid d’une branche, export vers Obsidian, comparaison
     avec une sauvegarde, relations incertaines en tirets ;
+  - MCP : écriture par `nodal_apply` seul (`--all-tools` pour les outils
+    unitaires), analyse dans `nodal_health`, nœuds touchés dans
+    `nodal_for_files`, commandes (prompts) et skill Claude Code ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

@@ -17,7 +17,9 @@ import type {
   CaptureTarget,
 } from '../../shared/quick-capture';
 import type { FileDialogs } from '../file-dialogs';
+import skill from '../../../assets/skills/nodal/SKILL.md?raw';
 import { installContextHook } from '../context-hook-install';
+import { installSkill } from '../skill-install';
 import type { TerminalService } from '../terminal/terminal-service';
 import { contextHookCommand } from '../../shared/context-hook';
 import { CodeAnchorService } from '../code/code-anchor-service';
@@ -275,6 +277,11 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     'terminal:close': ({ id }) => {
       deps.terminals.close(id);
       return null;
+    },
+    'assistant:installSkill': async () => {
+      const [root] = codeAnchors.getRoots().filter((item) => item.exists);
+      const directory = await dialogs.pickProjectFolder(root?.path ?? null);
+      return directory ? { file: installSkill(directory, skill) } : null;
     },
     'assistant:installContextHook': async ({ client }) => {
       const { filePath } = requireCurrent();

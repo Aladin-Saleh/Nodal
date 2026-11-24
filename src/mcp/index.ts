@@ -20,7 +20,7 @@ import { createNodalMcpServer } from './server';
 declare const NODAL_VERSION: string;
 
 const USAGE =
-  'Usage : node nodal-mcp.cjs <fichier.nodal> [--read-only | --context]';
+  'Usage : node nodal-mcp.cjs <fichier.nodal> [--read-only | --all-tools | --context]';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -54,6 +54,7 @@ async function main(): Promise<void> {
     workspaceFile: path.resolve(file),
     version: NODAL_VERSION,
     readOnly,
+    allTools: args.includes('--all-tools'),
     projectRoot,
   });
   await server.connect(new StdioServerTransport());

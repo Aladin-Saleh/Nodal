@@ -241,7 +241,7 @@ Quatre modèles sont fournis :
   le modèle est proposé, titre du document créé et contenu ; ajout et
   suppression ; « Rétablir les modèles par défaut ». Les modèles sont propres
   à l’espace et suivent l’export portable.
-- **Assistant IA (MCP)** : `nodal_create_node` et `nodal_apply` acceptent
+- **Assistant IA (MCP)** : `nodal_apply` accepte
   `template` (le nom d’un modèle) pour créer un nœud avec son document.
 
 ### Liens entre nœuds `[[...]]`
@@ -501,6 +501,13 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,
   copiez le bloc proposé dans `~/.claude/settings.json` (ou
   `~/.gemini/settings.json`). Le hook ne fait que lire l'espace.
+- **Skill** (Claude Code) : même fenêtre, **Installer le skill dans un
+  projet…** écrit `.claude/skills/nodal/SKILL.md`, le mode d’emploi de Nodal,
+  lu par l’assistant seulement quand il sert (ou par `/nodal`). Un fichier que
+  Nodal n’a pas écrit n’est pas remplacé.
+- **Commandes** : le serveur en propose cinq (« / » puis `nodal` dans Claude
+  Code) : `explique`, `avant-modif`, `documenter`, `a-revoir` (fiches
+  dépassées) et `lecon`.
 - **Fichiers du code** : avant de modifier des fichiers, l'assistant demande
   à Nodal les nœuds qui les documentent (outil `nodal_for_files`) ; après,
   il met ces nœuds à jour et y ancre les nouveaux fichiers (opération

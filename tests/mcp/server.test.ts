@@ -435,7 +435,7 @@ describe('mémoire de travail', () => {
   });
 });
 
-describe('nodal_impact et nodal_analyze', () => {
+describe('nodal_impact et analyse du graphe', () => {
   it('liste ce qui dépend d’un nœud ou d’un fichier', async () => {
     const { context } = workspace();
     const client = await connect(file);
@@ -463,7 +463,7 @@ describe('nodal_impact et nodal_analyze', () => {
 
   it('analyse le graphe', async () => {
     const client = await connect(file);
-    const data = toon(await client.call('nodal_analyze', {}));
+    const data = toon(await client.call('nodal_health', { graph: true }));
     expect(Object.keys(data)).toEqual([
       'questions',
       'connections',
@@ -483,7 +483,6 @@ describe('serveur MCP', () => {
       tools: { name: string; annotations?: { readOnlyHint?: boolean } }[];
     };
     expect(tools.map((tool) => tool.name).toSorted()).toEqual([
-      'nodal_analyze',
       'nodal_for_files',
       'nodal_get_node',
       'nodal_health',
@@ -498,6 +497,44 @@ describe('serveur MCP', () => {
     ]);
     expect(tools.every((tool) => tool.annotations?.readOnlyHint)).toBe(true);
     await client.close();
+  });
+
+  it('écrit par nodal_apply seulement, sauf --all-tools', async () => {
+    const names = async (allTools: boolean) => {
+      const client = await connect(file, false, null, allTools);
+      const { tools } = (await client.listTools()) as {
+        tools: { name: string }[];
+      };
+      await client.close();
+      return tools.map((tool) => tool.name);
+    };
+    const few = await names(false);
+    expect(few).toContain('nodal_apply');
+    expect(few).not.toContain('nodal_create_node');
+    expect(await names(true)).toHaveLength(few.length + 6);
+  });
+
+  it('propose des commandes ; en lecture seule, celles qui lisent', async () => {
+    const list = async (readOnly: boolean) => {
+      const client = await connect(file, readOnly);
+      const { prompts } = (await client.listPrompts()) as {
+        prompts: { name: string }[];
+      };
+      const text = JSON.stringify(
+        await client.getPrompt('avant-modif', { fichiers: 'src/a.ts' }),
+      );
+      expect(text).toContain('Je vais modifier : src/a.ts');
+      await client.close();
+      return prompts.map((prompt) => prompt.name);
+    };
+    expect(await list(true)).toEqual(['explique', 'avant-modif']);
+    expect(await list(false)).toEqual([
+      'explique',
+      'avant-modif',
+      'documenter',
+      'a-revoir',
+      'lecon',
+    ]);
   });
 
   it('donne une vue d’ensemble avec des listes tabulaires TOON', async () => {

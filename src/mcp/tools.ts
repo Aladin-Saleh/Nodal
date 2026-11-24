@@ -1022,7 +1022,7 @@ export function impact(
   };
 }
 
-/** Lignes par rubrique de nodal_analyze. */
+/** Lignes par rubrique de l'analyse du graphe. */
 export const ANALYZE_DEFAULT_LIMIT = 5;
 
 /** Ce que la forme du graphe suggère de regarder. */
@@ -1221,6 +1221,36 @@ export const staleRow = (stale: StaleNode) => ({
   changed: changedFilesText(stale),
 });
 
+/** Nœuds directement touchés cités au plus par nodal_for_files. */
+const AFFECTED_LIMIT = 8;
+
+/** Nœuds qui dépendent directement de ceux-ci ; absent s'il n'y en a pas. */
+function affectedBy(
+  ctx: ReadContext,
+  outline: Outline,
+  nodeIds: readonly string[],
+) {
+  if (nodeIds.length === 0) return {};
+  const directions = new Map(
+    listRelationTypes(ctx).map((type) => [type.id, impactDirection(type.name)]),
+  );
+  const hits = impactOf(
+    pathNodes(outline),
+    pathEdges(ctx),
+    nodeIds,
+    (typeId) => directions.get(typeId) ?? 'none',
+    1,
+  );
+  if (hits.length === 0) return {};
+  const shown = hits
+    .slice(0, AFFECTED_LIMIT)
+    .map((hit) => outline.byId.get(hit.nodeId)!.title);
+  const more = hits.length - shown.length;
+  return {
+    affected: more > 0 ? `${shown.join(', ')} (+${more})` : shown.join(', '),
+  };
+}
+
 /** Contenu de documents renvoyé par défaut par nodal_for_files. */
 export const DEFAULT_FOR_FILES_CHARS = 6_000;
 
@@ -1310,6 +1340,11 @@ export function forFiles(
           files: paths.join(', '),
         };
       }),
+      ...affectedBy(
+        ctx,
+        outline,
+        matches.map(({ node }) => node.nodeId),
+      ),
       ...(others.length > 0 ? { otherDocuments: others } : {}),
       ...(input.maxChars > 0 && needed > input.maxChars
         ? { maxCharsNeeded: needed }
