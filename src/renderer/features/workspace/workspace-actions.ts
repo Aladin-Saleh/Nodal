@@ -21,6 +21,8 @@ export const WORKSPACE_MENU = [
   'workspace.importMarkdown',
   'workspace.export',
   'workspace.exportLlm',
+  'workspace.exportVault',
+  'workspace.compare',
   SEP,
   'app.preferences',
   'workspace.close',
@@ -47,6 +49,7 @@ export const NODE_MENU = [
   'node.center',
   'node.pathTo',
   'node.impact',
+  'node.schema',
   'node.toggleHidden',
   'node.solo',
   SEP,
@@ -90,6 +93,12 @@ export interface WorkspaceCommands {
   templates(): void;
   relationTypes(): void;
   exportPortable(): void;
+  /** Export vers un coffre Obsidian. */
+  exportVault(): void;
+  /** Changements depuis une sauvegarde. */
+  compare(): void;
+  /** Schéma Mermaid de la branche. */
+  writeSchema(id: string): void;
   /** Importer un dossier Markdown / coffre Obsidian dans l'espace. */
   importMarkdown(): void;
   exportLlm(): void;
@@ -195,6 +204,14 @@ export function nodeActions(
       keywords: 'dépendance dépend touché revoir',
       enabled: on,
       run: () => commands.impact(id),
+    },
+    {
+      id: 'node.schema',
+      label: 'Schéma de la branche',
+      group: 'Nœud',
+      keywords: 'mermaid diagramme dessin',
+      enabled: on,
+      run: () => commands.writeSchema(id),
     },
     {
       id: 'node.validate',
@@ -383,6 +400,22 @@ export function workspaceActions(
       keywords: 'exporter sauvegarde',
       enabled: !state.exporting,
       run: commands.exportPortable,
+    },
+    {
+      id: 'workspace.exportVault',
+      label: 'Export vers un coffre Obsidian…',
+      group: 'Espace',
+      keywords: 'exporter markdown vault notes',
+      enabled: !state.exporting,
+      run: commands.exportVault,
+    },
+    {
+      id: 'workspace.compare',
+      label: 'Comparer avec une sauvegarde…',
+      group: 'Espace',
+      keywords: 'difference changements historique',
+      enabled: true,
+      run: commands.compare,
     },
     {
       id: 'workspace.importMarkdown',

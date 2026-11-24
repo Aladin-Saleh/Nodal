@@ -62,6 +62,9 @@ import {
   ignoreDuplicate,
   setSearchGapStatus,
 } from '../knowledge/health-service';
+import { compareWithBackup } from '../knowledge/compare-service';
+import { writeBranchSchema } from '../knowledge/schema-service';
+import { exportVault } from '../knowledge/vault-export-service';
 import { mergeNodes, mergePreview } from '../knowledge/merge-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
@@ -335,6 +338,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       nodes.move(input);
       return null;
     },
+    'node:writeSchema': ({ id }) => writeBranchSchema(context(), id),
     'node:mergePreview': ({ firstId, secondId }) =>
       mergePreview(context(), firstId, secondId),
     'node:merge': ({ keepId, dropId }) => {
@@ -455,6 +459,27 @@ export function createImplementations(deps: IpcDependencies): Implementations {
     },
 
     'search:query': ({ query }) => search.search(query),
+    'workspace:exportVault': async () => {
+      const current = requireCurrent();
+      const parentDir = await dialogs.pickExportParentDirectory();
+      if (!parentDir) return null;
+      try {
+        return await exportVault(context(), current, parentDir);
+      } catch (cause) {
+        if (cause instanceof NodalError) throw cause;
+        throw new NodalError(
+          'IO_ERROR',
+          'L’export a échoué pendant l’écriture ; aucun dossier n’a été créé.',
+          { cause },
+        );
+      }
+    },
+    'workspace:compare': async () => {
+      requireCurrent();
+      const file = await dialogs.pickComparisonFile();
+      if (!file) return null;
+      return { file, comparison: compareWithBackup(context(), file) };
+    },
     'workspace:exportLlm': async (options) => {
       const current = requireCurrent();
       const parentDir = await dialogs.pickExportParentDirectory();

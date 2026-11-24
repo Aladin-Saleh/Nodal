@@ -6,6 +6,7 @@ import type {
   ChildrenStrategy,
   LlmExportOptions,
   NodeSummary,
+  WorkspaceComparison,
   SearchHit,
 } from '../../../shared/model';
 import {
@@ -44,6 +45,7 @@ import { createLinkResolver } from '../../../shared/wiki-links';
 import { NodeProperties } from '../nodes/NodeProperties';
 import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { CenterPane } from './CenterPane';
+import { ComparisonDialog } from './ComparisonDialog';
 import { HealthDialog } from './HealthDialog';
 import { TopBar, type ViewMode } from './TopBar';
 import { WorkspacePanes } from './WorkspacePanes';
@@ -139,6 +141,10 @@ function WorkspaceView({
     fromId: string;
     toId: string;
     includeHierarchy: boolean;
+  } | null>(null);
+  const [comparison, setComparison] = useState<{
+    file: string;
+    comparison: WorkspaceComparison;
   } | null>(null);
   /** Choix du nœud à fusionner avec celui-ci. */
   const [mergePickFrom, setMergePickFrom] = useState<string | null>(null);
@@ -443,6 +449,40 @@ function WorkspaceView({
     }
   };
 
+  const exportVault = async () => {
+    setExporting(true);
+    try {
+      await tracker.flushAll();
+      const result = await run(() => client.call('workspace:exportVault'));
+      if (result) {
+        reportInfo(
+          `Coffre Obsidian créé dans ${result.folderPath} (${result.noteCount} notes, ${result.attachmentCount} pièces jointes).`,
+        );
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const compare = async () => {
+    await tracker.flushAll();
+    const result = await run(() => client.call('workspace:compare'));
+    if (result) setComparison(result);
+  };
+
+  const writeSchema = async (id: string) => {
+    const done = await run(() => client.call('node:writeSchema', { id }));
+    if (!done) return;
+    select(id);
+    data.refreshDetail();
+    openOverlay('editingDocumentId', done.documentId);
+    if (done.omittedNodes > 0 || done.omittedEdges > 0) {
+      reportInfo(
+        `Schéma limité aux nœuds les plus reliés : ${done.omittedNodes} nœuds et ${done.omittedEdges} relations non montrés.`,
+      );
+    }
+  };
+
   const exportForLlm = async (options: LlmExportOptions) => {
     closeOverlay('llmExport');
     setExporting(true);
@@ -533,6 +573,9 @@ function WorkspaceView({
     templates: () => setDialog({ kind: 'templates' }),
     relationTypes: () => setDialog({ kind: 'relationTypes' }),
     exportPortable: () => void exportWorkspace(),
+    exportVault: () => void exportVault(),
+    compare: () => void compare(),
+    writeSchema: (id) => void writeSchema(id),
     importMarkdown: () => void pickMarkdownFolder(),
     exportLlm: () => openOverlay('llmExport', true),
     connectAssistant: () => openOverlay('mcp', true),
@@ -914,6 +957,16 @@ function WorkspaceView({
               data.bumpRelations();
             }}
             onClose={() => setMarkdownPreview(null)}
+          />
+        )}
+        {comparison && (
+          <ComparisonDialog
+            {...comparison}
+            onNavigate={(id) => {
+              setComparison(null);
+              select(id);
+            }}
+            onClose={() => setComparison(null)}
           />
         )}
         {overlays.health && (

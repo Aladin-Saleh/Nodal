@@ -26,6 +26,8 @@ export interface FileDialogs {
   pickAttachmentSavePath(fileName: string): Promise<string | null>;
   /** Dossier dans lequel créer un export ; `null` si annulé. */
   pickExportParentDirectory(): Promise<string | null>;
+  /** Sauvegarde à comparer à l'espace ouvert ; `null` si annulé. */
+  pickComparisonFile(): Promise<string | null>;
   /** Dossier d'export à importer ; `null` si annulé. */
   pickImportFolder(): Promise<string | null>;
   /** Dossier Markdown ou coffre Obsidian à importer ; `null` si annulé. */
@@ -106,6 +108,15 @@ export function createFileDialogs(
       const result = await open({
         title: 'Choisir le dossier où créer l’export',
         properties: ['openDirectory', 'createDirectory'],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+
+    async pickComparisonFile() {
+      const result = await open({
+        title: 'Choisir une sauvegarde de cet espace',
+        filters: NODAL_FILTERS,
+        properties: ['openFile'],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);
     },

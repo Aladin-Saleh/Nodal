@@ -233,6 +233,46 @@ export interface HealthReport {
   gaps: SearchGap[];
 }
 
+/** Ligne d'une comparaison ; `nodeId` si le nœud existe encore. */
+export interface ComparisonEntry {
+  nodeId: string | null;
+  title: string;
+  detail: string;
+}
+export interface NodeChange {
+  nodeId: string;
+  title: string;
+  changes: string[];
+}
+export interface DocumentChange {
+  nodeId: string | null;
+  nodeTitle: string;
+  title: string;
+  change: 'added' | 'removed' | 'modified' | 'moved';
+  /** Caractères gagnés ou perdus. */
+  chars: number;
+}
+interface ComparisonList<T> {
+  /** Nombre exact ; `items` est plafonné. */
+  count: number;
+  items: T[];
+}
+/** Ce qui a changé depuis une sauvegarde. */
+export interface WorkspaceComparison {
+  added: ComparisonList<ComparisonEntry>;
+  removed: ComparisonList<ComparisonEntry>;
+  modified: ComparisonList<NodeChange>;
+  documents: ComparisonList<DocumentChange>;
+  relationsAdded: ComparisonList<ComparisonEntry>;
+  relationsRemoved: ComparisonList<ComparisonEntry>;
+}
+
+export interface VaultExportResult {
+  folderPath: string;
+  noteCount: number;
+  attachmentCount: number;
+}
+
 /** Ce que porte un nœud proposé à la fusion. */
 export interface MergeSide {
   id: string;

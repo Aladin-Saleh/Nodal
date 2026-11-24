@@ -128,6 +128,11 @@ liens parent-enfant apparaissent en pointillés.
   dans le fichier (dossiers de code seulement) : ✓ si elle y est. Sans
   preuve, ou si la citation est introuvable, « certaine » devient
   « probable ». Une relation retrouvée ailleurs garde toutes ses preuves.
+- **Schéma de la branche** (même menu) : document Mermaid des nœuds les plus
+  reliés de la branche (18 nœuds, 24 relations au plus ; le reste est
+  compté). Relancer l’action le met à jour ; retirez sa première ligne
+  (« %% Schéma généré par Nodal ») pour le garder tel que vous l’avez modifié.
+- Dans le graphe, une relation **incertaine** est en tirets longs.
 - **Fusionner avec…** (même menu, ou santé de la base) : choisissez le nœud à
   garder (Nodal propose celui que vous avez validé, sinon le plus fourni).
   Il reçoit les documents, sous-nœuds, relations, pièces jointes, tags,
@@ -502,6 +507,17 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   `anchor` de `nodal_apply`, journalisée et annulable comme les autres). Les
   nœuds possiblement obsolètes lui sont signalés dans les réponses (champ
   `stale`).
+
+### Exporter vers un coffre Obsidian, comparer avec une sauvegarde
+
+- Menu **Espace ▾** → **Export vers un coffre Obsidian…** : un nouveau
+  dossier, une note par nœud rangée comme l’arborescence (titre, type,
+  résumé et tags en tête ; documents, relations, pièces jointes), les liens
+  `[[…]]` visant les notes. Aucun fichier existant n’est touché.
+- **Comparer avec une sauvegarde…** : choisissez une sauvegarde du même
+  espace (aussi d’une version plus ancienne de Nodal) ; Nodal liste les
+  nœuds, documents et relations ajoutés, supprimés, modifiés ou déplacés
+  depuis. La sauvegarde n’est pas modifiée.
 
 ### Importer un dossier Markdown ou un coffre Obsidian
 

@@ -356,6 +356,7 @@ export class GraphScene {
         kind: 'relation' as const,
         label: edge.label,
         relationTypeId: edge.relationTypeId,
+        uncertain: edge.confidence === 'uncertain',
       })),
       ...visible.hierarchy.map((link) => ({
         id: link.id,
@@ -804,7 +805,11 @@ export class GraphScene {
 
   private syncLinks(
     visible: VisibleGraph,
-    specs: (SimLink & { label?: string | null; relationTypeId?: string })[],
+    specs: (SimLink & {
+      label?: string | null;
+      relationTypeId?: string;
+      uncertain?: boolean;
+    })[],
   ): void {
     const wanted = new Set(specs.map((spec) => spec.id));
     for (const [id, entry] of this.links) {
@@ -821,7 +826,7 @@ export class GraphScene {
         spec.kind === 'hierarchy'
           ? this.theme.hierarchy
           : (type?.color ?? this.theme.edge);
-      const labelKey = `${text}|${color}|${showLabels}`;
+      const labelKey = `${text}|${color}|${showLabels}|${spec.uncertain ?? false}`;
       const existing = this.links.get(spec.id);
       if (
         existing &&
@@ -834,7 +839,14 @@ export class GraphScene {
       if (existing) this.removeLink(spec.id, existing);
       this.links.set(
         spec.id,
-        this.createLink(spec, text, color, showLabels, labelKey),
+        this.createLink(
+          spec,
+          text,
+          color,
+          showLabels,
+          labelKey,
+          spec.uncertain ?? false,
+        ),
       );
     }
   }
@@ -845,6 +857,7 @@ export class GraphScene {
     color: string,
     showLabel: boolean,
     labelKey: string,
+    uncertain: boolean,
   ): LinkEntry {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute(
@@ -852,11 +865,12 @@ export class GraphScene {
       new THREE.BufferAttribute(new Float32Array(6), 3),
     );
     const material =
-      spec.kind === 'hierarchy'
+      spec.kind === 'hierarchy' || uncertain
         ? new THREE.LineDashedMaterial({
             color,
-            dashSize: 3,
-            gapSize: 2.5,
+            // Relation incertaine : tirets plus longs que la hiérarchie.
+            dashSize: uncertain ? 6 : 3,
+            gapSize: uncertain ? 4 : 2.5,
             transparent: true,
           })
         : new THREE.LineBasicMaterial({ color, transparent: true });

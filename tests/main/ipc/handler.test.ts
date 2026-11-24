@@ -149,6 +149,7 @@ function setup(pickedPath: string | null, confirmed = true) {
     pickExportParentDirectory: vi.fn(async () => null),
     pickImportFolder: vi.fn(async () => null),
     pickMarkdownFolder: vi.fn(async () => null),
+    pickComparisonFile: vi.fn(async () => null),
     pickCodeRoot: vi.fn(async () => null),
     pickProjectFolder: vi.fn(async () => null),
     pickAnchorFiles: vi.fn(async () => []),

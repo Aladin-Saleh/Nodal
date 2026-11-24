@@ -25,6 +25,8 @@ import type {
   LlmExportResult,
   GraphData,
   MergePreview,
+  VaultExportResult,
+  WorkspaceComparison,
   NodeDeletionImpact,
   NodeDetail,
   NodePosition,
@@ -340,6 +342,11 @@ export interface IpcContract {
   'node:create': { args: [CreateNodeInput]; result: NodeSummary };
   'node:update': { args: [UpdateNodeInput]; result: NodeSummary };
   'node:move': { args: [MoveNodeInput]; result: null };
+  /** Crée ou met à jour le schéma Mermaid de la branche. */
+  'node:writeSchema': {
+    args: [IdInput];
+    result: { documentId: string; omittedNodes: number; omittedEdges: number };
+  };
   'node:mergePreview': {
     args: [{ firstId: string; secondId: string }];
     result: MergePreview;
@@ -410,6 +417,13 @@ export interface IpcContract {
   'search:query': { args: [SearchInput]; result: SearchHit[] };
   /** Choix du dossier par le main ; `null` si annulé. */
   'workspace:export': { args: []; result: ExportResult | null };
+  /** Export vers un coffre Obsidian, dans un nouveau dossier. */
+  'workspace:exportVault': { args: []; result: VaultExportResult | null };
+  /** Ce qui a changé depuis une sauvegarde choisie ; `null` si annulé. */
+  'workspace:compare': {
+    args: [];
+    result: { file: string; comparison: WorkspaceComparison } | null;
+  };
   /** Export LLM (TOON, JSON, fragments) ; `null` si annulé. */
   'workspace:exportLlm': {
     args: [LlmExportOptions];
@@ -505,6 +519,7 @@ export const IPC_CHANNELS = [
   'node:create',
   'node:update',
   'node:move',
+  'node:writeSchema',
   'node:mergePreview',
   'node:merge',
   'node:duplicate',
@@ -542,6 +557,8 @@ export const IPC_CHANNELS = [
   'graph:savePositions',
   'search:query',
   'workspace:export',
+  'workspace:exportVault',
+  'workspace:compare',
   'workspace:exportLlm',
   'workspace:import',
   'workspace:backup',

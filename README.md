@@ -287,6 +287,8 @@ pièces jointes en BLOB).
     (migration 013, opération `lesson`, `nodal_lessons`, menu Assistant IA) ;
   - qualité (migration 014) : faux doublons écartés, fusion de nœuds avec
     sauvegarde, confiance et preuves vérifiées des relations ;
+  - vues : schéma Mermaid d’une branche, export vers Obsidian, comparaison
+    avec une sauvegarde, relations incertaines en tirets ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

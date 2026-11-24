@@ -385,6 +385,7 @@ export const ipcArgsSchemas = {
   'node:create': one(createNodeInputSchema),
   'node:update': one(updateNodeInputSchema),
   'node:move': one(moveNodeInputSchema),
+  'node:writeSchema': one(idInput),
   'node:mergePreview': one(
     z.strictObject({ firstId: idSchema, secondId: idSchema }),
   ),
@@ -442,6 +443,8 @@ export const ipcArgsSchemas = {
     z.strictObject({ query: z.string().max(SEARCH_QUERY_MAX_LENGTH) }),
   ),
   'workspace:export': noArgs,
+  'workspace:exportVault': noArgs,
+  'workspace:compare': noArgs,
   'workspace:exportLlm': one(
     z.strictObject({
       scope: z.discriminatedUnion('kind', [
