@@ -1,7 +1,12 @@
+import fs from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { contextHookOutput, promptKeywords } from '../../src/mcp/context-hook';
+import {
+  contextSessionFile,
+  REPEAT_AFTER_PROMPTS,
+} from '../../src/mcp/context-session';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
 const workspace = testWorkspaceFixture();
@@ -31,10 +36,14 @@ beforeEach(() => {
 });
 
 /** Contexte ajouté par le hook pour une demande, ou `null`. */
-function contextFor(prompt: string, event = 'UserPromptSubmit') {
+function contextFor(
+  prompt: string,
+  event = 'UserPromptSubmit',
+  session?: string,
+) {
   const output = contextHookOutput(
     file,
-    JSON.stringify({ prompt, hook_event_name: event }),
+    JSON.stringify({ prompt, hook_event_name: event, session_id: session }),
   );
   if (!output) return null;
   const parsed = JSON.parse(output) as {
@@ -82,5 +91,67 @@ describe('contexte automatique (hook)', () => {
     expect(contextHookOutput('C:/absent.nodal', '{"prompt":"serveur"}')).toBe(
       '',
     );
+  });
+
+  it('un nœud trouvé surtout par ses documents ne donne que son résumé', () => {
+    const hook = contextFor('pourquoi electron écrit une ligne vide');
+    expect(hook?.additionalContext).toContain('Exécuté par Node');
+    expect(hook?.additionalContext).not.toContain('--- document');
+  });
+
+  it('masque les secrets des documents', () => {
+    const { context } = workspace();
+    const nodes = new NodeService(context);
+    const [server] = nodes
+      .list()
+      .filter((node) => node.title === 'Serveur MCP');
+    const documents = new DocumentService(context);
+    const doc = documents.create({
+      nodeId: server!.id,
+      title: 'Accès',
+      contentType: 'markdown',
+    }).id;
+    const token = `ghp_${'a1B2'.repeat(10)}`;
+    documents.update({ id: doc, body: `Serveur MCP, jeton ${token}.` });
+    const hook = contextFor('quel jeton pour le serveur MCP ?');
+    expect(hook?.additionalContext).toContain('[masqué]');
+    expect(hook?.additionalContext).not.toContain(token);
+  });
+
+  it('ne répète pas un nœud dans une session, sauf modifié ou après un temps', () => {
+    const session = `session-${file}`;
+    const ask = (name = session) =>
+      contextFor('serveur MCP et Node', 'UserPromptSubmit', name);
+    const state = contextSessionFile(session, file);
+    try {
+      expect(ask()?.additionalContext).toContain('Serveur MCP');
+      expect(ask()).toBeNull();
+      // Une autre session part de zéro.
+      expect(ask()).toBeNull();
+      const other = contextSessionFile(`${session}-2`, file);
+      expect(ask(`${session}-2`)).not.toBeNull();
+      fs.rmSync(other, { force: true });
+
+      const nodes = new NodeService(workspace().context);
+      const [server] = nodes
+        .list()
+        .filter((node) => node.title === 'Serveur MCP');
+      const saved = JSON.parse(fs.readFileSync(state, 'utf8')) as {
+        sent: Record<string, { version: string }>;
+      };
+      saved.sent[server!.id]!.version = 'ancienne';
+      fs.writeFileSync(state, JSON.stringify(saved));
+      expect(ask()).not.toBeNull();
+
+      let repeated = 0;
+      for (let i = 0; i < REPEAT_AFTER_PROMPTS; i++) if (ask()) repeated++;
+      expect(repeated).toBe(1);
+
+      // État illisible : on répète, sans erreur.
+      fs.writeFileSync(state, 'pas du json');
+      expect(ask()).not.toBeNull();
+    } finally {
+      fs.rmSync(state, { force: true });
+    }
   });
 });
