@@ -6,6 +6,7 @@
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
 import type { ContextHookClient } from './context-hook';
+import type { Confidence } from './evidence';
 import type { Lesson } from './lessons';
 import type { TerminalEvent, TerminalSession, TerminalShell } from './terminal';
 import type { ContentType, NodeType } from './domain';
@@ -190,12 +191,14 @@ export interface CreateEdgeInput {
   relationTypeId: string;
   label?: string | null;
   description?: string | null;
+  confidence?: Confidence | null;
 }
 export interface UpdateEdgeInput {
   id: string;
   relationTypeId?: string;
   label?: string | null;
   description?: string | null;
+  confidence?: Confidence | null;
 }
 /** Résultat d'un import : nouvel espace ouvert, ou rapport de validation. */
 export type ImportResult =

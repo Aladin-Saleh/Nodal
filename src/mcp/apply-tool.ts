@@ -18,6 +18,11 @@ import {
   LESSON_OUTCOMES,
   LESSON_QUESTION_MAX_LENGTH,
 } from '../shared/lessons';
+import {
+  CONFIDENCES,
+  EVIDENCE_QUOTE_MAX_LENGTH,
+  EVIDENCE_SOURCE_MAX_LENGTH,
+} from '../shared/evidence';
 import { NodalError } from '../shared/errors';
 import type { ShortIds } from './short-ids';
 import {
@@ -43,6 +48,13 @@ const tagNames = z.array(z.string().min(1).max(100)).max(50);
 const anchorPaths = z
   .array(z.string().min(1).max(1000))
   .max(ANCHORS_MAX_PER_NODE);
+
+export const confidenceSchema = z.enum(CONFIDENCES);
+/** Source d'une relation : fichier (ligne éventuelle), document, adresse. */
+export const evidenceSchema = z.object({
+  source: z.string().min(1).max(EVIDENCE_SOURCE_MAX_LENGTH),
+  quote: z.string().max(EVIDENCE_QUOTE_MAX_LENGTH).optional(),
+});
 
 export const operationSchema = z.discriminatedUnion('op', [
   z.object({
@@ -86,6 +98,8 @@ export const operationSchema = z.discriminatedUnion('op', [
     label: z.string().max(200).optional(),
     description: z.string().max(2000).optional(),
     createRelationType: z.boolean().optional(),
+    confidence: confidenceSchema.optional(),
+    evidence: evidenceSchema.optional(),
   }),
   z.object({
     op: z.literal('tag'),
@@ -145,6 +159,7 @@ export function applyOperations(
     op: Operation['op'];
     id: string;
     documentId?: string;
+    note?: string;
   }[] = [];
 
   operations.forEach((operation, index) => {
@@ -170,13 +185,14 @@ export function applyOperations(
       }
       if (operation.op === 'lesson')
         resolved.nodeIds = operation.nodeIds?.map(resolve);
-      const { id, documentId } = run(ctx, resolved as Operation);
+      const { id, documentId, note } = run(ctx, resolved as Operation);
       produced.push(id);
       results.push({
         ref: `$${position}`,
         op: operation.op,
         id,
         ...(documentId && { documentId }),
+        ...(note && { note }),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -196,7 +212,7 @@ export function applyOperations(
 function run(
   ctx: WriteContext,
   operation: Operation,
-): { id: string; documentId?: string } {
+): { id: string; documentId?: string; note?: string } {
   switch (operation.op) {
     case 'createNode': {
       const { op: _op, ...input } = operation;
@@ -216,7 +232,13 @@ function run(
     }
     case 'link': {
       const { op: _op, ...input } = operation;
-      return { id: link(ctx, input).id };
+      const { id, confidence, note } = link(ctx, input);
+      return {
+        id,
+        note: [confidence && `confiance ${confidence}`, note]
+          .filter(Boolean)
+          .join(' ; '),
+      };
     }
     case 'tag': {
       const { op: _op, ...input } = operation;

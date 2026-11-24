@@ -39,7 +39,7 @@ export const CONTENT_TYPES = [
 ] as const;
 export type ContentType = (typeof CONTENT_TYPES)[number];
 
-/** Modifications d'un assistant IA tracées dans le journal (migrations 004, 010, 012, 013). */
+/** Modifications d'un assistant IA tracées dans le journal (migrations 004, 010, 012 à 014). */
 export const ASSISTANT_ACTIONS = [
   'create_node',
   'update_node',
@@ -50,6 +50,7 @@ export const ASSISTANT_ACTIONS = [
   'anchor',
   'review',
   'lesson',
+  'evidence',
 ] as const;
 export type AssistantAction = (typeof ASSISTANT_ACTIONS)[number];
 

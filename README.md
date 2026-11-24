@@ -285,6 +285,8 @@ pièces jointes en BLOB).
     superflues, cycles et questions (santé de la base, `nodal_analyze`) ;
   - mémoire de travail de l’assistant : impasses, corrections et nœuds utiles
     (migration 013, opération `lesson`, `nodal_lessons`, menu Assistant IA) ;
+  - qualité (migration 014) : faux doublons écartés, fusion de nœuds avec
+    sauvegarde, confiance et preuves vérifiées des relations ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

@@ -285,6 +285,76 @@ describe('nodal_path', () => {
   });
 });
 
+describe('confiance et preuves des relations', () => {
+  it('« certain » se prouve ; une preuve s’ajoute à la relation, annulable', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    fs.writeFileSync(
+      path.join(root, 'src', 'api', 'server.ts'),
+      "import { cache } from '../cache/redis';",
+    );
+    const client = await connect(file, false);
+    const relation = new RelationTypeService(context).list()[0]!.name;
+    const link = async (extra: object) =>
+      toon(
+        await client.call('nodal_link', {
+          sourceId: ids.api,
+          targetId: ids.other,
+          relation,
+          ...extra,
+        }),
+      );
+    const row = async () =>
+      toon(await client.call('nodal_get_node', { id: ids.api })).relations.find(
+        (item: { otherId: string }) => item.otherId === short(ids.other),
+      );
+    expect((await link({ confidence: 'certain' })).confidence).toBe('probable');
+    expect((await row()).confidence).toBe('probable');
+    const missing = await link({
+      evidence: { source: 'src/api/server.ts', quote: 'import { base }' },
+      confidence: 'certain',
+    });
+    expect(missing.note).toContain('introuvable');
+    expect((await row()).sources).toBe('src/api/server.ts ?');
+    const health = toon(await client.call('nodal_health', {}));
+    expect(health.counts.doubtfulRelation).toBe(1);
+
+    const proof = {
+      source: 'src/api/server.ts:1',
+      quote: "import { cache } from '../cache/redis'",
+    };
+    await link({ evidence: proof, confidence: 'certain' });
+    expect(await row()).toMatchObject({
+      confidence: 'certain',
+      sources: 'src/api/server.ts ? ; src/api/server.ts:1',
+    });
+    // Moins sûr, ou déjà dit : rien ne change.
+    const journal = new AssistantChangeService(context);
+    const count = journal.list().length;
+    await link({ evidence: proof, confidence: 'uncertain' });
+    expect(journal.list()).toHaveLength(count);
+    expect((await row()).confidence).toBe('certain');
+
+    journal.undo(journal.list()[0]!.id);
+    expect(await row()).toMatchObject({
+      confidence: 'probable',
+      sources: 'src/api/server.ts ?',
+    });
+    const weak = toon(
+      await client.call('nodal_path', { fromId: ids.api, toId: ids.other }),
+    );
+    expect(weak.weakest).toBe('probable');
+    // Sans rien de nouveau : doublon refusé, comme avant.
+    const twice = await client.call('nodal_link', {
+      sourceId: ids.api,
+      targetId: ids.other,
+      relation,
+    });
+    expect(twice.isError).toBe(true);
+    await client.close();
+  });
+});
+
 describe('mémoire de travail', () => {
   it('note des leçons, les rappelle avec les nœuds, annulables', async () => {
     const { context } = workspace();

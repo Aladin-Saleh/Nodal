@@ -3,6 +3,7 @@
  * Ce sont des vues : le contenu binaire des pièces jointes n'y figure jamais.
  */
 import type { Question } from './graph-analysis';
+import type { Confidence, EdgeEvidence } from './evidence';
 import type { AssistantAction, ContentType, NodeType } from './domain';
 
 export interface NodeSummary {
@@ -176,6 +177,10 @@ export interface EdgeInfo {
   updatedAt: string;
   /** Créée par un lien [[...]] d'un document : suit le lien. */
   fromLink?: boolean;
+  /** Absent : pas d'avis. */
+  confidence?: Confidence;
+  /** Sources qui l'établissent ; absent s'il n'y en a pas. */
+  evidence?: EdgeEvidence[];
 }
 
 /** Document qui mentionne un nœud par un lien [[...]] (« Mentionné dans »). */
@@ -197,6 +202,7 @@ export type HealthCheckId =
   | 'duplicate'
   | 'redundantRelation'
   | 'dependencyCycle'
+  | 'doubtfulRelation'
   | 'assistantPending'
   | 'stale';
 

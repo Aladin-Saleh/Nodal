@@ -67,6 +67,7 @@ export function RelationList({
               relationTypeId: value.relationTypeId,
               label: value.label,
               description: value.description,
+              confidence: value.confidence,
             }),
           )
         : await run(() => client.call('edge:create', value));
@@ -108,6 +109,11 @@ export function RelationList({
               >
                 {relation.otherNodeTitle}
               </button>
+              {relation.confidence === 'uncertain' && (
+                <span className="link-badge" title="À vérifier">
+                  incertaine
+                </span>
+              )}
               {relation.fromLink && (
                 <span
                   className="link-badge"
@@ -180,6 +186,7 @@ export function RelationList({
             relationTypeId: editing.relation.relationTypeId,
             label: editing.relation.label,
             description: editing.relation.description,
+            confidence: editing.relation.confidence ?? null,
           }}
           lockEnds
           submitLabel="Enregistrer"

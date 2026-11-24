@@ -40,6 +40,7 @@ import {
   impactOf,
   isVagueRelation,
 } from '../shared/graph-impact';
+import { confidenceRank, type Confidence } from '../shared/evidence';
 import { foldText } from '../shared/text';
 import {
   findShortestPath,
@@ -47,6 +48,7 @@ import {
   PATH_MAX_DEPTH,
   type PathGraphEdge,
   type PathLink,
+  type PathStep,
 } from '../shared/graph-path';
 import { toRootRelative, type StaleNode } from '../shared/code-anchors';
 import {
@@ -592,16 +594,7 @@ export function getNode(ctx: ReadContext, id: string) {
         children: childCount(outline, row.id),
         documents: row.document_count,
       })),
-      relations: new EdgeService(() => ctx)
-        .listForNode(detail.id)
-        .map((rel) => ({
-          direction: rel.direction === 'outgoing' ? 'out' : 'in',
-          relation: rel.relationTypeName,
-          otherId: rel.otherNodeId,
-          other: rel.otherNodeTitle,
-          label: rel.label,
-          by: origin(rel.createdByAssistant),
-        })),
+      relations: relationRows(ctx, detail.id),
       attachments: detail.attachments.map((file) => ({
         id: file.id,
         fileName: file.fileName,
@@ -613,6 +606,34 @@ export function getNode(ctx: ReadContext, id: string) {
     },
     documents: inline,
   };
+}
+
+/**
+ * Relations d'un nœud ; confiance et sources seulement si l'une en a. Une
+ * citation introuvable est marquée « ? ».
+ */
+function relationRows(ctx: ReadContext, nodeId: string) {
+  const relations = new EdgeService(() => ctx).listForNode(nodeId);
+  const graded = relations.some((rel) => rel.confidence);
+  const sourced = relations.some((rel) => rel.evidence);
+  return relations.map((rel) => ({
+    direction: rel.direction === 'outgoing' ? 'out' : 'in',
+    relation: rel.relationTypeName,
+    otherId: rel.otherNodeId,
+    other: rel.otherNodeTitle,
+    label: rel.label,
+    by: origin(rel.createdByAssistant),
+    ...(graded ? { confidence: rel.confidence ?? null } : {}),
+    ...(sourced
+      ? {
+          sources: (rel.evidence ?? [])
+            .map(
+              (item) => `${item.source}${item.verified === false ? ' ?' : ''}`,
+            )
+            .join(' ; '),
+        }
+      : {}),
+  }));
 }
 
 function anchorsOf(ctx: ReadContext, nodeId: string) {
@@ -887,12 +908,34 @@ export function findPath(
     length: found.steps.length - 1,
     // D'autres chemins aussi courts : celui-ci est le plus parlant.
     ...(found.routes > 1 ? { sameLength: found.routes } : {}),
+    ...weakestLink(ctx, found.steps),
     steps: found.steps.map((step) => ({
       id: step.nodeId,
       title: outline.byId.get(step.nodeId)!.title,
       via: step.via ? describeLink(step.via, relationNames) : '',
     })),
   };
+}
+
+/**
+ * Un chemin n'est pas plus sûr que son maillon le plus faible : la confiance
+ * de celui-ci, s'il n'est pas certain (sans avis : rien à en dire).
+ */
+function weakestLink(ctx: ReadContext, steps: readonly PathStep[]) {
+  const confidenceOf = ctx.db.prepare(
+    'SELECT confidence FROM edge WHERE id = ?',
+  );
+  const links = steps.flatMap(({ via }) => {
+    if (via?.kind !== 'relation') return [];
+    const row = confidenceOf.get(via.edgeId) as
+      | { confidence: Confidence | null }
+      | undefined;
+    return row?.confidence ? [row.confidence] : [];
+  });
+  const weakest = links.toSorted(
+    (a, b) => confidenceRank(a) - confidenceRank(b),
+  )[0];
+  return weakest && weakest !== 'certain' ? { weakest } : {};
 }
 
 /** Nœuds listés au plus par nodal_impact. */

@@ -1,3 +1,4 @@
+import { CONFIDENCE_LABELS } from '../../../shared/evidence';
 import type { EdgeInfo, RelationTypeInfo } from '../../../shared/model';
 
 export interface EdgeCardProps {
@@ -75,6 +76,25 @@ export function EdgeCard({
         <p className="muted edge-card-description">
           Aucune description. « Modifier » permet d’expliquer ce lien.
         </p>
+      )}
+      {edge.confidence && (
+        <p className="edge-card-description">
+          Relation {CONFIDENCE_LABELS[edge.confidence]}.
+        </p>
+      )}
+      {edge.evidence && (
+        <ul className="edge-card-evidence" aria-label="Preuves">
+          {edge.evidence.map((item) => (
+            <li key={item.id}>
+              <code>{item.source}</code>
+              {item.verified === true && ' ✓'}
+              {item.verified === false && (
+                <span className="muted"> (citation introuvable)</span>
+              )}
+              {item.quote && <blockquote>{item.quote}</blockquote>}
+            </li>
+          ))}
+        </ul>
       )}
       <div className="edge-card-actions">
         <button type="button" className="secondary" onClick={onEdit}>

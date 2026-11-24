@@ -1,4 +1,12 @@
+import {
+  EVIDENCE_MAX_PER_EDGE,
+  EVIDENCE_QUOTE_MAX_LENGTH,
+  EVIDENCE_SOURCE_MAX_LENGTH,
+  type Confidence,
+  type EdgeEvidence,
+} from '../../shared/evidence';
 import { NodalError } from '../../shared/errors';
+import { redactSecrets } from '../../shared/secrets';
 import type {
   CreateEdgeInput,
   UpdateEdgeInput,
@@ -19,10 +27,11 @@ interface EdgeRow {
   created_at: string;
   updated_at: string;
   from_link: number;
+  confidence: Confidence | null;
 }
 
 const EDGE_COLUMNS =
-  'e.id, e.source_node_id, e.target_node_id, e.relation_type_id, e.label, e.description, e.created_at, e.updated_at, e.from_link';
+  'e.id, e.source_node_id, e.target_node_id, e.relation_type_id, e.label, e.description, e.created_at, e.updated_at, e.from_link, e.confidence';
 
 function toEdgeInfo(row: EdgeRow): EdgeInfo {
   return {
@@ -35,17 +44,144 @@ function toEdgeInfo(row: EdgeRow): EdgeInfo {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     ...(row.from_link === 1 && { fromLink: true }),
+    ...(row.confidence && { confidence: row.confidence }),
   };
 }
 
+interface EvidenceRow {
+  id: string;
+  edge_id: string;
+  source: string;
+  quote: string | null;
+  verified: number | null;
+  client: string | null;
+  created_at: string;
+}
+
+/** Complète des relations par leurs preuves, dans l'ordre d'ajout. */
+function withEvidence<T extends EdgeInfo>(
+  ctx: ServiceContext,
+  edges: T[],
+): T[] {
+  if (edges.length === 0) return edges;
+  const byEdge = new Map<string, EdgeEvidence[]>();
+  for (const row of asRows<EvidenceRow>(
+    ctx.db
+      .prepare(
+        `SELECT v.* FROM edge_evidence v JOIN edge e ON e.id = v.edge_id
+         WHERE e.workspace_id = ? ORDER BY v.rowid`,
+      )
+      .all(ctx.workspaceId),
+  )) {
+    const item: EdgeEvidence = {
+      id: row.id,
+      source: row.source,
+      quote: row.quote,
+      verified: row.verified === null ? null : row.verified === 1,
+      client: row.client,
+      createdAt: row.created_at,
+    };
+    const list = byEdge.get(row.edge_id);
+    if (list) list.push(item);
+    else byEdge.set(row.edge_id, [item]);
+  }
+  return edges.map((edge) => {
+    const evidence = byEdge.get(edge.id);
+    return evidence ? { ...edge, evidence } : edge;
+  });
+}
+
+/** Relation d'un type entre deux nœuds, si elle existe. */
+export function findEdge(
+  ctx: ServiceContext,
+  sourceId: string,
+  targetId: string,
+  relationTypeId: string,
+): EdgeInfo | null {
+  const row = asRow<EdgeRow>(
+    ctx.db
+      .prepare(
+        `SELECT ${EDGE_COLUMNS} FROM edge e
+         WHERE e.source_node_id = ? AND e.target_node_id = ?
+           AND e.relation_type_id = ? AND e.workspace_id = ?`,
+      )
+      .get(sourceId, targetId, relationTypeId, ctx.workspaceId),
+  );
+  return row ? toEdgeInfo(row) : null;
+}
+
+/**
+ * Ajoute une preuve à une relation ; `null` si elle y est déjà. Les secrets
+ * reconnaissables sont masqués.
+ */
+export function addEvidence(
+  ctx: ServiceContext,
+  edgeId: string,
+  input: Pick<EdgeEvidence, 'source' | 'quote' | 'verified' | 'client'>,
+): string | null {
+  const source = redactSecrets(input.source).trim();
+  const quote = redactSecrets(input.quote ?? '').trim() || null;
+  if (
+    !source ||
+    source.length > EVIDENCE_SOURCE_MAX_LENGTH ||
+    (quote?.length ?? 0) > EVIDENCE_QUOTE_MAX_LENGTH
+  ) {
+    throw new NodalError(
+      'VALIDATION_ERROR',
+      `Preuve : source de 1 à ${EVIDENCE_SOURCE_MAX_LENGTH} caractères, citation de ${EVIDENCE_QUOTE_MAX_LENGTH} au plus.`,
+    );
+  }
+  const known = asRows<{ source: string; quote: string | null }>(
+    ctx.db
+      .prepare('SELECT source, quote FROM edge_evidence WHERE edge_id = ?')
+      .all(edgeId),
+  );
+  if (known.some((item) => item.source === source && item.quote === quote))
+    return null;
+  if (known.length >= EVIDENCE_MAX_PER_EDGE) {
+    throw new NodalError(
+      'LIMIT_EXCEEDED',
+      `${EVIDENCE_MAX_PER_EDGE} preuves au plus par relation.`,
+    );
+  }
+  const id = ctx.newId();
+  ctx.db
+    .prepare(
+      `INSERT INTO edge_evidence (id, edge_id, source, quote, verified, client, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      id,
+      edgeId,
+      source,
+      quote,
+      input.verified === null ? null : Number(input.verified),
+      input.client,
+      ctx.now(),
+    );
+  return id;
+}
+
+/** Change la confiance d'une relation, sans autre effet. */
+export function setConfidence(
+  ctx: ServiceContext,
+  edgeId: string,
+  confidence: Confidence | null,
+): void {
+  ctx.db
+    .prepare('UPDATE edge SET confidence = ?, updated_at = ? WHERE id = ?')
+    .run(confidence, ctx.now(), edgeId);
+}
+
 export function listEdges(ctx: ServiceContext): EdgeInfo[] {
-  return asRows<EdgeRow>(
+  const edges = asRows<EdgeRow>(
     ctx.db
       .prepare(
         `SELECT ${EDGE_COLUMNS} FROM edge e WHERE e.workspace_id = ? ORDER BY e.rowid`,
       )
       .all(ctx.workspaceId),
   ).map(toEdgeInfo);
+  return withEvidence(ctx, edges);
 }
 
 function getEdge(ctx: ServiceContext, id: string): EdgeInfo {
@@ -123,7 +259,7 @@ export class EdgeService {
         )
         .all({ id: nodeId }),
     );
-    return rows.map((row) => ({
+    const relations = rows.map((row): NodeRelation => ({
       ...toEdgeInfo(row),
       direction: row.source_node_id === nodeId ? 'outgoing' : 'incoming',
       otherNodeId: row.other_id,
@@ -131,6 +267,7 @@ export class EdgeService {
       relationTypeName: row.type_name,
       createdByAssistant: toAssistantOrigin(row),
     }));
+    return withEvidence(ctx, relations);
   }
 
   create(input: CreateEdgeInput): EdgeInfo {
@@ -155,8 +292,8 @@ export class EdgeService {
     const timestamp = ctx.now();
     ctx.db
       .prepare(
-        `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at, confidence)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -168,6 +305,7 @@ export class EdgeService {
         input.description ?? null,
         timestamp,
         timestamp,
+        input.confidence ?? null,
       );
     return getEdge(ctx, id);
   }
@@ -189,7 +327,7 @@ export class EdgeService {
     ctx.db
       .prepare(
         // Retouchée à la main : elle ne suit plus le lien qui l'a créée.
-        `UPDATE edge SET relation_type_id = ?, label = ?, description = ?, updated_at = ?, from_link = 0
+        `UPDATE edge SET relation_type_id = ?, label = ?, description = ?, confidence = ?, updated_at = ?, from_link = 0
          WHERE id = ?`,
       )
       .run(
@@ -198,6 +336,9 @@ export class EdgeService {
         input.description === undefined
           ? current.description
           : input.description,
+        input.confidence === undefined
+          ? (current.confidence ?? null)
+          : input.confidence,
         ctx.now(),
         input.id,
       );

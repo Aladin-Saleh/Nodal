@@ -6,13 +6,14 @@
  * travail plus récent).
  */
 import type { AssistantAction, NodeType } from '../../shared/domain';
+import type { Confidence } from '../../shared/evidence';
 import type { CodeSnapshot } from '../../shared/code-anchors';
 import { NodalError } from '../../shared/errors';
 import type { AssistantChange } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { DocumentService } from './document-service';
-import { EdgeService } from './edge-service';
+import { EdgeService, setConfidence } from './edge-service';
 import { NodeService } from './node-service';
 import { listAnchors, setAnchors, undoReview } from './anchor-service';
 import { deleteLesson } from './lesson-service';
@@ -46,6 +47,10 @@ export interface ChangeStates {
     after: { reviewedAt: string };
   };
   lesson: { before: null; after: { id: string } };
+  evidence: {
+    before: { confidence: Confidence | null };
+    after: { confidence: Confidence | null; evidenceId: string | null };
+  };
 }
 
 export type ChangeEntry = {
@@ -301,6 +306,29 @@ export class AssistantChangeService {
             ctx,
             row.entity_id,
             (before as { patterns: string[] }).patterns,
+          );
+          break;
+        }
+        case 'evidence': {
+          const current = asRow<{ confidence: Confidence | null }>(
+            ctx.db
+              .prepare('SELECT confidence FROM edge WHERE id = ?')
+              .get(row.entity_id),
+          );
+          if (!current) throw notFound('Relation');
+          const added = after as ChangeStates['evidence']['after'];
+          if (current.confidence !== added.confidence) {
+            throw modifiedSince('La confiance de la relation');
+          }
+          if (added.evidenceId) {
+            ctx.db
+              .prepare('DELETE FROM edge_evidence WHERE id = ?')
+              .run(added.evidenceId);
+          }
+          setConfidence(
+            ctx,
+            row.entity_id,
+            (before as ChangeStates['evidence']['before']).confidence,
           );
           break;
         }

@@ -3,6 +3,7 @@
  * arguments : tout argument manquant, en trop ou mal typé est refusé, ainsi
  * que toute propriété inconnue (objets stricts).
  */
+import { CONFIDENCES } from './evidence';
 import { CONTEXT_HOOK_CLIENTS } from './context-hook';
 import {
   TERMINAL_MAX_COLS,
@@ -249,6 +250,7 @@ export const createEdgeInputSchema = z.strictObject({
     'La description',
     DESCRIPTION_MAX_LENGTH,
   ).optional(),
+  confidence: z.enum(CONFIDENCES).nullable().optional(),
 });
 export const updateEdgeInputSchema = z.strictObject({
   id: idSchema,
@@ -258,6 +260,7 @@ export const updateEdgeInputSchema = z.strictObject({
     'La description',
     DESCRIPTION_MAX_LENGTH,
   ).optional(),
+  confidence: z.enum(CONFIDENCES).nullable().optional(),
 });
 
 export const savePositionsInputSchema = z.strictObject({

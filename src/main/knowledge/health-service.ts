@@ -234,6 +234,38 @@ export const HEALTH_CHECKS: HealthCheck[] = [
     },
   },
   {
+    id: 'doubtfulRelation',
+    label: 'Relations à vérifier',
+    run: (ctx) =>
+      asRows<{
+        id: string;
+        title: string;
+        other_id: string;
+        other: string;
+        relation: string;
+        confidence: string | null;
+      }>(
+        ctx.db
+          .prepare(
+            `SELECT s.id, s.title, t.id AS other_id, t.title AS other,
+               rt.name AS relation, e.confidence
+             FROM edge e JOIN node s ON s.id = e.source_node_id
+             JOIN node t ON t.id = e.target_node_id
+             JOIN relation_type rt ON rt.id = e.relation_type_id
+             WHERE e.workspace_id = ? AND (e.confidence = 'uncertain'
+               OR (coalesce(e.confidence, '') <> 'certain' AND EXISTS (
+                 SELECT 1 FROM edge_evidence v WHERE v.edge_id = e.id AND v.verified = 0)))
+             ORDER BY e.rowid`,
+          )
+          .all(ctx.workspaceId),
+      ).map((row) =>
+        issue('doubtfulRelation', row, {
+          otherNodeId: row.other_id,
+          detail: `${row.relation} ${row.other} : ${row.confidence === 'uncertain' ? 'incertaine' : 'citation introuvable'}`,
+        }),
+      ),
+  },
+  {
     id: 'dependencyCycle',
     label: 'Cycles de dépendance',
     run: (ctx) => {

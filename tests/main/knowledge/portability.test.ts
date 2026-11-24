@@ -105,8 +105,13 @@ function seed() {
     sourceId: cache,
     targetId: api,
     relationTypeId: uses,
+    confidence: 'probable',
     label: 'lit',
   });
+  context().db.exec(
+    `INSERT INTO edge_evidence (id, edge_id, source, quote, verified, client, created_at)
+     SELECT '00000000-0000-4000-8000-000000000001', id, 'src/a.ts', 'lire', 1, 'x', created_at FROM edge WHERE confidence = 'probable'`,
+  );
   fs.writeFileSync(path.join(dir, 'schema.bin'), Buffer.from([1, 2, 3, 250]));
   new AttachmentService(context).addFromPaths(api, [
     path.join(dir, 'schema.bin'),
@@ -137,6 +142,7 @@ function snapshot(db: DatabaseSync) {
     nodes: all('SELECT * FROM node ORDER BY id'),
     documents: all('SELECT * FROM document ORDER BY id'),
     edges: all('SELECT * FROM edge ORDER BY id'),
+    evidence: all('SELECT * FROM edge_evidence ORDER BY id'),
     relationTypes: all('SELECT * FROM relation_type ORDER BY id'),
     tags: all('SELECT * FROM tag ORDER BY id'),
     nodeTags: all('SELECT * FROM node_tag ORDER BY node_id, tag_id'),

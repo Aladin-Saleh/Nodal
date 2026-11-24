@@ -26,7 +26,18 @@ import {
 } from '../main/knowledge/assistant-change-service';
 import { notFound } from '../main/knowledge/context';
 import { DocumentService } from '../main/knowledge/document-service';
-import { EdgeService } from '../main/knowledge/edge-service';
+import {
+  addEvidence,
+  EdgeService,
+  findEdge,
+  setConfidence,
+} from '../main/knowledge/edge-service';
+import { verifyQuote } from '../main/code/quote-check';
+import {
+  confidenceRank,
+  grantedConfidence,
+  type Confidence,
+} from '../shared/evidence';
 import { NodeService } from '../main/knowledge/node-service';
 import { RelationTypeService } from '../main/knowledge/relation-type-service';
 import { asRow, asRows } from '../main/knowledge/rows';
@@ -324,15 +335,17 @@ export function link(
     label?: string;
     description?: string;
     createRelationType?: boolean;
+    confidence?: Confidence;
+    evidence?: { source: string; quote?: string };
   },
 ) {
   const relationTypes = new RelationTypeService(() => ctx);
   const name = check(relationTypeNameSchema, input.relation);
   const types = relationTypes.list();
-  let type = types.find(
+  let found = types.find(
     (candidate) => candidate.name.toLowerCase() === name.toLowerCase(),
   );
-  if (!type) {
+  if (!found) {
     if (!input.createRelationType) {
       throw new NodalError(
         'NOT_FOUND',
@@ -341,8 +354,56 @@ export function link(
           .join(', ')}. Passez createRelationType: true pour le créer.`,
       );
     }
-    type = relationTypes.create({ name });
+    found = relationTypes.create({ name });
   }
+  const type = found;
+  const proof = input.evidence && {
+    source: input.evidence.source,
+    quote: input.evidence.quote ?? null,
+    verified: verifyQuote(
+      ctx.codeRoots ?? [],
+      input.evidence.source,
+      input.evidence.quote ?? null,
+      PATHS_CASE_INSENSITIVE,
+    ),
+    client: ctx.client,
+  };
+  const confidence = grantedConfidence(input.confidence ?? null, proof ?? null);
+  const outcome = (id: string, kept: Confidence | null) => ({
+    id,
+    relation: type.name,
+    // Dit seulement ce que l'assistant ne sait pas déjà.
+    ...(kept !== (input.confidence ?? null) && kept
+      ? { confidence: kept }
+      : {}),
+    ...(proof?.verified === false
+      ? { note: 'Citation introuvable dans ce fichier : preuve non vérifiée.' }
+      : {}),
+  });
+  const ends = `${pathOf(ctx, input.sourceId)} —${type.name}→ ${pathOf(ctx, input.targetId)}`;
+
+  // Relation déjà connue : une preuve de plus, jamais une confiance moindre.
+  const known = findEdge(ctx, input.sourceId, input.targetId, type.id);
+  if (known && (proof || confidence)) {
+    const before = known.confidence ?? null;
+    const after =
+      confidenceRank(confidence) > confidenceRank(before) ? confidence : before;
+    const evidenceId = proof ? addEvidence(ctx, known.id, proof) : null;
+    if (after !== before) setConfidence(ctx, known.id, after);
+    if (evidenceId || after !== before) {
+      recordAssistantChange(ctx, {
+        action: 'evidence',
+        nodeId: input.sourceId,
+        entityId: known.id,
+        summary: `Relation étayée : ${ends}`,
+        client: ctx.client,
+        before: { confidence: before },
+        after: { confidence: after, evidenceId },
+      });
+    }
+    return outcome(known.id, after);
+  }
+
   const edgeInput = check(createEdgeInputSchema, {
     sourceId: input.sourceId,
     targetId: input.targetId,
@@ -351,19 +412,20 @@ export function link(
     ...(input.description !== undefined && {
       description: input.description,
     }),
+    ...(confidence && { confidence }),
   });
   const edge = new EdgeService(() => ctx).create(edgeInput);
-  const summary = `Relation ajoutée : ${pathOf(ctx, input.sourceId)} —${type.name}→ ${pathOf(ctx, input.targetId)}`;
+  if (proof) addEvidence(ctx, edge.id, proof);
   recordAssistantChange(ctx, {
     action: 'link',
     nodeId: input.sourceId,
     entityId: edge.id,
-    summary,
+    summary: `Relation ajoutée : ${ends}`,
     client: ctx.client,
     before: null,
     after: { edgeId: edge.id },
   });
-  return { id: edge.id, relation: type.name };
+  return outcome(edge.id, confidence);
 }
 
 export function tagNode(

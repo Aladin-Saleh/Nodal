@@ -277,6 +277,7 @@ export function GraphPanel({
         relationTypeId: value.relationTypeId,
         label: value.label,
         description: value.description,
+        confidence: value.confidence,
       }),
     );
     if (done) onRelationsChanged();
@@ -700,6 +701,7 @@ export function GraphPanel({
             relationTypeId: selectedEdge.relationTypeId,
             label: selectedEdge.label,
             description: selectedEdge.description,
+            confidence: selectedEdge.confidence ?? null,
           }}
           lockEnds
           submitLabel="Enregistrer"

@@ -32,6 +32,8 @@ const HINTS: Partial<Record<HealthCheckId, string>> = {
   duplicate: 'Titres presque identiques : à fusionner ou à distinguer.',
   redundantRelation:
     'La relation n’apprend rien de plus ; à retirer, ou à préciser par un libellé.',
+  doubtfulRelation:
+    'Ouvrez le nœud, puis « Modifier » la relation pour dire si elle est certaine.',
   dependencyCycle: 'Chaque nœud finit par dépendre de lui-même.',
   assistantPending: 'Ajouté par un assistant IA, pas encore vérifié.',
   stale:
@@ -116,6 +118,7 @@ export function HealthDialog({
         );
       case 'redundantRelation':
       case 'dependencyCycle':
+      case 'doubtfulRelation':
         return (
           <>
             {open}

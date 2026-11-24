@@ -54,6 +54,8 @@ import type { StaleNode } from '../shared/code-anchors';
 import {
   APPLY_MAX_OPERATIONS,
   applyOperations,
+  confidenceSchema,
+  evidenceSchema,
   operationSchema,
   type Operation,
 } from './apply-tool';
@@ -896,7 +898,10 @@ export function createNodalMcpServer(
       title: 'Relier deux nœuds',
       description:
         'Crée une relation orientée source → cible avec un type de relation existant (voir nodal_overview), ' +
-        'désigné par son nom. createRelationType: true crée le type s’il manque (à éviter si un type existant convient).',
+        'désigné par son nom. createRelationType: true crée le type s’il manque (à éviter si un type existant convient). ' +
+        'confidence : certain (écrit dans la source), probable (déduit), uncertain (à vérifier) ; evidence : ' +
+        'source (fichier:ligne, adresse…) et quote, citation vérifiée dans le fichier ; sans preuve, certain devient ' +
+        'probable. Relation déjà présente : la preuve s’y ajoute. description : pourquoi.',
       inputSchema: z.object({
         sourceId: id,
         targetId: id,
@@ -904,6 +909,8 @@ export function createNodalMcpServer(
         label: z.string().max(200).optional(),
         description: z.string().max(2000).optional(),
         createRelationType: z.boolean().optional(),
+        confidence: confidenceSchema.optional(),
+        evidence: evidenceSchema.optional(),
       }),
       annotations: ADDITIVE,
     },

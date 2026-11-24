@@ -16,6 +16,7 @@ import {
 import { templateListSchema } from '../../shared/templates';
 import { TEMPLATES_SETTING_KEY } from './template-service';
 import { CONTENT_TYPES, NODE_TYPES } from '../../shared/domain';
+import { CONFIDENCES } from '../../shared/evidence';
 import { NodalError } from '../../shared/errors';
 import { inTransaction } from '../database/transaction';
 import { EXPORT_FORMAT, EXPORT_FORMAT_VERSION } from './export-service';
@@ -109,6 +110,20 @@ const manifestSchema = z.object({
       updatedAt: iso,
       /** Relation issue d'un lien [[...]] (absent des exports antérieurs). */
       fromLink: z.boolean().optional(),
+      /** Confiance et preuves (absentes des exports antérieurs). */
+      confidence: z.enum(CONFIDENCES).optional(),
+      evidence: z
+        .array(
+          z.object({
+            id,
+            source: z.string().min(1),
+            quote: nullableText,
+            verified: z.boolean().nullable(),
+            client: nullableText,
+            createdAt: iso,
+          }),
+        )
+        .optional(),
     }),
   ),
 });
@@ -442,8 +457,12 @@ export function writeImport(
     }
 
     const insertEdge = db.prepare(
-      `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at, from_link)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO edge (id, workspace_id, source_node_id, target_node_id, relation_type_id, label, description, created_at, updated_at, from_link, confidence)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    const insertEvidence = db.prepare(
+      `INSERT INTO edge_evidence (id, edge_id, source, quote, verified, client, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const edge of manifest.edges) {
       insertEdge.run(
@@ -457,7 +476,19 @@ export function writeImport(
         edge.createdAt,
         edge.updatedAt,
         edge.fromLink ? 1 : 0,
+        edge.confidence ?? null,
       );
+      for (const item of edge.evidence ?? []) {
+        insertEvidence.run(
+          item.id,
+          edge.id,
+          item.source,
+          item.quote,
+          item.verified === null ? null : Number(item.verified),
+          item.client,
+          item.createdAt,
+        );
+      }
     }
   });
   return { nodeCount: manifest.nodes.length, documentCount, attachmentCount };

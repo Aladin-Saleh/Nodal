@@ -122,6 +122,12 @@ liens parent-enfant apparaissent en pointillés.
   Si plusieurs chemins sont aussi courts, Nodal choisit le plus parlant :
   il évite les liens vagues (« est lié à », hiérarchie), puis les nœuds
   reliés à tout, et dit combien il y en a.
+- **Confiance et preuves** d’une relation : **certaine**, **probable**,
+  **incertaine**, ou pas d’avis (fiche de la relation › Modifier). Un
+  assistant peut y joindre des sources et une citation, que Nodal cherche
+  dans le fichier (dossiers de code seulement) : ✓ si elle y est. Sans
+  preuve, ou si la citation est introuvable, « certaine » devient
+  « probable ». Une relation retrouvée ailleurs garde toutes ses preuves.
 - **Fusionner avec…** (même menu, ou santé de la base) : choisissez le nœud à
   garder (Nodal propose celui que vous avez validé, sinon le plus fourni).
   Il reçoit les documents, sous-nœuds, relations, pièces jointes, tags,
@@ -372,6 +378,8 @@ de cas et, pour chacun, l'action qui permet de corriger :
   une chaîne de « dépend de » ; jamais une relation libellée ou issue d’un
   lien `[[…]]`. Rien n’est retiré automatiquement ;
 - **cycles de dépendance** (5 nœuds au plus) ;
+- **relations à vérifier** : incertaines, ou dont la citation n’a pas été
+  retrouvée dans le fichier ;
 - **ajouts de l'IA à relire** → Valider ;
 - **documentation possiblement obsolète** (nœuds ancrés à des fichiers du
   code, voir _Fichiers du code_) → Ouvrir, Marquer comme à jour ;
