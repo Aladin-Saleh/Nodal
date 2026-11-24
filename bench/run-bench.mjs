@@ -15,10 +15,11 @@
  *
  * Écrit bench/results/<date>.json (détail) et <date>.md (tableau).
  */
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { scoreAnswer } from './score.mjs';
 
@@ -32,14 +33,15 @@ const option = (name, fallback) => {
 
 const runs = Number(option('runs', '2'));
 const only = option('only', null)?.split(',');
-const variants = option('variants', 'nodal,sans-nodal').split(',');
+const variants = option('variants', 'sans-nodal,nodal').split(',');
 const label = option('label', '');
+const model = option('model', null);
+const jobs = Number(option('jobs', '3'));
 const base =
   process.env.NODAL_BENCH_BASE ??
   path.join(os.homedir(), 'Documents', 'Nodal.nodal');
-const server =
-  process.env.NODAL_BENCH_SERVER ??
-  path.join(os.homedir(), '.nodal', 'mcp-dev', 'nodal-mcp.cjs');
+const defaultServer =
+  process.env.NODAL_BENCH_SERVER ?? path.join(repo, 'dist', 'nodal-mcp.cjs');
 
 // Exécutable natif appelé sans shell : les arguments ne sont jamais réinterprétés.
 const nativeClaude = path.join(os.homedir(), '.local', 'bin', 'claude.exe');
@@ -53,39 +55,112 @@ const questions = JSON.parse(
   fs.readFileSync(path.join(here, 'questions.json'), 'utf8'),
 ).filter((q) => !only || only.includes(q.id));
 
-// Configurations MCP explicites (--strict-mcp-config) : rien d'autre chargé.
-const configs = {
-  nodal: {
-    mcpServers: {
-      nodal: { command: 'node', args: [server, base, '--read-only'] },
-    },
-  },
-  'sans-nodal': { mcpServers: {} },
+/**
+ * Variantes. `server` : bundle du serveur MCP ; `hook` : contexte automatique ;
+ * `skill` : skill installé dans le projet. D'autres serveurs peuvent être
+ * comparés par NODAL_BENCH_SERVERS='nom=chemin;nom=chemin'.
+ */
+const VARIANTS = {
+  'sans-nodal': { server: null, hook: false, skill: false },
+  nodal: { server: defaultServer, hook: false, skill: false },
+  'nodal-hook': { server: defaultServer, hook: true, skill: false },
+  'nodal-skill': { server: defaultServer, hook: true, skill: true },
 };
+for (const pair of (process.env.NODAL_BENCH_SERVERS ?? '').split(';')) {
+  const at = pair.indexOf('=');
+  if (at > 0) {
+    VARIANTS[pair.slice(0, at)] = {
+      server: pair.slice(at + 1),
+      hook: false,
+      skill: false,
+    };
+  }
+}
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'nodal-bench-'));
+const git = (...gitArgs) =>
+  execFileSync('git', gitArgs, { cwd: repo, encoding: 'utf8' });
+
+/**
+ * Projet propre à une variante, pour ne rien laisser passer d'une autre :
+ * copie des fichiers suivis (dernier commit), sans `bench/` (il contient les
+ * réponses attendues) ni réglages d'assistant ; le CLAUDE.md, qui demande de
+ * consulter Nodal, seulement quand Nodal est là. Le dossier étant nouveau,
+ * l'assistant n'y a pas non plus de mémoire.
+ */
+function prepare(name) {
+  const variant = VARIANTS[name];
+  if (!variant) throw new Error(`Variante inconnue : ${name}`);
+  const project = path.join(tmp, name, 'Nodal');
+  fs.mkdirSync(project, { recursive: true });
+  const archive = path.join(tmp, `${name}.tar`);
+  git('archive', '-o', archive, 'HEAD');
+  execFileSync('tar', ['-xf', path.basename(archive), '-C', `${name}/Nodal`], {
+    cwd: tmp,
+  });
+  for (const item of ['bench', '.claude', 'docs/benchmark-tokens-mcp.md'])
+    fs.rmSync(path.join(project, item), { recursive: true, force: true });
+  if (!variant.server) fs.rmSync(path.join(project, 'CLAUDE.md'));
+  // Dépôt à part : Claude Code y voit un projet, sans l'historique.
+  execFileSync('git', ['init', '-q'], { cwd: project });
+
+  const mcpServers = {};
+  if (variant.server) {
+    const copy = path.join(tmp, `${name}.nodal`);
+    new DatabaseSync(base, { readOnly: true }).exec(
+      `VACUUM INTO '${copy.replaceAll("'", "''")}'`,
+    );
+    const db = new DatabaseSync(copy);
+    db.prepare(
+      "UPDATE workspace_settings SET value = ? WHERE key = 'code.roots'",
+    ).run(JSON.stringify([project]));
+    db.close();
+    mcpServers.nodal = {
+      command: 'node',
+      args: [variant.server, copy, '--read-only'],
+    };
+    if (variant.hook) {
+      const command = `node "${variant.server}" "${copy}" --context`;
+      const hooks = [{ type: 'command', command, timeout: 10 }];
+      fs.mkdirSync(path.join(project, '.claude'), { recursive: true });
+      fs.writeFileSync(
+        path.join(project, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            UserPromptSubmit: [{ hooks }],
+            PreToolUse: [{ matcher: 'Read|Edit|Write|Bash', hooks }],
+          },
+        }),
+      );
+    }
+    if (variant.skill) {
+      fs.cpSync(
+        path.join(repo, 'assets', 'skills'),
+        path.join(project, '.claude', 'skills'),
+        { recursive: true },
+      );
+    }
+  }
+  const config = path.join(tmp, `${name}.json`);
+  fs.writeFileSync(config, JSON.stringify({ mcpServers }));
+  return { project, config };
+}
+const prepared = new Map(variants.map((name) => [name, prepare(name)]));
 
 /** Outils autorisés : lecture seule, aucune écriture possible. */
 const ALLOWED = [
   'Read',
   'Grep',
   'Glob',
-  'Bash(git log:*)',
-  'Bash(git show:*)',
+  'Skill',
   'Bash(ls:*)',
-  'mcp__nodal__nodal_search',
-  'mcp__nodal__nodal_get_node',
-  'mcp__nodal__nodal_read_document',
-  'mcp__nodal__nodal_tree',
-  'mcp__nodal__nodal_neighborhood',
-  'mcp__nodal__nodal_overview',
-  'mcp__nodal__nodal_for_files',
-  'mcp__nodal__nodal_path',
-  'mcp__nodal__nodal_health',
+  'Bash(cat:*)',
+  'Bash(grep:*)',
+  'mcp__nodal',
 ];
 
 function runOnce(question, variant) {
-  const configFile = path.join(tmp, `${variant}.json`);
-  fs.writeFileSync(configFile, JSON.stringify(configs[variant]));
+  const { project, config: configFile } = prepared.get(variant);
   const cliArgs = [
     '-p',
     question.prompt,
@@ -98,11 +173,12 @@ function runOnce(question, variant) {
     '--allowedTools',
     ALLOWED.join(','),
     '--disallowedTools',
-    'Edit,Write,NotebookEdit',
+    'Edit,Write,NotebookEdit,Task,WebSearch,WebFetch',
+    ...(model ? ['--model', model] : []),
   ];
   return new Promise((resolve) => {
     const child = spawn(claudeBin, cliArgs, {
-      cwd: repo,
+      cwd: project,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let buffer = '';
@@ -167,19 +243,27 @@ function runOnce(question, variant) {
   });
 }
 
+// Runs d'un même cas à la suite (le cache du premier sert aux suivants) ;
+// plusieurs cas à la fois.
+const cases = questions.flatMap((question) =>
+  variants.map((variant) => ({ question, variant })),
+);
 const results = [];
-for (const question of questions) {
-  for (const variant of variants) {
-    for (let run = 1; run <= runs; run++) {
-      process.stderr.write(`${question.id} · ${variant} · run ${run}… `);
-      const measured = { ...(await runOnce(question, variant)), run };
-      results.push(measured);
-      process.stderr.write(
-        `${measured.ok ? 'ok' : 'ÉCHEC'} ${measured.turns} tours, ${measured.costUsd?.toFixed(4)} $\n`,
-      );
+let nextCase = 0;
+await Promise.all(
+  Array.from({ length: jobs }, async () => {
+    while (nextCase < cases.length) {
+      const { question, variant } = cases[nextCase++];
+      for (let run = 1; run <= runs; run++) {
+        const measured = { ...(await runOnce(question, variant)), run };
+        results.push(measured);
+        process.stderr.write(
+          `${question.id} · ${variant} · run ${run} : ${measured.ok ? 'ok' : 'ÉCHEC'} ${measured.turns} tours, ${measured.costUsd?.toFixed(4)} $\n`,
+        );
+      }
     }
-  }
-}
+  }),
+);
 fs.rmSync(tmp, { recursive: true, force: true });
 
 // --- Synthèse ----------------------------------------------------------------
@@ -235,6 +319,7 @@ const meta = {
     child.on('close', () => resolve(out.trim()));
   }),
   runsPerCase: runs,
+  model,
 };
 fs.writeFileSync(
   path.join(outDir, `${stamp}.json`),
@@ -261,18 +346,28 @@ const table = [
   ),
   '',
 ];
-for (const question of questions) {
-  const a = rows.find(
-    (r) => r.question === question.id && r.variant === 'nodal',
+const reference = variants[0];
+table.push(
+  '| Variante | Coût moyen ($) | Écart | Tours | Durée (s) | Qualité |',
+  '| -------- | -------------: | ----: | ----: | --------: | ------: |',
+);
+const summary = (variant) => {
+  const ok = results.filter((r) => r.variant === variant && r.ok);
+  const quality = rows.filter((r) => r.variant === variant);
+  return {
+    // Moyenne des questions, chacune comptant autant.
+    cost: mean(quality.map((r) => r.cost)),
+    turns: mean(quality.map((r) => r.turns)),
+    seconds: mean(ok.map((r) => r.durationMs)) / 1000,
+    quality: mean(quality.map((r) => r.quality)),
+  };
+};
+for (const variant of variants) {
+  const s = summary(variant);
+  const gap = (s.cost / summary(reference).cost - 1) * 100;
+  table.push(
+    `| ${variant} | ${fmt(s.cost, 4)} | ${variant === reference ? '—' : `${fmt(gap)} %`} | ${fmt(s.turns, 1)} | ${fmt(s.seconds)} | ${fmt(s.quality * 100)} % |`,
   );
-  const b = rows.find(
-    (r) => r.question === question.id && r.variant === 'sans-nodal',
-  );
-  if (a && b && a.cost && b.cost) {
-    table.push(
-      `- ${question.id} : coût ${fmt((a.cost / b.cost - 1) * 100)} % (à chaud ${fmt((a.warmCost / b.warmCost - 1) * 100)} %), entrée ${fmt((a.input / b.input - 1) * 100)} % avec Nodal.`,
-    );
-  }
 }
 fs.writeFileSync(path.join(outDir, `${stamp}.md`), `${table.join('\n')}\n`);
 process.stdout.write(

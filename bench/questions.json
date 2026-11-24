@@ -1,6 +1,7 @@
 [
   {
     "id": "ipc",
+    "kind": "documenté",
     "prompt": "Quels fichiers dois-je modifier pour ajouter un nouveau canal IPC dans Nodal, et comment l'émetteur d'un message IPC est-il vérifié ? Réponds en 10 lignes au plus.",
     "expect": [
       "ipc-contract",
@@ -16,6 +17,7 @@
   },
   {
     "id": "capture",
+    "kind": "documenté",
     "prompt": "Comment fonctionne la capture rapide de Nodal : où la capture est-elle rangée quand aucun espace n'est ouvert, et quels canaux IPC la fenêtre de capture a-t-elle le droit d'appeler ? Réponds en 10 lignes au plus.",
     "expect": [
       "Bo[iî]te de r[ée]ception",
@@ -31,6 +33,7 @@
   },
   {
     "id": "avant-modif",
+    "kind": "documenté",
     "prompt": "Je vais ajouter une opération à src/mcp/apply-tool.ts. Que dois-je savoir avant, et qu'est-ce qu'il faudra mettre à jour ou tester ensuite ? Ne modifie rien. Réponds en 10 lignes au plus.",
     "expect": [
       "operationSchema",
@@ -42,6 +45,43 @@
       "server\\.test",
       "description|server\\.ts",
       "token|benchmark"
+    ]
+  },
+  {
+    "id": "pourquoi",
+    "kind": "décision",
+    "prompt": "Pourquoi la recherche de Nodal ne pondère-t-elle pas les mots par leur rareté (IDF), et pourquoi le contexte automatique n'a-t-il pas de règle de silence stricte ? Donne les chiffres s'il y en a. Réponds en 8 lignes au plus.",
+    "expect": [
+      "moins bon|pire|n'améliore pas|pas mieux|équivalent",
+      "12\\s*/\\s*18|12 sur 18|7\\s*/\\s*18|\\b7 et 13",
+      "petite base|31 nœuds",
+      "13\\s*/\\s*18|13 sur 18",
+      "17\\s*/\\s*18|17 sur 18"
+    ]
+  },
+  {
+    "id": "impact",
+    "kind": "relations",
+    "prompt": "Dans Nodal, si je change le schéma de la base SQLite, quelles parties de l'application sont touchées, directement et indirectement ? Cite au moins cinq parties. Réponds en 10 lignes au plus.",
+    "expect": [
+      "services? métier|src/main/knowledge",
+      "recherche",
+      "serveur MCP|src/mcp",
+      "IPC",
+      "migration",
+      "export|import",
+      "état de la vue|view-state|vues? (du )?graphe|graph[_ -]?view"
+    ]
+  },
+  {
+    "id": "code-seul",
+    "kind": "absent de Nodal",
+    "prompt": "Dans src/shared/duplicates.ts, à quelles conditions exactes deux mots de longueurs différentes sont-ils tenus pour le même mot ? Réponds en 6 lignes au plus.",
+    "expect": [
+      "\\b5\\b|cinq",
+      "\\b6\\b|six",
+      "endsWith|se termine|préfixe|devant|début",
+      "une? (seule )?lettre|un (seul )?caractère|\\+ ?1|length \\+ 1"
     ]
   }
 ]
