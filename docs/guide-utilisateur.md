@@ -355,9 +355,11 @@ de cas et, pour chacun, l'action qui permet de corriger :
 - **nœuds isolés** : ni relation ni enfant (les racines ne comptent pas) ;
 - **liens `[[…]]` cassés** → Ouvrir le document ;
 - **doublons probables** : titres identiques aux accents, à la casse, à la
-  ponctuation ou au pluriel près, ou à une lettre près (pas à un chiffre
-  près : « Étape 1 » et « Étape 2 » ne sont pas des doublons) → Ouvrir l'un
-  ou l'autre ;
+  ponctuation, au pluriel ou aux mots de liaison près, ou à une coquille
+  près. Des nombres différents, une lettre isolée différente (« Serveur A »,
+  « Serveur B »), un mot dérivé (« synchrone », « asynchrone ») ou un titre
+  courant (« Conception ») sous deux parents ne sont pas des doublons →
+  Ouvrir l'un ou l'autre, **Pas un doublon** (la paire n'est plus signalée) ;
 - **relations superflues** : lien « est lié à » en plus d’une relation
   précise ou entre un parent et son enfant, « dépend de » déjà impliqué par
   une chaîne de « dépend de » ; jamais une relation libellée ou issue d’un

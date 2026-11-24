@@ -3,39 +3,18 @@ import { AssistantChangeService } from '../../../src/main/knowledge/assistant-ch
 import { DocumentService } from '../../../src/main/knowledge/document-service';
 import { EdgeService } from '../../../src/main/knowledge/edge-service';
 import {
-  duplicatePairs,
   healthReport,
   listSearchGaps,
   recordSearchGap,
   SEARCH_GAP_LIMIT,
   setSearchGapStatus,
-  titleKey,
+  ignoreDuplicate,
 } from '../../../src/main/knowledge/health-service';
 import { NodeService } from '../../../src/main/knowledge/node-service';
 import { RelationTypeService } from '../../../src/main/knowledge/relation-type-service';
 import { testWorkspaceFixture } from '../../helpers/test-workspace';
 
 const workspace = testWorkspaceFixture();
-
-describe('doublons probables', () => {
-  it('rapprochent accents, casse, ponctuation, pluriel et une lettre d’écart', () => {
-    expect(titleKey('Les Événements !')).toBe(titleKey('les evenement'));
-    const pairs = duplicatePairs([
-      { id: 'a', title: 'Serveur MCP' },
-      { id: 'b', title: 'serveur-mcp' },
-      { id: 'c', title: 'Persistance' },
-      { id: 'd', title: 'Persistence' },
-      { id: 'e', title: 'Kafka' },
-      { id: 'f', title: 'Kafko' },
-      { id: 'g', title: 'Élément 0.0.1' },
-      { id: 'h', title: 'Élément 0.0.2' },
-    ]);
-    expect(pairs.map((pair) => pair.join('+')).toSorted()).toEqual([
-      'a+b',
-      'c+d',
-    ]);
-  });
-});
 
 describe('santé de la base', () => {
   it('liste chaque problème, avec des compteurs exacts et des listes plafonnées', () => {
@@ -143,5 +122,28 @@ describe('sujets à documenter', () => {
     expect(
       ctx.db.prepare('SELECT count(*) AS n FROM search_gap').get(),
     ).toEqual({ n: SEARCH_GAP_LIMIT });
+  });
+});
+
+describe('« Pas un doublon »', () => {
+  it('écarte la paire, jusqu’à la suppression de l’un des nœuds', () => {
+    const { context } = workspace();
+    const nodes = new NodeService(context);
+    const [a, b] = ['Serveur MCP', 'Serveur-MCP'].map(
+      (title) =>
+        nodes.create({ parentId: null, title, nodeType: 'concept' }).id,
+    );
+    const count = () =>
+      healthReport(context()).checks.find((check) => check.id === 'duplicate')!
+        .count;
+    expect(count()).toBe(1);
+    ignoreDuplicate(context(), b!, a!);
+    ignoreDuplicate(context(), a!, b!);
+    expect(count()).toBe(0);
+    expect(() => ignoreDuplicate(context(), a!, a!)).toThrow(/introuvable/);
+    nodes.delete({ id: a!, childrenStrategy: 'reparent' });
+    expect(
+      context().db.prepare('SELECT * FROM duplicate_ignored').all(),
+    ).toEqual([]);
   });
 });

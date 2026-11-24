@@ -71,6 +71,16 @@ export function HealthDialog({
     void load();
   };
 
+  const ignoreDuplicate = async (item: HealthIssue) => {
+    await run(() =>
+      client.call('duplicate:ignore', {
+        firstId: item.nodeId,
+        secondId: item.otherNodeId!,
+      }),
+    );
+    void load();
+  };
+
   const markReviewed = async (nodeId: string) => {
     const done = await run(() =>
       client.call('anchor:markReviewed', { id: nodeId }),
@@ -102,7 +112,6 @@ export function HealthDialog({
             Ouvrir le document
           </button>
         );
-      case 'duplicate':
       case 'redundantRelation':
       case 'dependencyCycle':
         return (
@@ -114,6 +123,27 @@ export function HealthDialog({
               onClick={() => onOpenNode(item.otherNodeId!)}
             >
               Ouvrir l’autre
+            </button>
+          </>
+        );
+      case 'duplicate':
+        return (
+          <>
+            {open}
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onOpenNode(item.otherNodeId!)}
+            >
+              Ouvrir l’autre
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              title="Ne plus signaler cette paire"
+              onClick={() => void ignoreDuplicate(item)}
+            >
+              Pas un doublon
             </button>
           </>
         );

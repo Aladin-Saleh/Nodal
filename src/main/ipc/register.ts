@@ -57,7 +57,11 @@ import {
   type ScannedFolder,
 } from '../markdown-import/markdown-import-service';
 import { SuggestionService } from '../knowledge/suggestion-service';
-import { healthReport, setSearchGapStatus } from '../knowledge/health-service';
+import {
+  healthReport,
+  ignoreDuplicate,
+  setSearchGapStatus,
+} from '../knowledge/health-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -293,6 +297,10 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return null;
     },
     'anchor:staleNodes': () => codeAnchors.staleNodes(),
+    'duplicate:ignore': ({ firstId, secondId }) => {
+      ignoreDuplicate(context(), firstId, secondId);
+      return null;
+    },
     'gap:setStatus': ({ key, status }) => {
       setSearchGapStatus(context(), key, status);
       return null;

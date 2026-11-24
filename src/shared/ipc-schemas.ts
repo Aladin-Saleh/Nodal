@@ -318,6 +318,9 @@ export const ipcArgsSchemas = {
   'node:backlinks': one(idInput),
   'suggestion:listForNode': one(idInput),
   'health:report': noArgs,
+  'duplicate:ignore': one(
+    z.strictObject({ firstId: idSchema, secondId: idSchema }),
+  ),
   'gap:setStatus': one(
     z.strictObject({
       key: z.string().min(1).max(500),

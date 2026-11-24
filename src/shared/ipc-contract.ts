@@ -273,6 +273,11 @@ export interface IpcContract {
   'node:backlinks': { args: [IdInput]; result: Backlink[] };
   /** Rapport « Santé de la base » et sujets à documenter. */
   'health:report': { args: []; result: HealthReport };
+  /** « Pas un doublon » : la paire n'est plus signalée. */
+  'duplicate:ignore': {
+    args: [{ firstId: string; secondId: string }];
+    result: null;
+  };
   /** Sujet à documenter traité (`done`) ou écarté (`ignored`). */
   'gap:setStatus': {
     args: [{ key: string; status: 'done' | 'ignored' }];
@@ -465,6 +470,7 @@ export const IPC_CHANNELS = [
   'node:backlinks',
   'suggestion:listForNode',
   'health:report',
+  'duplicate:ignore',
   'gap:setStatus',
   'suggestion:accept',
   'suggestion:ignore',

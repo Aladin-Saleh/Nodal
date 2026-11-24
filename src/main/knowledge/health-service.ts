@@ -21,11 +21,12 @@ import {
   redundantRelations,
   suggestedQuestions,
 } from '../../shared/graph-analysis';
+import { duplicatePairs, pairKey } from '../../shared/duplicates';
 import { foldText } from '../../shared/text';
 import { parseWikiLinks, resolveTarget } from '../../shared/wiki-links';
 import { readAnalysisGraph } from './analysis-service';
 import { pendingAssistantNodeIds } from './assistant-origin';
-import type { ServiceContext } from './context';
+import { notFound, type ServiceContext } from './context';
 import { workspaceLinkResolver } from './link-service';
 import { asRows } from './rows';
 
@@ -62,57 +63,34 @@ const issue = (
   extra: Partial<HealthIssue> = {},
 ): HealthIssue => ({ check, nodeId: node.id, title: node.title, ...extra });
 
-/** Clé de comparaison des titres : sans accents, casse, ponctuation ni pluriel. */
-export function titleKey(title: string): string {
-  return foldText(title)
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-    .split(' ')
-    .map((word) => (word.length > 3 ? word.replace(/[sx]$/u, '') : word))
-    .join(' ');
+/** Paires écartées par l'utilisateur (« Pas un doublon »). */
+function ignoredPairs(ctx: ServiceContext): Set<string> {
+  return new Set(
+    asRows<{ a: string; b: string }>(
+      ctx.db
+        .prepare(
+          'SELECT first_node_id AS a, second_node_id AS b FROM duplicate_ignored',
+        )
+        .all(),
+    ).map(({ a, b }) => pairKey(a, b)),
+  );
 }
 
-function push(map: Map<string, string[]>, key: string, id: string): void {
-  const list = map.get(key);
-  if (list) list.push(id);
-  else map.set(key, [id]);
-}
-
-/**
- * Paires de nœuds aux titres probablement en double : même clé, ou clés de
- * 6 caractères au moins à une lettre près, chiffres exclus (suppressions
- * symétriques : pas de comparaison de toutes les paires).
- */
-export function duplicatePairs(
-  nodes: readonly { id: string; title: string }[],
-): [string, string][] {
-  const pairs = new Map<string, [string, string]>();
-  const add = (a: string, b: string) => {
-    if (a === b) return;
-    const [first, second] = a < b ? [a, b] : [b, a];
-    pairs.set(`${first}|${second}`, [first, second]);
-  };
-  const byKey = new Map<string, string[]>();
-  const byDeletion = new Map<string, string[]>();
-  for (const node of nodes) {
-    const key = titleKey(node.title);
-    if (!key) continue;
-    push(byKey, key, node.id);
-    if (key.length < 6) continue;
-    push(byDeletion, key, node.id);
-    for (let i = 0; i < key.length; i++) {
-      // Lettres seulement : « Étape 1 » et « Étape 2 » ne sont pas des doublons.
-      if (!/\p{L}/u.test(key[i]!)) continue;
-      push(byDeletion, key.slice(0, i) + key.slice(i + 1), node.id);
-    }
-  }
-  for (const ids of [...byKey.values(), ...byDeletion.values()]) {
-    if (ids.length < 2 || ids.length > 20) continue;
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) add(ids[i]!, ids[j]!);
-    }
-  }
-  return [...pairs.values()];
+/** « Pas un doublon » : la paire n'est plus signalée. */
+export function ignoreDuplicate(
+  ctx: ServiceContext,
+  a: string,
+  b: string,
+): void {
+  const exists = ctx.db.prepare(
+    'SELECT 1 FROM node WHERE id = ? AND workspace_id = ?',
+  );
+  if (a === b || ![a, b].every((id) => exists.get(id, ctx.workspaceId)))
+    throw notFound('Nœud');
+  const [first, second] = a < b ? [a, b] : [b, a];
+  ctx.db
+    .prepare('INSERT OR IGNORE INTO duplicate_ignored VALUES (?, ?, ?)')
+    .run(first, second, ctx.now());
 }
 
 export const HEALTH_CHECKS: HealthCheck[] = [
@@ -216,13 +194,22 @@ export const HEALTH_CHECKS: HealthCheck[] = [
     run: (ctx) => {
       const nodes = allNodes(ctx);
       const byId = new Map(nodes.map((node) => [node.id, node]));
-      return duplicatePairs(nodes).map(([a, b]) => {
-        const other = byId.get(b)!;
-        return issue('duplicate', byId.get(a)!, {
-          otherNodeId: other.id,
-          detail: other.title,
+      const ignored = ignoredPairs(ctx);
+      return duplicatePairs(
+        nodes.map(({ id, title, parent_id }) => ({
+          id,
+          title,
+          parentId: parent_id,
+        })),
+      )
+        .filter(([a, b]) => !ignored.has(pairKey(a, b)))
+        .map(([a, b]) => {
+          const other = byId.get(b)!;
+          return issue('duplicate', byId.get(a)!, {
+            otherNodeId: other.id,
+            detail: other.title,
+          });
         });
-      });
     },
   },
   {
