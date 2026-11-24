@@ -367,6 +367,16 @@ describe('serveur MCP', () => {
     expect(over.otherMatches[0]).toMatchObject({
       documentId: short(ids.query),
     });
+    // Le budget annoncé suffit, sans rien de trop.
+    expect(over.maxCharsNeeded).toBeGreaterThan(100);
+    const whole = toon(
+      await client.call('nodal_search', {
+        query: 'select',
+        maxChars: over.maxCharsNeeded,
+      }),
+    );
+    expect(whole.otherMatches).toBeUndefined();
+    expect(whole.maxCharsNeeded).toBeUndefined();
     // Budget nul : extraits seuls, termes marqués.
     const result = await client.call('nodal_search', {
       query: 'deploiement',
@@ -380,6 +390,7 @@ describe('serveur MCP', () => {
       document: 'Notes',
     });
     expect(data.otherMatches[0].snippet).toContain('**Déploiement**');
+    expect(data.maxCharsNeeded).toBeUndefined();
     await client.close();
   });
 
@@ -574,7 +585,18 @@ describe('serveur MCP', () => {
     const truncated = toon(
       await client.call('nodal_tree', { depth: 5, maxRows: 2 }),
     );
-    expect(truncated).toMatchObject({ truncated: true });
+    expect(truncated).toMatchObject({ truncated: true, maxRowsNeeded: 4 });
+    expect(truncated.nodes).toHaveLength(2);
+    expect(deep.maxRowsNeeded).toBeUndefined();
+    const near = toon(
+      await client.call('nodal_neighborhood', {
+        nodeId: ids.other,
+        depth: 2,
+        maxNodes: 2,
+      }),
+    );
+    expect(near).toMatchObject({ truncated: true, maxNodesNeeded: 3 });
+    expect(near.nodes).toHaveLength(2);
 
     const around = toon(
       await client.call('nodal_neighborhood', { nodeId: ids.other, depth: 2 }),

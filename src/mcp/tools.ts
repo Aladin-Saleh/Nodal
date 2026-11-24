@@ -99,6 +99,12 @@ function pathOf(outline: Outline, id: string): string {
   return titles.join(PATH_SEPARATOR);
 }
 
+/** Chemins de plusieurs nœuds d'un même appel. */
+export function nodePaths(ctx: ReadContext): (id: string) => string {
+  const outline = loadOutline(ctx);
+  return (id) => pathOf(outline, id);
+}
+
 const childCount = (outline: Outline, id: string) =>
   outline.children.get(id)?.length ?? 0;
 
@@ -232,23 +238,22 @@ export function tree(
     children: number;
     documents: number;
   }[] = [];
-  let truncated = false;
+  let total = 0;
   // Parcours en profondeur : l'ordre des lignes et la profondeur suffisent à
   // reconstruire l'arbre (le parent d'une ligne est la dernière ligne de
   // profondeur inférieure), d'où l'absence de parentId.
   const visit = (row: OutlineRow, depth: number) => {
-    if (nodes.length >= maxRows) {
-      truncated = true;
-      return;
+    // Au-delà de la limite, les lignes sont seulement comptées.
+    if (++total <= maxRows) {
+      nodes.push({
+        id: row.id,
+        title: row.title,
+        type: row.node_type,
+        depth,
+        children: childCount(outline, row.id),
+        documents: row.document_count,
+      });
     }
-    nodes.push({
-      id: row.id,
-      title: row.title,
-      type: row.node_type,
-      depth,
-      children: childCount(outline, row.id),
-      documents: row.document_count,
-    });
     if (depth >= input.depth) return;
     for (const child of outline.children.get(row.id) ?? [])
       visit(child, depth + 1);
@@ -260,7 +265,8 @@ export function tree(
   return {
     root: input.rootId ? pathOf(outline, input.rootId) : null,
     nodes,
-    truncated,
+    truncated: total > maxRows,
+    ...(total > maxRows ? { maxRowsNeeded: total } : {}),
   };
 }
 
@@ -343,13 +349,14 @@ function sectionsOf(doc: {
 /**
  * Sections d'un long document qui contiennent le plus de mots cherchés
  * (titres de section compris) — à égalité, toutes —, dans la limite de
- * `budget` caractères, remises dans l'ordre du document.
+ * `budget` caractères, remises dans l'ordre du document ; `chars` : la taille
+ * de toutes ces sections, retenues ou non.
  */
 function matchingSections(
   sections: FoundSection[],
   patterns: RegExp[],
   budget: number,
-): FoundSection[] {
+): { sections: FoundSection[]; chars: number } {
   const scored = sections
     .map((section, index) => {
       const haystack = normalize(
@@ -385,9 +392,12 @@ function matchingSections(
       break;
     }
   }
-  return chosen
-    .toSorted((a, b) => a.index - b.index)
-    .map((entry) => entry.section);
+  return {
+    sections: chosen
+      .toSorted((a, b) => a.index - b.index)
+      .map((entry) => entry.section),
+    chars: ranked.reduce((sum, entry) => sum + entry.section.content.length, 0),
+  };
 }
 
 /**
@@ -398,6 +408,8 @@ function matchingSections(
  * documents hors budget restent signalés par un extrait. Si aucun nœud ne
  * contient tous les mots, ceux qui en contiennent au moins un sont renvoyés
  * (`allTerms: false`), plutôt qu'une liste vide qui obligerait à relancer.
+ * Une réponse coupée l'annonce, avec le budget qu'il aurait fallu
+ * (`maxCharsNeeded`).
  */
 export function search(
   ctx: ReadContext,
@@ -423,6 +435,7 @@ export function search(
     snippet: string;
   }[] = [];
   let used = 0;
+  let needed = 0;
   for (const hit of hits) {
     for (const match of hit.matches) {
       // Les correspondances dans le titre ou le résumé sont couvertes par la
@@ -439,13 +452,19 @@ export function search(
         totalChars: doc.body.length,
       };
       if (doc.body.length <= SHORT_DOCUMENT_CHARS) {
+        needed += doc.body.length;
         if (doc.body.length <= remaining) {
           used += doc.body.length;
           found.push({ ...base, body: doc.body, sections: [] });
           continue;
         }
-      } else if (remaining > 0) {
-        const sections = matchingSections(sectionsOf(doc), patterns, remaining);
+      } else if (input.maxChars > 0) {
+        const { sections, chars } = matchingSections(
+          sectionsOf(doc),
+          patterns,
+          remaining,
+        );
+        needed += chars;
         if (sections.length > 0) {
           used += sections.reduce((sum, part) => sum + part.content.length, 0);
           found.push({ ...base, body: null, sections });
@@ -477,6 +496,10 @@ export function search(
       })),
       // Documents trouvés mais hors budget : à lire avec nodal_read_document.
       ...(snippets.length > 0 ? { otherMatches: snippets } : {}),
+      // 0 : extraits seuls, demandés.
+      ...(input.maxChars > 0 && needed > input.maxChars
+        ? { maxCharsNeeded: needed }
+        : {}),
     },
     documents: found,
   };
@@ -700,26 +723,24 @@ export function neighborhood(
 
   const distance = new Map([[input.nodeId, 0]]);
   let frontier = [input.nodeId];
-  let truncated = false;
   for (let level = 1; level <= input.depth && frontier.length > 0; level++) {
     const next: string[] = [];
     for (const id of frontier) {
       for (const neighbor of adjacency.get(id) ?? []) {
         if (distance.has(neighbor)) continue;
-        if (distance.size >= maxNodes) {
-          truncated = true;
-          break;
-        }
         distance.set(neighbor, level);
         next.push(neighbor);
       }
     }
     frontier = next;
   }
+  // Les plus proches d'abord (parcours en largeur).
+  const total = distance.size;
+  const kept = new Map([...distance].slice(0, maxNodes));
 
   return {
     center: pathOf(outline, input.nodeId),
-    nodes: [...distance].map(([id, dist]) => {
+    nodes: [...kept].map(([id, dist]) => {
       const row = outline.byId.get(id)!;
       return {
         id,
@@ -732,8 +753,7 @@ export function neighborhood(
     relations: edges
       .filter(
         (edge) =>
-          distance.has(edge.source_node_id) &&
-          distance.has(edge.target_node_id),
+          kept.has(edge.source_node_id) && kept.has(edge.target_node_id),
       )
       .map((edge) => ({
         sourceId: edge.source_node_id,
@@ -742,7 +762,8 @@ export function neighborhood(
         label: edge.label,
         by: origin(edge.by_assistant),
       })),
-    truncated,
+    truncated: total > maxNodes,
+    ...(total > maxNodes ? { maxNodesNeeded: total } : {}),
   };
 }
 
@@ -919,11 +940,13 @@ export function forFiles(
   const others: { nodeId: string; id: string; title: string; chars: number }[] =
     [];
   let used = 0;
+  let needed = 0;
   for (const { node } of matches) {
     const path = pathOf(outline, node.nodeId);
     for (const { id } of documentIds.all(node.nodeId) as { id: string }[]) {
       const doc = documents.get(id);
       const size = doc.body.length;
+      if (size <= SHORT_DOCUMENT_CHARS) needed += size;
       if (size <= SHORT_DOCUMENT_CHARS && used + size <= input.maxChars) {
         used += size;
         found.push({
@@ -962,6 +985,9 @@ export function forFiles(
         };
       }),
       ...(others.length > 0 ? { otherDocuments: others } : {}),
+      ...(input.maxChars > 0 && needed > input.maxChars
+        ? { maxCharsNeeded: needed }
+        : {}),
       // Fichiers sans nœud : à documenter, ou à ancrer à un nœud existant.
       ...(notAnchored.length > 0
         ? { notAnchored: notAnchored.join(', ') }
