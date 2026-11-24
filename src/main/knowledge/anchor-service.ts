@@ -13,6 +13,7 @@ import {
   CODE_ROOTS_MAX,
   matchesAnchor,
   normalizeAnchorPattern,
+  type CodeSnapshot,
 } from '../../shared/code-anchors';
 import { NodalError } from '../../shared/errors';
 import { notFound, type ServiceContext } from './context';
@@ -155,6 +156,8 @@ export interface AnchoredNode {
   patterns: string[];
   /** Plus récente des dates : nœud, documents, « Marquer comme à jour ». */
   since: string;
+  /** Contenu du code documenté (withSnapshots) ; absent : jamais relevé. */
+  snapshot?: CodeSnapshot;
 }
 
 /** Nœuds ancrés de l'espace (tous, ou ceux de `nodeIds`). */
@@ -196,11 +199,28 @@ export function listAnchoredNodes(
 }
 
 /** « Marquer comme à jour » : la documentation reflète le code actuel. */
-export function markReviewed(ctx: ServiceContext, nodeId: string): void {
+export function markReviewed(ctx: ServiceContext, nodeId: string): string {
   assertNode(ctx, nodeId);
+  const now = ctx.now();
   ctx.db
     .prepare('UPDATE node SET code_reviewed_at = ? WHERE id = ?')
-    .run(ctx.now(), nodeId);
+    .run(now, nodeId);
+  return now;
+}
+
+/** Annule une relecture : l'état du code d'avant redevient la référence. */
+export function undoReview(
+  ctx: ServiceContext,
+  nodeId: string,
+  before: { reviewedAt: string | null; snapshot: CodeSnapshot | null },
+): void {
+  ctx.db
+    .prepare('UPDATE node SET code_reviewed_at = ? WHERE id = ?')
+    .run(before.reviewedAt, nodeId);
+  const [node] = listAnchoredNodes(ctx, [nodeId]);
+  // Le nœud a pu être mis à jour dans le même appel : sa date est la sienne.
+  if (node && before.snapshot)
+    saveSnapshot(ctx, nodeId, { ...before.snapshot, since: node.since });
 }
 
 /** Nœuds dont un motif couvre l'un des chemins relatifs donnés. */
@@ -218,4 +238,55 @@ export function nodesForPaths(
     if (paths.length > 0) found.push({ node, paths });
   }
   return found;
+}
+
+/** Complète des nœuds ancrés par l'état du code enregistré. */
+export function withSnapshots(
+  ctx: ServiceContext,
+  nodes: readonly AnchoredNode[],
+): AnchoredNode[] {
+  const read = ctx.db.prepare(
+    'SELECT since, patterns, files FROM node_code_state WHERE node_id = ?',
+  );
+  return nodes.map((node) => {
+    const row = asRow<{ since: string; patterns: string; files: string }>(
+      read.get(node.nodeId),
+    );
+    if (!row) return node;
+    try {
+      const snapshot: CodeSnapshot = {
+        since: row.since,
+        patterns: JSON.parse(row.patterns) as string[],
+        files: JSON.parse(row.files) as CodeSnapshot['files'],
+      };
+      return { ...node, snapshot };
+    } catch {
+      // JSON modifié à la main : comme s'il n'y en avait pas.
+      return node;
+    }
+  });
+}
+
+/**
+ * Enregistre l'état du code d'un nœud, sauf si le nœud a changé depuis qu'il
+ * a été relevé (l'état serait aussitôt caduc) ou n'existe plus.
+ */
+export function saveSnapshot(
+  ctx: ServiceContext,
+  nodeId: string,
+  snapshot: CodeSnapshot,
+): void {
+  if (listAnchoredNodes(ctx, [nodeId])[0]?.since !== snapshot.since) return;
+  ctx.db
+    .prepare(
+      `INSERT INTO node_code_state (node_id, since, patterns, files) VALUES (?, ?, ?, ?)
+       ON CONFLICT (node_id) DO UPDATE SET
+         since = excluded.since, patterns = excluded.patterns, files = excluded.files`,
+    )
+    .run(
+      nodeId,
+      snapshot.since,
+      JSON.stringify(snapshot.patterns),
+      JSON.stringify(snapshot.files),
+    );
 }

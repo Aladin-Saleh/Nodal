@@ -15,7 +15,8 @@
  * - exécutable cherché dans les dossiers absolus du PATH seulement : sous
  *   Windows, un nom nu serait d'abord cherché dans le dossier courant, donc
  *   un `git.exe` déposé dans le dépôt serait exécuté ;
- * - commandes en lecture seule (`rev-parse`, `log`) avec
+ * - commandes en lecture seule (`rev-parse`, `log`, `ls-files`, `rev-list`,
+ *   `ls-tree`, `cat-file` ; jamais `diff`, qui peut exécuter un filtre) avec
  *   GIT_OPTIONAL_LOCKS=0 (aucun verrou ni rafraîchissement de l'index),
  *   sans pager, fsmonitor ni invite d'identifiants ; délai maximal.
  */
@@ -144,4 +145,56 @@ export async function filesCommittedSince(
     }
   }
   return changes;
+}
+
+/** Fichiers suivis ou nouveaux (hors .gitignore), relatifs à `root`. */
+export async function listGitFiles(
+  root: string,
+  run: GitRunner = runGit,
+): Promise<string[]> {
+  const out = await run(root, [
+    'ls-files',
+    '--cached',
+    '--others',
+    '--exclude-standard',
+    '-z',
+  ]);
+  return [...new Set(out.split('\0').filter(Boolean))];
+}
+
+/**
+ * Fichiers du dernier commit antérieur à `date` : chemin relatif à `root` →
+ * objet git. Vide si l'historique commence après.
+ */
+export async function gitFilesAt(
+  root: string,
+  date: Date,
+  run: GitRunner = runGit,
+): Promise<Map<string, string>> {
+  const commit = (
+    await run(root, [
+      'rev-list',
+      '-1',
+      `--before=${date.toISOString()}`,
+      'HEAD',
+    ]).catch(() => '')
+  ) // Aucun commit.
+    .trim();
+  const files = new Map<string, string>();
+  if (!commit) return files;
+  const out = await run(root, ['ls-tree', '-r', '-z', commit]);
+  for (const entry of out.split('\0')) {
+    const match = entry.match(/^\d+ blob ([0-9a-f]+)\t(.+)$/s);
+    if (match) files.set(match[2]!, match[1]!);
+  }
+  return files;
+}
+
+/** Contenu d'un objet git (aucun filtre ni textconv du dépôt n'est exécuté). */
+export async function readGitBlob(
+  root: string,
+  objectId: string,
+  run: GitRunner = runGit,
+): Promise<Buffer> {
+  return Buffer.from(await run(root, ['cat-file', 'blob', objectId]), 'utf8');
 }

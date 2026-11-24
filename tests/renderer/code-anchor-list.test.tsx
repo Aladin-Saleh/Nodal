@@ -33,7 +33,7 @@ const anchors: NodeAnchors = {
       { path: 'src/mcp/server.ts', changedAt: '2026-10-20T10:00:00.000Z' },
     ],
     fileCount: 1,
-    source: 'git',
+    source: 'content',
   },
 };
 

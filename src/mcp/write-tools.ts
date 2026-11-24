@@ -33,12 +33,15 @@ import { asRow, asRows } from '../main/knowledge/rows';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
 import { requireTemplate } from '../main/knowledge/template-service';
-import { toRootRelative } from '../shared/code-anchors';
+import { matchesAnchor, toRootRelative } from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
+  listAnchoredNodes,
   listAnchors,
+  markReviewed,
   normalizeAnchorList,
   setAnchors,
+  withSnapshots,
 } from '../main/knowledge/anchor-service';
 import { canonicalizeLlmLinks } from './links';
 import { loadShortIds } from './short-ids';
@@ -59,6 +62,8 @@ export interface WriteContext extends ReadContext {
   client: string | null;
   /** Dossiers de code de l'espace (absolus), pour ancrer des chemins absolus. */
   codeRoots?: string[];
+  /** Fichiers déclarés relus pendant l'appel, par nœud. */
+  reviewed?: Map<string, string[]>;
 }
 
 /** Valide une valeur avec les règles de l'application (mêmes messages). */
@@ -436,4 +441,52 @@ export function anchorFiles(
     });
   }
   return { nodeId: input.nodeId, anchors: after.join(', ') };
+}
+
+/**
+ * Déclare avoir relu des fichiers ancrés au nœud : sa documentation reflète
+ * leur contenu actuel (ou leur suppression).
+ */
+export function reviewFiles(
+  ctx: WriteContext,
+  input: { nodeId: string; files: string[] },
+) {
+  nodeType(ctx, input.nodeId);
+  const [node] = withSnapshots(ctx, listAnchoredNodes(ctx, [input.nodeId]));
+  const files = input.files.map((raw) => {
+    const found = toRootRelative(
+      raw,
+      ctx.codeRoots ?? [],
+      PATHS_CASE_INSENSITIVE,
+    );
+    const anchored = node?.patterns.some(
+      (pattern) =>
+        found && matchesAnchor(pattern, found.path, PATHS_CASE_INSENSITIVE),
+    );
+    if (!found?.path || !anchored) {
+      throw new NodalError(
+        'VALIDATION_ERROR',
+        `« ${raw} » n'est pas ancré à ce nœud.`,
+      );
+    }
+    return found.path;
+  });
+  const { code_reviewed_at: before } = ctx.db
+    .prepare('SELECT code_reviewed_at FROM node WHERE id = ?')
+    .get(input.nodeId) as { code_reviewed_at: string | null };
+  const reviewedAt = markReviewed(ctx, input.nodeId);
+  recordAssistantChange(ctx, {
+    action: 'review',
+    nodeId: input.nodeId,
+    entityId: input.nodeId,
+    summary: `Fichiers relus pour ${pathOf(ctx, input.nodeId)} : ${files.join(', ')}`,
+    client: ctx.client,
+    before: { reviewedAt: before, snapshot: node?.snapshot ?? null },
+    after: { reviewedAt },
+  });
+  ctx.reviewed?.set(input.nodeId, [
+    ...(ctx.reviewed.get(input.nodeId) ?? []),
+    ...files,
+  ]);
+  return { nodeId: input.nodeId };
 }

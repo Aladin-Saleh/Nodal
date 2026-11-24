@@ -55,6 +55,7 @@ describe('createNodalDatabase', () => {
         'link_suggestion_ignored',
         'node',
         'node_anchor',
+        'node_code_state',
         'node_tag',
         'relation_type',
         'search_gap',

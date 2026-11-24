@@ -21,11 +21,13 @@ import {
   markReviewed,
   readCodeRoots,
   resolveCodeRoots,
+  saveSnapshot,
   setAnchors,
+  withSnapshots,
   writeCodeRoots,
 } from '../knowledge/anchor-service';
-import type { ContextProvider } from '../knowledge/context';
-import { describeAnchors, findStaleNodes } from './code-check';
+import type { ContextProvider, ServiceContext } from '../knowledge/context';
+import { checkCode, describeAnchors, type NodeSnapshot } from './code-check';
 import type { GitRunner } from './git-history';
 
 /** Durée de validité d'une vérification d'obsolescence (ms). */
@@ -91,13 +93,32 @@ export class CodeAnchorService {
   async listForNode(nodeId: string): Promise<NodeAnchors> {
     const ctx = this.context();
     const patterns = listAnchors(ctx, nodeId);
-    const anchored = listAnchoredNodes(ctx, [nodeId]);
+    const anchored = withSnapshots(ctx, listAnchoredNodes(ctx, [nodeId]));
     const roots = this.roots();
-    const [anchors, stale] = await Promise.all([
+    const [anchors, { stale, snapshots }] = await Promise.all([
       describeAnchors(roots, patterns),
-      findStaleNodes(roots, anchored, { run: this.options.run }),
+      checkCode(roots, anchored, { run: this.options.run }),
     ]);
+    this.save(ctx, snapshots);
     return { anchors, stale: stale[0] ?? null, hasRoots: roots.length > 0 };
+  }
+
+  /**
+   * Garde les états relevés, pour comparer ensuite des contenus. Un échec
+   * (espace refermé entre-temps, fichier en lecture seule) n'a pour effet que
+   * de les relever à nouveau.
+   */
+  private save(ctx: ServiceContext, snapshots: readonly NodeSnapshot[]): void {
+    if (snapshots.length === 0) return;
+    try {
+      if (this.context().db !== ctx.db) return;
+      inTransaction(ctx.db, () => {
+        for (const { nodeId, snapshot } of snapshots)
+          saveSnapshot(ctx, nodeId, snapshot);
+      });
+    } catch {
+      // Relevé à la prochaine vérification.
+    }
   }
 
   setAnchors(nodeId: string, patterns: string[]): string[] {
@@ -146,7 +167,12 @@ export class CodeAnchorService {
     if (this.cache?.key === key && now - this.cache.at < STALE_CACHE_MS) {
       return this.cache.result;
     }
-    const result = findStaleNodes(roots, nodes, { run: this.options.run });
+    const result = checkCode(roots, withSnapshots(ctx, nodes), {
+      run: this.options.run,
+    }).then(({ stale, snapshots }) => {
+      this.save(ctx, snapshots);
+      return stale;
+    });
     this.cache = { key, at: now, result };
     result.catch(() => {
       if (this.cache?.result === result) this.cache = null;

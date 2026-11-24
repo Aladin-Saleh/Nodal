@@ -25,6 +25,8 @@ import { RelationTypeService } from '../../src/main/knowledge/relation-type-serv
 import { TagService } from '../../src/main/knowledge/tag-service';
 import { connect, type ToolResult } from '../helpers/mcp-client';
 import { listFiles } from '../helpers/temp-dir';
+import { contextHookOutput } from '../../src/mcp/context-hook';
+import { readLogFile } from '../../src/mcp/read-proof';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
 const workspace = testWorkspaceFixture();
@@ -1480,6 +1482,90 @@ describe('fichiers du code (ancrage)', () => {
       path: 'API',
       detail: 'src/api/server.ts',
     });
+  });
+
+  it('mettre un nœud à jour ne prouve pas que ses fichiers ont été relus', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    const source = path.join(root, 'src', 'api', 'server.ts');
+    setAnchors(context(), ids.api, ['src/api/**']);
+    const client = await connect(file, false);
+    const update = async (extra: object[] = []) =>
+      toon(
+        await client.call('nodal_apply', {
+          operations: [
+            { op: 'updateNode', id: ids.api, summary: `Résumé ${Date.now()}` },
+            ...extra,
+          ],
+        }),
+      );
+    const staleCount = async () =>
+      toon(await client.call('nodal_health', {})).counts.stale;
+    expect((await update()).stale).toEqual([
+      {
+        id: short(ids.api),
+        since: expect.any(String),
+        changed: 'src/api/server.ts',
+      },
+    ]);
+    expect(await staleCount()).toBe(1);
+
+    const review = { op: 'review', nodeId: ids.api, files: [source] };
+    expect((await update([review])).stale).toBeUndefined();
+    expect(await staleCount()).toBe(0);
+
+    // Journalisé et annulable : le fichier est de nouveau à relire.
+    const journal = new AssistantChangeService(context);
+    const entry = journal.list().find((change) => change.action === 'review')!;
+    expect(entry.summary).toContain('src/api/server.ts');
+    journal.undo(entry.id);
+    expect(await staleCount()).toBe(1);
+
+    const refused = await client.call('nodal_apply', {
+      operations: [{ ...review, files: ['src/autre.ts'] }],
+    });
+    expect(refused.isError).toBe(true);
+    await client.close();
+  });
+
+  it('un fichier vu par le hook dans son état actuel est tenu pour lu', async () => {
+    const root = codeRoot();
+    const { context } = workspace();
+    const source = path.join(root, 'src', 'api', 'server.ts');
+    setAnchors(context(), ids.api, ['src/api/**']);
+    const client = await connect(file, false);
+    const update = async () =>
+      toon(
+        await client.call('nodal_apply', {
+          operations: [
+            { op: 'updateNode', id: ids.api, summary: `Résumé ${Date.now()}` },
+          ],
+        }),
+      ).stale;
+    const hook = (tool_name: string) =>
+      contextHookOutput(
+        file,
+        JSON.stringify({
+          hook_event_name: 'PreToolUse',
+          tool_name,
+          cwd: root,
+          tool_input: { file_path: source },
+        }),
+      );
+    try {
+      hook('Read');
+      fs.writeFileSync(source, 'changé après la lecture');
+      expect(await update()).toHaveLength(1);
+      // Le hook dit que la fiche peut être dépassée.
+      expect(hook('Read')).toContain('changed');
+      expect(await update()).toBeUndefined();
+      hook('Edit');
+      fs.writeFileSync(source, 'modifié par l’assistant');
+      expect(await update()).toBeUndefined();
+    } finally {
+      fs.rmSync(readLogFile(file), { force: true });
+    }
+    await client.close();
   });
 
   it('dit qu’aucun dossier de code n’est déclaré', async () => {

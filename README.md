@@ -276,6 +276,10 @@ pièces jointes en BLOB).
   - contexte automatique plus sobre : contenu des seuls nœuds sûrs, résumé
     des autres, rien de répété dans une session, secrets masqués ; rappel des
     nœuds d'un fichier avant de le lire ou de le modifier (Claude Code) ;
+  - documentation possiblement obsolète : comparaison du contenu des fichiers
+    (empreintes insensibles à la mise en forme, migration 012, table
+    `node_code_state`) au lieu des dates ; une mise à jour par l'IA ne vaut
+    que pour les fichiers qu'elle a lus (hook, ou opération `review`) ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

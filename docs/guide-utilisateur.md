@@ -280,14 +280,23 @@ du nœud.
   documentation à jour, ou cliquez **Marquer comme à jour** si elle reste
   juste. La vérification est refaite à l'ouverture de l'espace, après chaque
   enregistrement et à chaque retour dans la fenêtre.
-- **Comment Nodal date les changements** : dans un dépôt git, par le dernier
-  commit qui touche le fichier, si le fichier a aussi été modifié sur le
-  disque après la mise à jour du nœud (modifier le code, mettre la
-  documentation à jour puis committer ne signale donc rien) ; un fichier
-  supprimé compte. Hors git, ou si git n'est pas installé, par la date de
-  modification du fichier. Les modifications pas encore committées ne
-  comptent pas dans un dépôt git. Nodal lit l'historique sans jamais
-  écrire dans le dépôt.
+- **Comment Nodal voit les changements** : par le contenu. Pour chaque nœud
+  ancré, il garde l'empreinte des fichiers que sa documentation reflète et
+  la compare au contenu actuel, committé ou non : un fichier réécrit à
+  l'identique, une autre branche puis un retour, une copie neuve du dépôt ou
+  (pour l'essentiel) une remise en forme ne signalent rien. Un fichier
+  ajouté ou supprimé compte ; ceux que `.gitignore` exclut, non. L'empreinte
+  est relevée quand le nœud est mis à jour ; à défaut (espace d'une version
+  précédente, fichier modifié avant que Nodal ne l'ait relevée), le contenu
+  de référence vient du dernier commit antérieur, et sans git seule la date
+  de modification en décide. Nodal lit le dépôt sans jamais y écrire.
+- **Mise à jour par un assistant** : elle ne prouve pas qu'il a relu tout le
+  code. Un fichier modifié qu'il n'a ni lu ni modifié dans son état actuel
+  reste signalé ; l'assistant le voit dans la réponse et peut déclarer
+  l'avoir relu (opération `review`, journalisée et annulable). Avec le
+  contexte automatique installé, ses lectures sont reconnues d'elles-mêmes
+  (sauf dans une commande qui modifie le fichier). Vos propres
+  modifications, elles, valent toujours mise à jour.
 
 **Pièces jointes** : _Joindre des fichiers…_ dans le panneau de propriétés
 (taille maximale réglable dans les Paramètres). Une pièce jointe n'est jamais

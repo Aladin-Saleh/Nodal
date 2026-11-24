@@ -101,8 +101,12 @@ export function CodeAnchorList({
               <li key={file.path}>
                 <code>{file.path}</code>{' '}
                 <span className="muted">
-                  {file.deleted ? 'supprimé' : 'modifié'} le{' '}
-                  {formatDate(file.changedAt)}
+                  {file.deleted
+                    ? 'supprimé'
+                    : file.added
+                      ? 'ajouté'
+                      : 'modifié'}{' '}
+                  le {formatDate(file.changedAt)}
                 </span>
               </li>
             ))}

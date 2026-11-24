@@ -6,6 +6,7 @@
  * travail plus récent).
  */
 import type { AssistantAction, NodeType } from '../../shared/domain';
+import type { CodeSnapshot } from '../../shared/code-anchors';
 import { NodalError } from '../../shared/errors';
 import type { AssistantChange } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
@@ -13,7 +14,7 @@ import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { DocumentService } from './document-service';
 import { EdgeService } from './edge-service';
 import { NodeService } from './node-service';
-import { listAnchors, setAnchors } from './anchor-service';
+import { listAnchors, setAnchors, undoReview } from './anchor-service';
 import { asRow, asRows } from './rows';
 import { listNodeTags } from './tag-service';
 
@@ -39,6 +40,10 @@ export interface ChangeStates {
   link: { before: null; after: { edgeId: string } };
   tag: { before: { tagIds: string[] }; after: { tagIds: string[] } };
   anchor: { before: { patterns: string[] }; after: { patterns: string[] } };
+  review: {
+    before: { reviewedAt: string | null; snapshot: CodeSnapshot | null };
+    after: { reviewedAt: string };
+  };
 }
 
 export type ChangeEntry = {
@@ -294,6 +299,24 @@ export class AssistantChangeService {
             ctx,
             row.entity_id,
             (before as { patterns: string[] }).patterns,
+          );
+          break;
+        }
+        case 'review': {
+          const current = asRow<{ code_reviewed_at: string | null }>(
+            ctx.db
+              .prepare('SELECT code_reviewed_at FROM node WHERE id = ?')
+              .get(row.entity_id),
+          );
+          if (!current) throw notFound('Nœud');
+          const { reviewedAt } = after as { reviewedAt: string };
+          if (current.code_reviewed_at !== reviewedAt) {
+            throw modifiedSince('La relecture du nœud');
+          }
+          undoReview(
+            ctx,
+            row.entity_id,
+            before as ChangeStates['review']['before'],
           );
           break;
         }

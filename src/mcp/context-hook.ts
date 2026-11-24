@@ -243,16 +243,30 @@ export function fileContext(
   files: readonly string[],
   projectRoot: string | null,
   session: ContextSession | null = null,
+  edit = false,
 ): string | null {
   const keep = notSentYet(ctx, session);
-  const found = fileNodes(ctx, workspaceFile, files, projectRoot, (id) =>
-    keep(id, false),
+  const found = fileNodes(
+    ctx,
+    workspaceFile,
+    files,
+    projectRoot,
+    (id) => keep(id, false),
+    edit,
   );
   if (found.nodes.length === 0) return null;
+  // « changed » seulement s'il y a quelque chose à dire.
+  const outdated = found.nodes.some((node) => node.changed);
+  const nodes = found.nodes.map(({ changed, ...node }) =>
+    outdated ? { ...node, changed } : node,
+  );
   return contextBlock(
     ctx,
-    `Base Nodal « ${ctx.workspace.name} » : nœuds qui documentent ${found.files.join(', ')} (contenu : nodal_get_node).`,
-    { result: { nodes: found.nodes }, documents: [] },
+    `Base Nodal « ${ctx.workspace.name} » : nœuds qui documentent ${found.files.join(', ')} (contenu : nodal_get_node).` +
+      (outdated
+        ? ' changed : fichiers modifiés depuis la mise à jour du nœud, qui peut être dépassé.'
+        : ''),
+    { result: { nodes }, documents: [] },
   );
 }
 
@@ -270,10 +284,14 @@ interface HookInput {
   /** Claude Code : sous-agent, dont le contexte est séparé. */
   agent_id?: unknown;
   cwd?: unknown;
+  tool_name?: unknown;
   tool_input?: unknown;
   /** SessionStart : `compact` après un résumé du contexte. */
   source?: unknown;
 }
+
+/** Outils qui modifient le fichier visé. */
+const EDIT_TOOLS = /^(?:Edit|MultiEdit|Write|NotebookEdit)$/;
 
 const textOr = (value: unknown, fallback: string): string =>
   typeof value === 'string' && value ? value : fallback;
@@ -315,7 +333,14 @@ export function contextHookOutput(
     if (session && !isTool) session.prompt++;
     const context = withWorkspace(workspaceFile, (ctx) =>
       isTool
-        ? fileContext(ctx, workspaceFile, files, projectRootOf(cwd), session)
+        ? fileContext(
+            ctx,
+            workspaceFile,
+            files,
+            projectRootOf(cwd),
+            session,
+            EDIT_TOOLS.test(textOr(input.tool_name, '')),
+          )
         : promptContext(ctx, prompt as string, maxChars, session),
     );
     if (file && session && (context || !isTool))

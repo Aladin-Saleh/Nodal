@@ -10,9 +10,12 @@ import { staticPrefix, toRootRelative } from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
   nodesForPaths,
+  withSnapshots,
   type AnchoredNode,
 } from '../main/knowledge/anchor-service';
+import { contentFingerprint } from '../main/code/fingerprint';
 import { asRows } from '../main/knowledge/rows';
+import { recordReads } from './read-proof';
 import { codeRootsFor, nodePaths } from './tools';
 import type { ReadContext } from './workspace-reader';
 
@@ -93,11 +96,23 @@ export interface FileNode {
   path: string;
   summary: string | null;
   documents: string;
+  /** Fichiers concernés modifiés depuis la mise à jour du nœud. */
+  changed: string;
+}
+
+/** Empreinte lue sans attendre (le hook ne lit que quelques fichiers). */
+function fingerprintNow(file: string): string | null {
+  try {
+    return contentFingerprint(fs.readFileSync(file), path.basename(file));
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Nœuds ancrés à ces fichiers, les plus précis d'abord, avec les chemins
- * relatifs concernés. `keep` écarte ceux déjà donnés dans la session.
+ * relatifs concernés. `keep` écarte ceux déjà donnés dans la session. Les
+ * fichiers ancrés sont notés comme lus, ou en cours de modification (`edit`).
  */
 export function fileNodes(
   ctx: ReadContext,
@@ -105,13 +120,37 @@ export function fileNodes(
   files: readonly string[],
   projectRoot: string | null,
   keep: (nodeId: string) => boolean,
+  edit = false,
 ): { files: string[]; nodes: FileNode[] } {
   const roots = codeRootsFor(ctx, workspaceFile, projectRoot);
-  const relative = files.flatMap((file) => {
+  // Chemin relatif → dossier de code (nom) et empreinte actuelle.
+  const targets = new Map<
+    string,
+    { root: string; file: string; content: string | null }
+  >();
+  for (const file of files) {
     const found = toRootRelative(file, roots, PATHS_CASE_INSENSITIVE);
-    return found?.root && found.path ? [found.path] : [];
-  });
-  const matches = nodesForPaths(ctx, [...new Set(relative)])
+    if (!found?.root || !found.path || targets.has(found.path)) continue;
+    targets.set(found.path, {
+      root: path.basename(found.root),
+      file,
+      content: null,
+    });
+  }
+  const all = nodesForPaths(ctx, [...targets.keys()]);
+  const anchored = new Set(all.flatMap((match) => match.paths));
+  for (const name of anchored) {
+    const target = targets.get(name)!;
+    target.content = fingerprintNow(target.file);
+  }
+  recordReads(
+    workspaceFile,
+    [...anchored]
+      .map((name) => targets.get(name)!)
+      .filter((target) => edit || target.content !== null)
+      .map(({ file, content }) => ({ file, content: edit ? null : content })),
+  );
+  const matches = all
     .map((match) => ({ ...match, rank: precision(match.node, match.paths) }))
     .toSorted((a, b) => b.rank - a.rank)
     .slice(0, FILE_HOOK_MAX_NODES)
@@ -125,9 +164,26 @@ export function fileNodes(
   const documentsOf = ctx.db.prepare(
     'SELECT title FROM document WHERE node_id = ? ORDER BY sort_order, rowid',
   );
+  const snapshotOf = new Map(
+    withSnapshots(
+      ctx,
+      matches.map(({ node }) => node),
+    ).map((node) => [node.nodeId, node.snapshot]),
+  );
+  const changedIn = (node: AnchoredNode, paths: readonly string[]) => {
+    const snapshot = snapshotOf.get(node.nodeId);
+    if (snapshot?.since !== node.since) return '';
+    return paths
+      .filter((name) => {
+        const { root, content } = targets.get(name)!;
+        const known = snapshot.files[`${root}/${name}`];
+        return content !== null && known !== null && known !== content;
+      })
+      .join(', ');
+  };
   return {
     files: [...new Set(matches.flatMap((match) => match.paths))],
-    nodes: matches.map(({ node }) => ({
+    nodes: matches.map(({ node, paths }) => ({
       id: node.nodeId,
       path: pathOf(node.nodeId),
       summary:
@@ -136,6 +192,7 @@ export function fileNodes(
       documents: asRows<{ title: string }>(documentsOf.all(node.nodeId))
         .map((doc) => doc.title)
         .join(' ; '),
+      changed: changedIn(node, paths),
     })),
   };
 }

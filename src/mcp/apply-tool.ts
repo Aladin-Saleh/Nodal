@@ -19,6 +19,7 @@ import {
   anchorFiles,
   createNode,
   link,
+  reviewFiles,
   tagNode,
   updateDocument,
   updateNode,
@@ -90,6 +91,11 @@ export const operationSchema = z.discriminatedUnion('op', [
     nodeId: target,
     add: anchorPaths.optional(),
     remove: anchorPaths.optional(),
+  }),
+  z.object({
+    op: z.literal('review'),
+    nodeId: target,
+    files: anchorPaths.min(1),
   }),
 ]);
 
@@ -203,6 +209,10 @@ function run(
     case 'anchor': {
       const { op: _op, ...input } = operation;
       return { id: anchorFiles(ctx, input).nodeId };
+    }
+    case 'review': {
+      const { op: _op, ...input } = operation;
+      return { id: reviewFiles(ctx, input).nodeId };
     }
   }
 }

@@ -142,6 +142,27 @@ describe('migration 010 : ancrage aux fichiers du code', () => {
   });
 });
 
+describe('migration 012 : état du code', () => {
+  it('garde le journal, accepte l’action review, suit la suppression du nœud', () => {
+    runMigrations(db, MIGRATIONS.slice(0, 11));
+    db.exec(
+      "INSERT INTO workspace VALUES ('w', 'W', NULL, 't', 't');" +
+        "INSERT INTO node (id, workspace_id, title, node_type, created_at, updated_at) VALUES ('n', 'w', 'N', 'concept', 't', 't');" +
+        "INSERT INTO assistant_change (id, workspace_id, created_at, action, entity_id, summary) VALUES ('c1', 'w', 't', 'anchor', 'n', 'Ancrage');",
+    );
+    expect(runMigrations(db)).toBe(LATEST_SCHEMA_VERSION);
+    db.exec(
+      "INSERT INTO assistant_change (id, workspace_id, created_at, action, entity_id, summary) VALUES ('c2', 'w', 't', 'review', 'n', 'Relu');" +
+        "INSERT INTO node_code_state VALUES ('n', 't', '[]', '{}');",
+    );
+    expect(
+      db.prepare('SELECT id FROM assistant_change ORDER BY rowid').all(),
+    ).toEqual([{ id: 'c1' }, { id: 'c2' }]);
+    db.exec("DELETE FROM node WHERE id = 'n'");
+    expect(db.prepare('SELECT * FROM node_code_state').all()).toEqual([]);
+  });
+});
+
 const insert = (sql: string) => db.exec(sql);
 const all = (sql: string) => db.prepare(sql).all();
 

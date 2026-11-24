@@ -33,6 +33,7 @@ import {
   nodesForPaths,
   readCodeRoots,
   resolveCodeRoots,
+  withSnapshots,
   type AnchoredNode,
 } from '../main/knowledge/anchor-service';
 import type { ReadContext } from './workspace-reader';
@@ -874,15 +875,19 @@ export function anchorCheck(
 ): AnchorCheck {
   return {
     roots,
-    nodes: roots.length > 0 ? listAnchoredNodes(ctx, nodeIds) : [],
+    nodes:
+      roots.length > 0
+        ? withSnapshots(ctx, listAnchoredNodes(ctx, nodeIds))
+        : [],
   };
 }
 
 /** Fichiers modifiés, en une chaîne : les trois plus récents, puis le reste compté. */
 export function changedFilesText(stale: StaleNode): string {
-  const shown = stale.files
-    .slice(0, 3)
-    .map((file) => (file.deleted ? `${file.path} (supprimé)` : file.path));
+  const shown = stale.files.slice(0, 3).map((file) => {
+    if (file.deleted) return `${file.path} (supprimé)`;
+    return file.added ? `${file.path} (nouveau)` : file.path;
+  });
   const more = stale.fileCount - shown.length;
   return more > 0 ? `${shown.join(', ')} (+${more})` : shown.join(', ');
 }
@@ -908,21 +913,20 @@ export function forFiles(
   input: { paths: string[]; maxChars: number },
   roots: string[],
 ) {
-  const check = anchorCheck(ctx, roots);
-  if (check.roots.length === 0) {
+  if (roots.length === 0) {
     return {
       result: {
         nodeCount: 0,
         note: "Aucun dossier de code n'est déclaré dans Nodal (paramètres de l'espace) : aucun fichier n'est ancré.",
       },
       documents: [] as FoundDocument[],
-      check,
+      check: { roots, nodes: [] } as AnchorCheck,
     };
   }
   const relative: string[] = [];
   const unknown: string[] = [];
   for (const raw of input.paths) {
-    const found = toRootRelative(raw, check.roots, PATHS_CASE_INSENSITIVE);
+    const found = toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE);
     if (found?.path) relative.push(found.path);
     else unknown.push(raw);
   }
@@ -994,6 +998,12 @@ export function forFiles(
         : {}),
     },
     documents: found,
-    check: { roots: check.roots, nodes: matches.map(({ node }) => node) },
+    check: {
+      roots,
+      nodes: withSnapshots(
+        ctx,
+        matches.map(({ node }) => node),
+      ),
+    },
   };
 }

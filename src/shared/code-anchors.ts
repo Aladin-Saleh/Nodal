@@ -174,6 +174,24 @@ export interface ChangedFile {
   changedAt: string;
   /** Le fichier n'existe plus. */
   deleted?: boolean;
+  /** Le fichier n'existait pas. */
+  added?: boolean;
+}
+
+/**
+ * Contenu du code que reflète la documentation d'un nœud : empreinte de
+ * chaque fichier ancré, à la date de référence du nœud.
+ */
+export interface CodeSnapshot {
+  /** Date de référence du nœud ; une autre date rend l'état caduc. */
+  since: string;
+  /** Motifs ancrés quand l'état a été relevé. */
+  patterns: string[];
+  /**
+   * `dossier/chemin` → empreinte. `null` : contenu inconnu (la date en
+   * décide) ; `''` : contenu dépassé, à relire.
+   */
+  files: Record<string, string | null>;
 }
 
 /** Nœud dont la documentation est possiblement obsolète. */
@@ -185,8 +203,11 @@ export interface StaleNode {
   files: ChangedFile[];
   /** Nombre exact de fichiers modifiés. */
   fileCount: number;
-  /** Source des dates : historique git, ou dates de modification. */
-  source: 'git' | 'mtime';
+  /**
+   * `content` : contenu comparé ; `mtime` : un fichier au moins n'est jugé
+   * que sur sa date (contenu de référence inconnu).
+   */
+  source: 'content' | 'mtime';
 }
 
 /** Fichiers couverts par un motif ancré (panneau du nœud). */

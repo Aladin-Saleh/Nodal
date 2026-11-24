@@ -32,7 +32,15 @@ import {
   staleRow,
   type AnchorCheck,
 } from './tools';
-import { findStaleNodes } from '../main/code/code-check';
+import { findStaleNodes, snapshotsAfterWrite } from '../main/code/code-check';
+import {
+  listAnchoredNodes,
+  saveSnapshot,
+  withSnapshots,
+  type AnchoredNode,
+} from '../main/knowledge/anchor-service';
+import { isGlobPattern } from '../shared/code-anchors';
+import { provenReads } from './read-proof';
 import type { StaleNode } from '../shared/code-anchors';
 import {
   APPLY_MAX_OPERATIONS,
@@ -91,7 +99,8 @@ sujets à documenter) : complétez le nœud existant
 détail dans des documents, relations avec les types existants. Plusieurs
 écritures : nodal_apply (un appel, une transaction). Rien n'est supprimé ;
 tout est journalisé et annulable par l'utilisateur. Après avoir modifié du
-code : mettez ses nœuds à jour, ancrez les nouveaux fichiers (op anchor).`;
+code : mettez ses nœuds à jour, ancrez les nouveaux fichiers (op anchor) et
+déclarez relus ceux que stale signale, si vous les avez lus (op review).`;
 
 const READ_ONLY_INSTRUCTIONS = `
 
@@ -570,23 +579,91 @@ export function createNodalMcpServer(
 
   if (options.readOnly) return server;
 
+  /**
+   * Après une écriture, hors de sa transaction : relève l'état du code des
+   * nœuds touchés et renvoie ce qui reste à relire. Un échec n'annule rien :
+   * l'état sera relevé plus tard.
+   */
+  const recordCodeState = async (
+    roots: readonly string[],
+    before: readonly AnchoredNode[],
+    after: readonly AnchoredNode[],
+    reviewed: ReadonlyMap<string, readonly string[]>,
+  ) => {
+    const previous = new Map(before.map((node) => [node.nodeId, node]));
+    const isRead = provenReads(options.workspaceFile);
+    const writes = after.flatMap((node) => {
+      const old = previous.get(node.nodeId) ?? null;
+      const added = node.patterns.filter(
+        (pattern) => !old?.patterns.includes(pattern),
+      );
+      const same =
+        old?.since === node.since &&
+        added.length === 0 &&
+        old.patterns.length === node.patterns.length;
+      return same
+        ? []
+        : {
+            before: old,
+            after: node,
+            isRead,
+            // Un fichier ancré nommément vient d'être choisi pour ce nœud.
+            reviewed: [
+              ...(reviewed.get(node.nodeId) ?? []),
+              ...added.filter((pattern) => !isGlobPattern(pattern)),
+            ],
+          };
+    });
+    if (writes.length === 0) return {};
+    try {
+      const snapshots = await snapshotsAfterWrite(roots, writes);
+      withWorkspace(
+        options.workspaceFile,
+        (ctx) => {
+          for (const { nodeId, snapshot } of snapshots)
+            saveSnapshot(ctx, nodeId, snapshot);
+        },
+        'write',
+      );
+      const check = call({}, 'read', (ctx) =>
+        anchorCheck(
+          ctx,
+          codeRootsOf(ctx),
+          writes.map((write) => write.after.nodeId),
+        ),
+      );
+      return staleField(await staleOf(check));
+    } catch {
+      return {};
+    }
+  };
+
   /** Exécute une écriture (une transaction, journalisée) et encode son résultat. */
   const write =
-    <A>(change: (ctx: WriteContext, args: A) => unknown) =>
+    <A>(change: (ctx: WriteContext, args: A) => object) =>
     async (args: A): Promise<CallToolResult> => {
       try {
         const client = server.server.getClientVersion()?.name ?? null;
-        const data = call(args, 'write', (ctx, resolved) =>
-          change(
-            {
-              ...ctx,
-              client,
-              codeRoots: codeRootsOf(ctx),
-            },
+        const reviewed = new Map<string, string[]>();
+        let codeRoots: string[] = [];
+        let before: AnchoredNode[] = [];
+        let after: AnchoredNode[] = [];
+        const data = call(args, 'write', (ctx, resolved) => {
+          codeRoots = codeRootsOf(ctx);
+          const anchored = () =>
+            codeRoots.length > 0 ? listAnchoredNodes(ctx) : [];
+          before = withSnapshots(ctx, anchored());
+          const result = change(
+            { ...ctx, client, codeRoots, reviewed },
             resolved,
-          ),
-        );
-        return { content: [{ type: 'text', text: encodeToon(data) }] };
+          );
+          after = anchored();
+          return result;
+        });
+        const stale = await recordCodeState(codeRoots, before, after, reviewed);
+        return {
+          content: [{ type: 'text', text: encodeToon({ ...data, ...stale }) }],
+        };
       } catch (error) {
         return failure(error);
       }
@@ -728,7 +805,9 @@ export function createNodalMcpServer(
         'Applique dans l’ordre une liste d’opérations, en une seule transaction (tout ou rien) : ' +
         'createNode, updateNode, addDocument, updateDocument, link, tag — mêmes champs que les outils ' +
         'unitaires, plus op — et anchor (nodeId, add/remove : fichiers du code, chemins ou motifs glob ' +
-        'comme src/mcp/**, à ancrer au nœud). Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
+        'comme src/mcp/**, à ancrer au nœud) et review (nodeId, files : fichiers ancrés relus, que la ' +
+        'documentation du nœud reflète désormais). stale dans la réponse : fichiers modifiés que rien ne dit relus. ' +
+        'Un identifiant peut être une référence $n à l’élément créé ou modifié par ' +
         'la n-ième opération (ex. nodeId: "$1"). Renvoie l’identifiant de chaque élément touché. ' +
         'À préférer dès qu’il y a plusieurs choses à enregistrer.',
       inputSchema: z.object({
