@@ -23,6 +23,7 @@ import {
 import type { TreeIndex } from '../nodes/tree';
 import { RelationTypeManagerDialog } from '../relations/RelationTypeManagerDialog';
 import { TagManagerDialog } from '../tags/TagManagerDialog';
+import { MergeDialog } from '../nodes/MergeDialog';
 import { LessonsDialog } from './LessonsDialog';
 import { AssistantActivityDialog } from './AssistantActivityDialog';
 import type { AppAction } from '../commands/actions';
@@ -44,6 +45,7 @@ export type DialogState =
     }
   | { kind: 'move'; nodes: NodeSummary[]; bulk: boolean }
   | { kind: 'duplicate'; node: NodeSummary }
+  | { kind: 'merge'; firstId: string; secondId: string }
   | { kind: 'delete'; node: NodeSummary; impact: NodeDeletionImpact }
   | { kind: 'bulkDelete'; ids: string[]; impact: BulkDeletionImpact }
   | { kind: 'tags' }
@@ -98,6 +100,7 @@ export interface WorkspaceDialogsProps {
   ): void;
   onMove(nodes: NodeSummary[], parentId: string | null, bulk: boolean): void;
   onDuplicate(node: NodeSummary, includeChildren: boolean): void;
+  onMerge(keepId: string, dropId: string): void;
   onDeleteNode(node: NodeSummary, strategy: ChildrenStrategy): void;
   onBulkDelete(ids: string[], strategy: ChildrenStrategy): void;
   onExportForLlm(options: LlmExportOptions): void;
@@ -124,6 +127,7 @@ export function WorkspaceDialogs({
   onCreateNode,
   onMove,
   onDuplicate,
+  onMerge,
   onDeleteNode,
   onBulkDelete,
   onExportForLlm,
@@ -235,6 +239,14 @@ export function WorkspaceDialogs({
           onSubmit={(includeChildren) =>
             onDuplicate(dialog.node, includeChildren)
           }
+          onCancel={onCloseDialog}
+        />
+      )}
+      {dialog?.kind === 'merge' && (
+        <MergeDialog
+          firstId={dialog.firstId}
+          secondId={dialog.secondId}
+          onSubmit={onMerge}
           onCancel={onCloseDialog}
         />
       )}

@@ -23,6 +23,7 @@ import type {
   LlmExportOptions,
   LlmExportResult,
   GraphData,
+  MergePreview,
   NodeDeletionImpact,
   NodeDetail,
   NodePosition,
@@ -336,6 +337,15 @@ export interface IpcContract {
   'node:create': { args: [CreateNodeInput]; result: NodeSummary };
   'node:update': { args: [UpdateNodeInput]; result: NodeSummary };
   'node:move': { args: [MoveNodeInput]; result: null };
+  'node:mergePreview': {
+    args: [{ firstId: string; secondId: string }];
+    result: MergePreview;
+  };
+  /** Fusion, après sauvegarde automatique (`backupPath`). */
+  'node:merge': {
+    args: [{ keepId: string; dropId: string }];
+    result: { documents: number; links: number; backupPath: string };
+  };
   'node:duplicate': { args: [DuplicateNodeInput]; result: NodeSummary };
   'node:getDeletionImpact': { args: [IdInput]; result: NodeDeletionImpact };
   'node:delete': { args: [DeleteNodeInput]; result: null };
@@ -492,6 +502,8 @@ export const IPC_CHANNELS = [
   'node:create',
   'node:update',
   'node:move',
+  'node:mergePreview',
+  'node:merge',
   'node:duplicate',
   'node:getDeletionImpact',
   'node:delete',

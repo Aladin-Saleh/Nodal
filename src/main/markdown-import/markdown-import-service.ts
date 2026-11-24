@@ -276,10 +276,11 @@ function foldersWithNotes(scan: ScannedFolder): string[] {
 }
 
 /**
- * Sauvegarde automatique avant un import, à côté du fichier de l'espace :
- * « <nom>-avant-import-<date>.nodal », jamais un fichier existant.
+ * Sauvegarde automatique avant un import ou une fusion, à côté du fichier de
+ * l'espace : « <nom>-avant-import-<date>.nodal », jamais un fichier existant.
  */
-export function backupPathBeforeImport(
+export function backupPathBefore(
+  operation: 'import' | 'fusion',
   workspaceFile: string,
   now: Date,
 ): string {
@@ -290,7 +291,7 @@ export function backupPathBeforeImport(
     .replace('T', '-');
   const base = path.join(
     path.dirname(workspaceFile),
-    `${path.basename(workspaceFile, path.extname(workspaceFile))}-avant-import-${stamp}`,
+    `${path.basename(workspaceFile, path.extname(workspaceFile))}-avant-${operation}-${stamp}`,
   );
   let candidate = `${base}.nodal`;
   for (let n = 2; fs.existsSync(candidate); n++)

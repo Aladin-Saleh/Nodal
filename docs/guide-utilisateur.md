@@ -122,6 +122,13 @@ liens parent-enfant apparaissent en pointillés.
   Si plusieurs chemins sont aussi courts, Nodal choisit le plus parlant :
   il évite les liens vagues (« est lié à », hiérarchie), puis les nœuds
   reliés à tout, et dit combien il y en a.
+- **Fusionner avec…** (même menu, ou santé de la base) : choisissez le nœud à
+  garder (Nodal propose celui que vous avez validé, sinon le plus fourni).
+  Il reçoit les documents, sous-nœuds, relations, pièces jointes, tags,
+  fichiers ancrés et leçons de l’autre, sans que rien chez lui soit
+  remplacé ; un second résumé devient un document, et les liens `[[…]]` sont
+  redirigés. L’espace est d’abord sauvegardé
+  (`<nom>-avant-fusion-<date>.nodal`). Un assistant ne peut pas fusionner.
 - **Impact d’un changement** (même menu) : les nœuds à revoir si celui-ci,
   ou l’un de ses sous-nœuds, change, à deux liens au plus. Nodal remonte
   « dépend de », « utilise », « implémente », « consomme », « décrit » et
@@ -359,7 +366,7 @@ de cas et, pour chacun, l'action qui permet de corriger :
   près. Des nombres différents, une lettre isolée différente (« Serveur A »,
   « Serveur B »), un mot dérivé (« synchrone », « asynchrone ») ou un titre
   courant (« Conception ») sous deux parents ne sont pas des doublons →
-  Ouvrir l'un ou l'autre, **Pas un doublon** (la paire n'est plus signalée) ;
+  Ouvrir l'un ou l'autre, **Fusionner…**, **Pas un doublon** (la paire n'est plus signalée) ;
 - **relations superflues** : lien « est lié à » en plus d’une relation
   précise ou entre un parent et son enfant, « dépend de » déjà impliqué par
   une chaîne de « dépend de » ; jamais une relation libellée ou issue d’un

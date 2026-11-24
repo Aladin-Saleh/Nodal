@@ -140,6 +140,8 @@ function WorkspaceView({
     toId: string;
     includeHierarchy: boolean;
   } | null>(null);
+  /** Choix du nœud à fusionner avec celui-ci. */
+  const [mergePickFrom, setMergePickFrom] = useState<string | null>(null);
   /** « Impact » : nœud dont on regarde ce qui en dépend. */
   const [impactFrom, setImpactFrom] = useState<string | null>(null);
   /** Choix du nœud d'arrivée en cours, depuis ce nœud. */
@@ -330,6 +332,20 @@ function WorkspaceView({
     select(copy.id);
   };
 
+  const merge = async (keepId: string, dropId: string) => {
+    setDialog(null);
+    await tracker.flushAll();
+    const done = await run(() => client.call('node:merge', { keepId, dropId }));
+    if (!done) return;
+    await data.refreshNodes();
+    void data.refreshTags();
+    relationsChanged();
+    select(keepId);
+    reportInfo(
+      `Nœuds fusionnés (${done.links} liens redirigés). Sauvegarde : ${done.backupPath}`,
+    );
+  };
+
   const askDelete = async (id: string) => {
     const node = index.byId.get(id);
     if (!node) return;
@@ -484,6 +500,7 @@ function WorkspaceView({
     showAll: () => dispatch({ type: 'showAll' }),
     center,
     pathFrom: setPathPickFrom,
+    mergeFrom: setMergePickFrom,
     impact: (id) => {
       setPathQuery(null);
       setImpactFrom(id);
@@ -643,6 +660,7 @@ function WorkspaceView({
     dialog !== null ||
     palette !== null ||
     pathPickFrom !== null ||
+    mergePickFrom !== null ||
     overlays.health !== null ||
     overlays.editingDocumentId !== null ||
     overlays.addingDocumentFor !== null;
@@ -878,6 +896,7 @@ function WorkspaceView({
           onDuplicate={(node, includeChildren) =>
             void duplicate(node, includeChildren)
           }
+          onMerge={(keepId, dropId) => void merge(keepId, dropId)}
           onDeleteNode={(node, strategy) => void deleteNode(node, strategy)}
           onBulkDelete={(ids, strategy) => void bulkDelete(ids, strategy)}
           onExportForLlm={(options) => void exportForLlm(options)}
@@ -910,6 +929,10 @@ function WorkspaceView({
               openDocument(documentId, nodeId);
             }}
             onValidate={(ids) => void validate(ids)}
+            onMerge={(firstId, secondId) => {
+              closeOverlay('health');
+              setDialog({ kind: 'merge', firstId, secondId });
+            }}
             onCodeAnchorsChanged={() => void staleNodes.refresh()}
             onCreateFromGap={(gap) => {
               closeOverlay('health');
@@ -920,6 +943,22 @@ function WorkspaceView({
                 gapKey: gap.key,
               });
             }}
+          />
+        )}
+        {mergePickFrom !== null && (
+          <CommandPalette
+            actions={[]}
+            nodes={paletteNodes.filter((node) => node.id !== mergePickFrom)}
+            recentNodes={recentNodes.filter(
+              (node) => node.id !== mergePickFrom,
+            )}
+            actionsOnly={false}
+            label={`Fusionner « ${index.byId.get(mergePickFrom)?.title ?? ''} » avec…`}
+            placeholder="Nœud à fusionner…"
+            onOpenNode={(secondId) =>
+              setDialog({ kind: 'merge', firstId: mergePickFrom, secondId })
+            }
+            onClose={() => setMergePickFrom(null)}
           />
         )}
         {pathPickFrom !== null && (

@@ -227,6 +227,26 @@ export interface HealthReport {
   gaps: SearchGap[];
 }
 
+/** Ce que porte un nœud proposé à la fusion. */
+export interface MergeSide {
+  id: string;
+  title: string;
+  hasSummary: boolean;
+  documents: number;
+  /** Taille totale des documents. */
+  chars: number;
+  relations: number;
+  children: number;
+  attachments: number;
+}
+
+export interface MergePreview {
+  first: MergeSide;
+  second: MergeSide;
+  /** Nœud à garder, proposé. */
+  keepId: string;
+}
+
 /** Recherche d'un assistant IA restée sans résultat. */
 export interface SearchGap {
   /** Requête normalisée (identifiant). */

@@ -382,6 +382,10 @@ export const ipcArgsSchemas = {
   'node:create': one(createNodeInputSchema),
   'node:update': one(updateNodeInputSchema),
   'node:move': one(moveNodeInputSchema),
+  'node:mergePreview': one(
+    z.strictObject({ firstId: idSchema, secondId: idSchema }),
+  ),
+  'node:merge': one(z.strictObject({ keepId: idSchema, dropId: idSchema })),
   'node:duplicate': one(duplicateNodeInputSchema),
   'node:getDeletionImpact': one(idInput),
   'node:delete': one(deleteNodeInputSchema),

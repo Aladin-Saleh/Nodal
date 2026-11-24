@@ -6,7 +6,7 @@ import { DocumentService } from '../../../src/main/knowledge/document-service';
 import { EdgeService } from '../../../src/main/knowledge/edge-service';
 import { NodeService } from '../../../src/main/knowledge/node-service';
 import {
-  backupPathBeforeImport,
+  backupPathBefore,
   previewMarkdownImport,
   scanMarkdownFolder,
   writeMarkdownImport,
@@ -153,7 +153,8 @@ describe('import d’un dossier Markdown', () => {
       frontMatterCount: 1,
     });
 
-    const backup = backupPathBeforeImport(
+    const backup = backupPathBefore(
+      'import',
       service.getCurrent()!.filePath,
       new Date(),
     );

@@ -15,6 +15,7 @@ export interface HealthDialogProps {
   onOpenNode(id: string): void;
   onOpenDocument(documentId: string, nodeId: string): void;
   onValidate(ids: string[]): void;
+  onMerge(firstId: string, secondId: string): void;
   /** « Marquer comme à jour » : les badges de l'arbre sont à revérifier. */
   onCodeAnchorsChanged(): void;
   /** Créer un nœud pour un sujet à documenter (marqué traité ensuite). */
@@ -48,6 +49,7 @@ export function HealthDialog({
   onOpenNode,
   onOpenDocument,
   onValidate,
+  onMerge,
   onCodeAnchorsChanged,
   onCreateFromGap,
 }: HealthDialogProps) {
@@ -136,6 +138,13 @@ export function HealthDialog({
               onClick={() => onOpenNode(item.otherNodeId!)}
             >
               Ouvrir l’autre
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onMerge(item.nodeId, item.otherNodeId!)}
+            >
+              Fusionner…
             </button>
             <button
               type="button"

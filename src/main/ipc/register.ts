@@ -50,7 +50,7 @@ import {
 import { inTransaction } from '../database/transaction';
 import { randomUUID } from 'node:crypto';
 import {
-  backupPathBeforeImport,
+  backupPathBefore,
   previewMarkdownImport,
   scanMarkdownFolder,
   writeMarkdownImport,
@@ -62,6 +62,7 @@ import {
   ignoreDuplicate,
   setSearchGapStatus,
 } from '../knowledge/health-service';
+import { mergeNodes, mergePreview } from '../knowledge/merge-service';
 import { NodeService } from '../knowledge/node-service';
 import { RelationTypeService } from '../knowledge/relation-type-service';
 import { SearchService } from '../knowledge/search-service';
@@ -334,6 +335,22 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       nodes.move(input);
       return null;
     },
+    'node:mergePreview': ({ firstId, secondId }) =>
+      mergePreview(context(), firstId, secondId),
+    'node:merge': ({ keepId, dropId }) => {
+      const current = requireCurrent();
+      // Refusée avant d'écrire une sauvegarde inutile.
+      mergePreview(context(), keepId, dropId);
+      const backupPath = backupPathBefore(
+        'fusion',
+        current.filePath,
+        new Date(),
+      );
+      maintenance.backupTo(backupPath);
+      const result = mergeNodes(context(), keepId, dropId);
+      codeAnchors.invalidate();
+      return { ...result, backupPath };
+    },
     'node:duplicate': (input) => nodes.duplicate(input),
     'node:getDeletionImpact': ({ id }) => nodes.getDeletionImpact(id),
     'node:delete': (input) => {
@@ -521,7 +538,11 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       const { scan } = markdownScan;
       markdownScan = null;
       // Sauvegarde de secours d'abord, comme avant tout import.
-      const backupPath = backupPathBeforeImport(current.filePath, new Date());
+      const backupPath = backupPathBefore(
+        'import',
+        current.filePath,
+        new Date(),
+      );
       maintenance.backupTo(backupPath);
       return writeMarkdownImport(scan, context(), backupPath);
     },

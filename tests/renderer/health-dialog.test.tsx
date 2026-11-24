@@ -83,6 +83,7 @@ function setup(focus: 'all' | 'gaps' = 'all') {
     onOpenNode: vi.fn(),
     onOpenDocument: vi.fn(),
     onValidate: vi.fn(),
+    onMerge: vi.fn(),
     onCodeAnchorsChanged: vi.fn(),
     onCreateFromGap: vi.fn(),
   };

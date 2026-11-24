@@ -52,6 +52,7 @@ export const NODE_MENU = [
   SEP,
   'node.move',
   'node.duplicate',
+  'node.merge',
   'node.delete',
 ];
 
@@ -70,6 +71,8 @@ export interface WorkspaceCommands {
   impact(id: string): void;
   move(node: NodeSummary): void;
   duplicate(node: NodeSummary): void;
+  /** Fusionner ce nœud avec un autre, à choisir. */
+  mergeFrom(id: string): void;
   validate(id: string): void;
   delete(id: string): void;
   setView(view: ViewMode): void;
@@ -222,6 +225,14 @@ export function nodeActions(
       keywords: 'copier',
       enabled: on,
       run: () => node && commands.duplicate(node),
+    },
+    {
+      id: 'node.merge',
+      label: 'Fusionner avec…',
+      group: 'Nœud',
+      keywords: 'doublon reunir',
+      enabled: on,
+      run: () => commands.mergeFrom(id),
     },
     {
       id: 'node.delete',
