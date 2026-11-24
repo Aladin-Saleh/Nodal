@@ -32,9 +32,18 @@ export function installContextHook(
     }
   }
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(
-    file,
-    `${JSON.stringify(withContextHook(settings, client, command), null, 2)}\n`,
-  );
+  // Fichier temporaire puis renommage : une coupure ne tronque pas les réglages.
+  const temporary = `${file}.${process.pid}.nodal.tmp`;
+  try {
+    fs.writeFileSync(
+      temporary,
+      `${JSON.stringify(withContextHook(settings, client, command), null, 2)}
+`,
+    );
+    fs.renameSync(temporary, file);
+  } catch (error) {
+    fs.rmSync(temporary, { force: true });
+    throw error;
+  }
   return file;
 }
