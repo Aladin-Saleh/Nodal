@@ -14,7 +14,13 @@
  * titre et le résumé contiennent plusieurs mots-clés vient avec ses documents,
  * un nœud trouvé surtout par ses documents vient avec son résumé. Un nœud
  * déjà donné dans la session n'est pas répété (context-session.ts).
+ *
+ * La même commande sert deux autres hooks de Claude Code : `PreToolUse`
+ * (rappel des nœuds d'un fichier, file-hook.ts) et `SessionStart` après un
+ * résumé du contexte (ce qui a été donné peut l'être à nouveau).
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { encode as encodeToon } from '@toon-format/toon';
 import { asRows } from '../main/knowledge/rows';
 import { workspaceLinkResolver } from '../main/knowledge/link-service';
@@ -25,13 +31,15 @@ import { renderLinksForLlm, renderResponseLinks } from './links';
 import {
   alreadySent,
   contextSessionFile,
+  forgetContextSession,
   readContextSession,
   writeContextSession,
   type ContextSession,
 } from './context-session';
+import { fileNodes, toolFiles } from './file-hook';
 import { formatFoundDocument } from './server';
 import { loadShortIds, shortenIds } from './short-ids';
-import { normalize, search, termPatterns } from './tools';
+import { normalize, search, termPatterns, type FoundDocument } from './tools';
 import { withWorkspace, type ReadContext } from './workspace-reader';
 
 /** Contenu de documents ajouté au plus (≈ 1 000 tokens). */
@@ -59,9 +67,36 @@ const STOP_WORDS = new Set(
   ).split(' '),
 );
 
+/**
+ * Blocs ajoutés par l'assistant, pas écrits par l'utilisateur : notifications
+ * de tâches, sorties de commandes locales, rappels.
+ */
+const HARNESS_BLOCK =
+  /<(task-notification|system-reminder|nodal-context|local-command-[a-z]+|command-[a-z]+|bash-[a-z]+)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/g;
+/** Balise autour d'un texte collé : seul le texte compte. */
+const PASTE_TAG = /<\/?pasted_content\b[^>]*>/g;
+/** Chemin absolu : `C:\dossier\fichier.ts`, `/home/x/fichier.ts`, `~/x/y`. */
+const ABSOLUTE_PATH =
+  /(?<![\p{L}\p{N}:/\\.])(?:[a-z]:[\\/]|~?\/(?=[^\s/]+\/))[^\s"'`<>()]*/giu;
+
+/**
+ * Texte de la demande, sans les blocs de l'assistant ; un chemin absolu n'est
+ * gardé que par son dernier nom (les dossiers parents ne sont pas un sujet).
+ */
+export function promptText(prompt: string): string {
+  return prompt
+    .replace(HARNESS_BLOCK, ' ')
+    .replace(PASTE_TAG, ' ')
+    .replace(
+      ABSOLUTE_PATH,
+      (found) => found.split(/[\\/]+/).findLast(Boolean) ?? '',
+    )
+    .trim();
+}
+
 /** Mots-clés d'une demande : sans accents, ni mots courants, ni mots de 1-2 lettres. */
 export function promptKeywords(prompt: string): string[] {
-  const words = normalize(prompt).match(/[\p{L}\p{N}_]+/gu) ?? [];
+  const words = normalize(promptText(prompt)).match(/[\p{L}\p{N}_]+/gu) ?? [];
   const kept = words.filter(
     (word) => word.length >= 3 && !STOP_WORDS.has(word) && !/^\d+$/.test(word),
   );
@@ -111,25 +146,50 @@ function relevantHits(
     .map((entry) => entry.hit);
 }
 
-/** Retire les nœuds déjà donnés dans la session ; note ceux qui le sont. */
-function withoutSent(
+/**
+ * Filtre des nœuds à donner : écarte ceux déjà donnés dans la session, note
+ * les autres. Sans session (identifiant absent), rien n'est écarté.
+ */
+function notSentYet(
   ctx: ReadContext,
-  hits: SearchHit[],
-  session: ContextSession,
-): SearchHit[] {
+  session: ContextSession | null,
+): (nodeId: string, full: boolean) => boolean {
+  if (!session) return () => true;
   const versionOf = ctx.db.prepare(
     `SELECT max(n.updated_at, coalesce((SELECT max(d.updated_at)
        FROM document d WHERE d.node_id = n.id), '')) AS version
      FROM node n WHERE n.id = ?`,
   );
-  return hits.filter((hit) => {
-    const [row] = asRows<{ version: string }>([versionOf.get(hit.nodeId)]);
+  return (nodeId, full) => {
+    const [row] = asRows<{ version: string }>([versionOf.get(nodeId)]);
     const version = row?.version ?? '';
-    const full = hit.matches.length > 0;
-    if (alreadySent(session, hit.nodeId, version, full)) return false;
-    session.sent[hit.nodeId] = { version, full, prompt: session.prompt };
+    if (alreadySent(session, nodeId, version, full)) return false;
+    session.sent[nodeId] = { version, full, prompt: session.prompt };
     return true;
+  };
+}
+
+/** Bloc de contexte : introduction, données en TOON, documents. */
+function contextBlock(
+  ctx: ReadContext,
+  intro: string,
+  data: { result: object; documents: FoundDocument[] },
+): string {
+  const ids = loadShortIds(ctx);
+  let resolver: LinkResolver | null = null;
+  const readable = renderResponseLinks(data, (text) => {
+    if (!text.includes('[[')) return text;
+    resolver ??= workspaceLinkResolver(ctx);
+    return renderLinksForLlm(text, resolver, ids);
   });
+  const { result, documents } = shortenIds(readable, ids) as typeof data;
+  return [
+    '<nodal-context>',
+    intro,
+    redactSecrets(encodeToon(result)),
+    ...documents.map((doc) => redactSecrets(formatFoundDocument(doc))),
+    '</nodal-context>',
+  ].join('\n\n');
 }
 
 /**
@@ -142,7 +202,8 @@ export function promptContext(
   maxChars = CONTEXT_MAX_CHARS,
   session: ContextSession | null = null,
 ): string | null {
-  if (prompt.trimStart().startsWith('/')) return null;
+  // Le chemin en tête (« /home/… ») n'est pas une commande.
+  if (promptText(prompt).startsWith('/')) return null;
   const keywords = promptKeywords(prompt);
   if (keywords.length === 0) return null;
   const found = search(
@@ -155,29 +216,50 @@ export function promptContext(
         0,
         CONTEXT_MAX_NODES,
       );
-      return session ? withoutSent(ctx, chosen, session) : chosen;
+      const keep = notSentYet(ctx, session);
+      return chosen.filter((hit) => keep(hit.nodeId, hit.matches.length > 0));
     },
   );
   if (found.result.nodes.length === 0) return null;
 
-  const ids = loadShortIds(ctx);
-  let resolver: LinkResolver | null = null;
-  const readable = renderResponseLinks(found, (text) => {
-    if (!text.includes('[[')) return text;
-    resolver ??= workspaceLinkResolver(ctx);
-    return renderLinksForLlm(text, resolver, ids);
-  });
-  const { result, documents } = shortenIds(readable, ids) as typeof found;
-  // La requête est rappelée en clair dans l'en-tête.
-  const { query: _query, ...rest } = result;
-  return [
-    '<nodal-context>',
+  // La requête est rappelée en clair dans l'en-tête ; le budget manquant ne
+  // sert qu'à un appel d'outil.
+  const { query: _query, maxCharsNeeded: _needed, ...result } = found.result;
+  return contextBlock(
+    ctx,
     `Base Nodal « ${ctx.workspace.name} » : extraits trouvés automatiquement pour cette demande (mots : ${keywords.join(', ')}). ` +
       'Partez-en ; approfondissez avec nodal_get_node / nodal_read_document, ou nodal_search si ce n’est pas le bon sujet.',
-    redactSecrets(encodeToon(rest)),
-    ...documents.map((doc) => redactSecrets(formatFoundDocument(doc))),
-    '</nodal-context>',
-  ].join('\n\n');
+    { result, documents: found.documents },
+  );
+}
+
+/**
+ * Rappel des nœuds qui documentent des fichiers (absolus), ou `null` : aucun,
+ * ou déjà donnés dans la session.
+ */
+export function fileContext(
+  ctx: ReadContext,
+  workspaceFile: string,
+  files: readonly string[],
+  projectRoot: string | null,
+  session: ContextSession | null = null,
+): string | null {
+  const keep = notSentYet(ctx, session);
+  const found = fileNodes(ctx, workspaceFile, files, projectRoot, (id) =>
+    keep(id, false),
+  );
+  if (found.nodes.length === 0) return null;
+  return contextBlock(
+    ctx,
+    `Base Nodal « ${ctx.workspace.name} » : nœuds qui documentent ${found.files.join(', ')} (contenu : nodal_get_node).`,
+    { result: { nodes: found.nodes }, documents: [] },
+  );
+}
+
+/** Dépôt git du projet : dossier de code si l'espace n'en déclare aucun. */
+function projectRootOf(cwd: string): string | null {
+  const root = process.env.CLAUDE_PROJECT_DIR || cwd;
+  return fs.existsSync(path.join(root, '.git')) ? root : null;
 }
 
 /** Entrée du hook (champs communs à Claude Code et Gemini CLI). */
@@ -185,7 +267,16 @@ interface HookInput {
   prompt?: unknown;
   hook_event_name?: unknown;
   session_id?: unknown;
+  /** Claude Code : sous-agent, dont le contexte est séparé. */
+  agent_id?: unknown;
+  cwd?: unknown;
+  tool_input?: unknown;
+  /** SessionStart : `compact` après un résumé du contexte. */
+  source?: unknown;
 }
+
+const textOr = (value: unknown, fallback: string): string =>
+  typeof value === 'string' && value ? value : fallback;
 
 /**
  * Réponse du hook pour un fichier d'espace et l'entrée JSON reçue sur stdin :
@@ -199,27 +290,39 @@ export function contextHookOutput(
 ): string {
   try {
     const input = JSON.parse(stdin) as HookInput;
+    const event = textOr(input.hook_event_name, 'UserPromptSubmit');
+    const sessionId = textOr(input.session_id, '');
+    const agentId = textOr(input.agent_id, '');
+    const file = sessionId
+      ? contextSessionFile(
+          agentId ? `${sessionId}\0${agentId}` : sessionId,
+          workspaceFile,
+        )
+      : null;
+    if (event === 'SessionStart') {
+      if (file && input.source === 'compact') forgetContextSession(file);
+      return '';
+    }
+
+    const isTool = event === 'PreToolUse';
+    const cwd = textOr(input.cwd, process.cwd());
+    const files = isTool ? toolFiles(input.tool_input, cwd) : [];
     const prompt = input.prompt;
-    if (typeof prompt !== 'string') return '';
-    const file =
-      typeof input.session_id === 'string' && input.session_id
-        ? contextSessionFile(input.session_id, workspaceFile)
-        : null;
+    // Le plus souvent, un outil ne vise aucun fichier : la base n'est pas ouverte.
+    if (isTool ? files.length === 0 : typeof prompt !== 'string') return '';
+
     const session = file ? readContextSession(file) : null;
-    if (session) session.prompt++;
+    if (session && !isTool) session.prompt++;
     const context = withWorkspace(workspaceFile, (ctx) =>
-      promptContext(ctx, prompt, maxChars, session),
+      isTool
+        ? fileContext(ctx, workspaceFile, files, projectRootOf(cwd), session)
+        : promptContext(ctx, prompt as string, maxChars, session),
     );
-    if (file && session) writeContextSession(file, session);
+    if (file && session && (context || !isTool))
+      writeContextSession(file, session);
     if (!context) return '';
     return JSON.stringify({
-      hookSpecificOutput: {
-        hookEventName:
-          typeof input.hook_event_name === 'string'
-            ? input.hook_event_name
-            : 'UserPromptSubmit',
-        additionalContext: context,
-      },
+      hookSpecificOutput: { hookEventName: event, additionalContext: context },
     });
   } catch {
     return '';

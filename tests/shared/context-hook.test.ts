@@ -49,6 +49,18 @@ describe('withContextHook', () => {
           { hooks: [{ type: 'command', command: 'echo autre' }] },
           { hooks: [{ type: 'command', command, timeout: 10 }] },
         ],
+        PreToolUse: [
+          {
+            matcher: 'Read|Edit|MultiEdit|Write|NotebookEdit|Bash|PowerShell',
+            hooks: [{ type: 'command', command, timeout: 10 }],
+          },
+        ],
+        SessionStart: [
+          {
+            matcher: 'compact',
+            hooks: [{ type: 'command', command, timeout: 10 }],
+          },
+        ],
       },
     });
   });
@@ -74,7 +86,8 @@ describe('installContextHook', () => {
     expect(file).toBe(path.join(dir, '.claude', 'settings.local.json'));
     const again = installContextHook(dir, 'claude-code', command);
     const written = JSON.parse(fs.readFileSync(again, 'utf8'));
-    expect(written.hooks.UserPromptSubmit).toHaveLength(1);
+    for (const event of ['UserPromptSubmit', 'PreToolUse', 'SessionStart'])
+      expect(written.hooks[event]).toHaveLength(1);
   });
 
   it('refuse de réécrire un fichier illisible', () => {

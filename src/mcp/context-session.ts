@@ -11,7 +11,7 @@ import path from 'node:path';
 
 /**
  * Demandes après lesquelles un nœud peut être redonné : l'assistant a pu
- * l'oublier (contexte résumé), ce que le hook ne sait pas.
+ * l'oublier (contexte résumé), ce que le hook ne sait pas toujours.
  */
 export const REPEAT_AFTER_PROMPTS = 10;
 /** Âge au-delà duquel le fichier d'une session est effacé. */
@@ -84,6 +84,11 @@ export function writeContextSession(
   } catch {
     fs.rmSync(temporary, { force: true });
   }
+}
+
+/** Contexte résumé par l'assistant : ce qui a été donné est à redonner. */
+export function forgetContextSession(file: string): void {
+  fs.rmSync(file, { force: true });
 }
 
 /** Déjà donné récemment, aussi complètement, et inchangé depuis. */

@@ -1,8 +1,10 @@
 /**
  * Contexte automatique (hook d'assistant) : avant chaque demande, l'assistant
  * lance le serveur de Nodal en mode `--context`, qui ajoute au contexte les
- * nœuds et documents pertinents (voir src/mcp/context-hook.ts). Ce module
- * décrit le hook et l'ajoute aux réglages d'un projet. Logique pure.
+ * nœuds et documents pertinents (voir src/mcp/context-hook.ts). Claude Code
+ * lance la même commande avant de lire ou modifier un fichier, et après avoir
+ * résumé son contexte. Ce module décrit les hooks et les ajoute aux réglages
+ * d'un projet. Logique pure.
  */
 
 /** Assistants dont les hooks peuvent ajouter du contexte à une demande. */
@@ -52,15 +54,29 @@ type Json = Record<string, unknown>;
 const isObject = (value: unknown): value is Json =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-/** Entrée de hook à ajouter sous `hooks[événement]`. */
-export function contextHookEntry(
+/** Outils de Claude Code qui lisent ou modifient des fichiers. */
+const FILE_TOOLS = 'Read|Edit|MultiEdit|Write|NotebookEdit|Bash|PowerShell';
+
+/** Entrées de hooks à ajouter, par événement. */
+export function contextHookEntries(
   client: ContextHookClient,
   command: string,
-): Json {
-  return client === 'claude-code'
-    ? // Délai en secondes : la recherche prend quelques dizaines de ms.
-      { hooks: [{ type: 'command', command, timeout: 10 }] }
-    : { matcher: '*', hooks: [{ name: HOOK_NAME, type: 'command', command }] };
+): Record<string, Json> {
+  if (client === 'gemini-cli') {
+    return {
+      [CONTEXT_HOOK_EVENT[client]]: {
+        matcher: '*',
+        hooks: [{ name: HOOK_NAME, type: 'command', command }],
+      },
+    };
+  }
+  // Délai en secondes : la recherche prend quelques dizaines de ms.
+  const hooks = [{ type: 'command', command, timeout: 10 }];
+  return {
+    [CONTEXT_HOOK_EVENT[client]]: { hooks },
+    PreToolUse: { matcher: FILE_TOOLS, hooks },
+    SessionStart: { matcher: 'compact', hooks },
+  };
 }
 
 /**
@@ -74,25 +90,24 @@ export function withContextHook(
 ): Json {
   const base = isObject(settings) ? settings : {};
   const hooks = isObject(base.hooks) ? base.hooks : {};
-  const event = CONTEXT_HOOK_EVENT[client];
-  const entries = Array.isArray(hooks[event])
-    ? (hooks[event] as unknown[])
-    : [];
-  const others = entries.flatMap((entry) => {
-    if (!isObject(entry) || !Array.isArray(entry.hooks)) return [entry];
-    const kept = entry.hooks.filter(
-      (hook) => !(isObject(hook) && isNodalContextCommand(hook.command)),
-    );
-    if (kept.length === entry.hooks.length) return [entry];
-    return kept.length > 0 ? [{ ...entry, hooks: kept }] : [];
-  });
-  return {
-    ...base,
-    hooks: {
-      ...hooks,
-      [event]: [...others, contextHookEntry(client, command)],
-    },
-  };
+  const next: Json = { ...hooks };
+  for (const [event, added] of Object.entries(
+    contextHookEntries(client, command),
+  )) {
+    const entries = Array.isArray(hooks[event])
+      ? (hooks[event] as unknown[])
+      : [];
+    const others = entries.flatMap((entry) => {
+      if (!isObject(entry) || !Array.isArray(entry.hooks)) return [entry];
+      const kept = entry.hooks.filter(
+        (hook) => !(isObject(hook) && isNodalContextCommand(hook.command)),
+      );
+      if (kept.length === entry.hooks.length) return [entry];
+      return kept.length > 0 ? [{ ...entry, hooks: kept }] : [];
+    });
+    next[event] = [...others, added];
+  }
+  return { ...base, hooks: next };
 }
 
 /** Bloc de réglages à copier (sans fusion), pour une installation manuelle. */

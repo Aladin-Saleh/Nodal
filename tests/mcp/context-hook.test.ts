@@ -1,15 +1,27 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { NodeService } from '../../src/main/knowledge/node-service';
-import { contextHookOutput, promptKeywords } from '../../src/mcp/context-hook';
+import {
+  contextHookOutput,
+  promptKeywords,
+  promptText,
+} from '../../src/mcp/context-hook';
 import {
   contextSessionFile,
   REPEAT_AFTER_PROMPTS,
 } from '../../src/mcp/context-session';
+import {
+  setAnchors,
+  writeCodeRoots,
+} from '../../src/main/knowledge/anchor-service';
+import { toolFiles } from '../../src/mcp/file-hook';
+import { useTempDir } from '../helpers/temp-dir';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
 
 const workspace = testWorkspaceFixture();
+const tempDir = useTempDir();
 let file: string;
 
 beforeEach(() => {
@@ -59,6 +71,33 @@ describe('promptKeywords', () => {
         'Pourquoi le serveur MCP tourne-t-il sous Node ? Écris 2 tests',
       ),
     ).toEqual(['serveur', 'mcp', 'tourne', 'node', 'ecris', 'tests']);
+  });
+});
+
+describe('promptText', () => {
+  it('écarte ce que l’assistant ajoute, garde le texte collé', () => {
+    expect(
+      promptText(
+        '<task-notification>\n<status>completed</status>\n</task-notification>',
+      ),
+    ).toBe('');
+    expect(
+      promptText('<pasted_content id="9">\nserveur\n</pasted_content>'),
+    ).toBe('serveur');
+    // Bloc coupé : rien après lui n'est de l'utilisateur.
+    expect(promptText('avant <system-reminder>a <b>')).toBe('avant');
+  });
+
+  it('ne garde d’un chemin absolu que son dernier nom', () => {
+    expect(promptText('dans C:\\Users\\moi\\app\\hook.ts corrige')).toBe(
+      'dans hook.ts corrige',
+    );
+    expect(promptText('lis /home/moi/app/hook.ts')).toBe('lis hook.ts');
+    expect(promptText('et/ou src/mcp, https://a.b/c/d')).toBe(
+      'et/ou src/mcp, https://a.b/c/d',
+    );
+    // Une commande reste une commande.
+    expect(promptText('/mcp serveur')).toBe('/mcp serveur');
   });
 });
 
@@ -152,6 +191,110 @@ describe('contexte automatique (hook)', () => {
       expect(ask()).not.toBeNull();
     } finally {
       fs.rmSync(state, { force: true });
+    }
+  });
+});
+
+describe('rappel avant un fichier ancré (PreToolUse)', () => {
+  let root: string;
+  let source: string;
+
+  beforeEach(() => {
+    root = tempDir();
+    source = path.join(root, 'src', 'mcp', 'server.ts');
+    fs.mkdirSync(path.dirname(source), { recursive: true });
+    fs.writeFileSync(source, '');
+    const { context } = workspace();
+    writeCodeRoots(context(), [root]);
+    const all = new NodeService(context).list();
+    const id = (title: string) => all.find((node) => node.title === title)!.id;
+    setAnchors(context(), id('Electron'), ['src/**']);
+    setAnchors(context(), id('Serveur MCP'), ['src/mcp/server.ts']);
+  });
+
+  const before = (toolInput: unknown, extra: Record<string, unknown> = {}) => {
+    const output = contextHookOutput(
+      file,
+      JSON.stringify({
+        hook_event_name: 'PreToolUse',
+        cwd: root,
+        tool_input: toolInput,
+        ...extra,
+      }),
+    );
+    if (!output) return null;
+    const { hookSpecificOutput } = JSON.parse(output) as {
+      hookSpecificOutput: Record<string, string>;
+    };
+    // L'appel d'outil n'est ni bloqué ni autorisé d'office.
+    expect(Object.keys(hookSpecificOutput)).toEqual([
+      'hookEventName',
+      'additionalContext',
+    ]);
+    return hookSpecificOutput.additionalContext!;
+  };
+
+  it('donne les nœuds du fichier, le plus précis d’abord', () => {
+    const text = before({ file_path: source })!;
+    expect(text).toContain('src/mcp/server.ts');
+    expect(text.indexOf('Serveur MCP')).toBeLessThan(text.indexOf('Electron,'));
+    // Résumé et titres des documents, pas leur contenu.
+    expect(text).toContain('Exécuté par Node');
+    expect(text).toContain('Décision');
+    expect(text).not.toContain('ligne vide');
+  });
+
+  it('se tait pour un fichier non ancré, hors du projet, ou sans fichier', () => {
+    expect(before({ file_path: path.join(root, 'README.md') })).toBeNull();
+    expect(before({ file_path: path.join(tempDir(), 'x.ts') })).toBeNull();
+    expect(before({ command: 'npm test' })).toBeNull();
+    expect(before(null)).toBeNull();
+  });
+
+  it('reconnaît les fichiers cités par une commande', () => {
+    expect(before({ command: 'sed -n 1,20p src/mcp/server.ts' })).toContain(
+      'Serveur MCP',
+    );
+    expect(toolFiles({ command: 'cd src && cat mcp/server.ts' }, root)).toEqual(
+      [source],
+    );
+    expect(
+      toolFiles({ command: 'cat absent.ts https://a.b/server.ts' }, root),
+    ).toEqual([]);
+    // Texte d'un heredoc : pas une lecture.
+    expect(
+      toolFiles({ command: 'cat > n.md <<E\nsrc/mcp/server.ts\nE' }, root),
+    ).toEqual([]);
+  });
+
+  it('une fois par session et par agent, et de nouveau après un résumé', () => {
+    const session_id = `fichiers-${file}`;
+    const read = (extra = {}) =>
+      before({ file_path: source }, { session_id, ...extra });
+    const states = [
+      contextSessionFile(session_id, file),
+      contextSessionFile(`${session_id}\0agent`, file),
+    ];
+    try {
+      expect(read()).not.toBeNull();
+      expect(read()).toBeNull();
+      expect(read({ agent_id: 'agent' })).not.toBeNull();
+
+      const start = (source_: string) =>
+        contextHookOutput(
+          file,
+          JSON.stringify({
+            hook_event_name: 'SessionStart',
+            session_id,
+            source: source_,
+          }),
+        );
+      expect(start('resume')).toBe('');
+      expect(read()).toBeNull();
+      expect(start('compact')).toBe('');
+      expect(read()).not.toBeNull();
+    } finally {
+      for (const state of states) fs.rmSync(state, { force: true });
     }
   });
 });

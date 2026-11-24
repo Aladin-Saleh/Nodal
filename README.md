@@ -274,7 +274,10 @@ pièces jointes en BLOB).
   - arborescence, panneau du nœud, éditeur / aperçu et terminal
     redimensionnables (souris ou flèches, double-clic : taille par défaut) ;
   - contexte automatique plus sobre : contenu des seuls nœuds sûrs, résumé
-    des autres, rien de répété dans une session, secrets masqués.
+    des autres, rien de répété dans une session, secrets masqués ; rappel des
+    nœuds d'un fichier avant de le lire ou de le modifier (Claude Code) ;
+  - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
+    `maxRowsNeeded`, `maxNodesNeeded`).
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,

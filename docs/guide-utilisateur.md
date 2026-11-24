@@ -431,7 +431,15 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   le reste du fichier est conservé). À chaque demande, avant de répondre,
   l'assistant reçoit alors les nœuds et documents de l'espace qui
   correspondent aux mots de la demande (au plus 5 nœuds et environ 1 000
-  tokens ; rien si aucun ne correspond, ni pour une commande « / »). Plus
+  tokens ; rien si aucun ne correspond, ni pour une commande « / »). Un nœud
+  dont le titre et le résumé répondent à la demande vient avec ses
+  documents, les autres avec leur seul résumé ; un nœud déjà donné dans la
+  session n'est pas répété, sauf s'il a changé, et les secrets
+  reconnaissables (clés d'API, jetons…) sont masqués. Avec Claude Code,
+  l'assistant reçoit aussi, avant de lire ou de modifier un fichier du code,
+  le résumé des nœuds ancrés à ce fichier (3 au plus, une fois par session ;
+  rien n'est bloqué). Hook installé avec une version précédente :
+  réinstallez-le pour en profiter. Plus
   besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,
   copiez le bloc proposé dans `~/.claude/settings.json` (ou
   `~/.gemini/settings.json`). Le hook ne fait que lire l'espace.

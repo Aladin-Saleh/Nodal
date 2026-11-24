@@ -81,10 +81,13 @@ function ContextHookSection({
         À chaque demande, avant de répondre, l’assistant reçoit les nœuds et
         documents de cet espace qui correspondent aux mots de la demande
         (environ 1 000 tokens au plus, rien si aucun ne correspond) : plus
-        besoin de lui dire de consulter Nodal. Hook «{' '}
-        {CONTEXT_HOOK_EVENT[assistant]} », ajouté à{' '}
-        {CONTEXT_HOOK_SETTINGS_FILE[assistant]} dans le dossier du projet
-        choisi.
+        besoin de lui dire de consulter Nodal.
+        {assistant === 'claude-code' &&
+          ' Avant de lire ou de modifier un fichier du code, il reçoit aussi, une fois, le résumé des nœuds ancrés à ce fichier.'}{' '}
+        Hook « {CONTEXT_HOOK_EVENT[assistant]} »
+        {assistant === 'claude-code' && ' (et PreToolUse, SessionStart)'},
+        ajouté à {CONTEXT_HOOK_SETTINGS_FILE[assistant]} dans le dossier du
+        projet choisi.
       </p>
       <div className="mcp-hook-actions">
         <button type="button" onClick={() => void install()}>
