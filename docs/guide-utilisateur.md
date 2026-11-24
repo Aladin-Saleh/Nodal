@@ -119,6 +119,14 @@ liens parent-enfant apparaissent en pointillés.
   emprunter les liens parent / enfant (« ↑ parent », « ↓ enfant »). S’il n’y
   a aucun chemin en 12 liens au plus, le panneau le dit. **×** ferme le
   chemin.
+  Si plusieurs chemins sont aussi courts, Nodal choisit le plus parlant :
+  il évite les liens vagues (« est lié à », hiérarchie), puis les nœuds
+  reliés à tout, et dit combien il y en a.
+- **Impact d’un changement** (même menu) : les nœuds à revoir si celui-ci,
+  ou l’un de ses sous-nœuds, change, à deux liens au plus. Nodal remonte
+  « dépend de », « utilise », « implémente », « consomme », « décrit » et
+  suit « alimente » ; « est lié à », « remplace » et les types que vous avez
+  créés ne comptent pas, faute d’en connaître le sens.
 - **Relations** : cliquez sur un trait (ou son libellé) pour ouvrir la fiche
   de la relation : source, type, cible et description. **Modifier** permet
   de changer le type, le libellé et la description ; un clic sur une
@@ -350,9 +358,16 @@ de cas et, pour chacun, l'action qui permet de corriger :
   ponctuation ou au pluriel près, ou à une lettre près (pas à un chiffre
   près : « Étape 1 » et « Étape 2 » ne sont pas des doublons) → Ouvrir l'un
   ou l'autre ;
+- **relations superflues** : lien « est lié à » en plus d’une relation
+  précise ou entre un parent et son enfant, « dépend de » déjà impliqué par
+  une chaîne de « dépend de » ; jamais une relation libellée ou issue d’un
+  lien `[[…]]`. Rien n’est retiré automatiquement ;
+- **cycles de dépendance** (5 nœuds au plus) ;
 - **ajouts de l'IA à relire** → Valider ;
 - **documentation possiblement obsolète** (nœuds ancrés à des fichiers du
   code, voir _Fichiers du code_) → Ouvrir, Marquer comme à jour ;
+- **questions suggérées** : nœuds par lesquels tout passe, relations
+  ajoutées par l’IA à vérifier, liens sans précision, nœuds sans relation ;
 - **sujets à documenter** (voir ci-dessous) → Créer un nœud, Ignorer.
 
 Les listes sont limitées à 50 lignes par vérification ; **Actualiser**

@@ -18,7 +18,10 @@ import {
   type FoundDocument,
   neighborhood,
   overview,
+  analyze,
+  ANALYZE_DEFAULT_LIMIT,
   findPath,
+  impact,
   health,
   HEALTH_MCP_LIMIT,
   readDocument,
@@ -48,6 +51,7 @@ import {
   operationSchema,
   type Operation,
 } from './apply-tool';
+import { IMPACT_DEFAULT_DEPTH, IMPACT_MAX_DEPTH } from '../shared/graph-impact';
 import { PATH_DEFAULT_DEPTH, PATH_MAX_DEPTH } from '../shared/graph-path';
 import { loadShortIds, resolveIds, shortenIds } from './short-ids';
 import { renderLinksForLlm, renderResponseLinks } from './links';
@@ -555,7 +559,7 @@ export function createNodalMcpServer(
     {
       title: 'Chemin entre deux nœuds',
       description:
-        'Plus court chemin de fromId à toId par les relations (dans les deux sens), ' +
+        'Plus court chemin de fromId à toId par les relations, le plus parlant si plusieurs (sameLength), ' +
         'en option par la hiérarchie : chaque nœud avec le lien qui y mène (→ / ← type, ↑ parent, ↓ enfant).',
       inputSchema: z.object({
         fromId: id.describe('Nœud de départ'),
@@ -571,10 +575,62 @@ export function createNodalMcpServer(
           .boolean()
           .default(false)
           .describe('Passer aussi par les liens parent-enfant'),
+        directed: z
+          .boolean()
+          .default(false)
+          .describe('Suivre les relations dans leur sens seulement'),
       }),
       annotations: READ_ONLY,
     },
     run(findPath),
+  );
+
+  server.registerTool(
+    'nodal_impact',
+    {
+      title: 'Impact d’un changement',
+      description:
+        'Nœuds à revoir si un nœud (nodeId, avec ses descendants) ou des fichiers du code (paths) changent : ' +
+        'relations remontées dans le sens de la dépendance (dépend de, utilise, implémente, consomme, décrit, ' +
+        'alimente). depth = éloignement ; via = relation suivie ; relationsIgnored = types dont le sens ' +
+        'n’est pas connu (à ajouter dans relations si la source y dépend de la cible).',
+      inputSchema: z.object({
+        nodeId: id.optional(),
+        paths: z.array(z.string().min(1).max(1000)).max(100).optional(),
+        depth: z
+          .number()
+          .int()
+          .min(1)
+          .max(IMPACT_MAX_DEPTH)
+          .default(IMPACT_DEFAULT_DEPTH),
+        relations: z.array(z.string().min(1).max(100)).max(50).optional(),
+      }),
+      annotations: READ_ONLY,
+    },
+    run((ctx, args: Parameters<typeof impact>[1]) =>
+      impact(ctx, args, codeRootsOf(ctx)),
+    ),
+  );
+
+  server.registerTool(
+    'nodal_analyze',
+    {
+      title: 'Analyse du graphe',
+      description:
+        'Ce que la forme du graphe suggère de regarder : questions, connexions entre branches éloignées, ' +
+        'nœuds charnières (share : part des plus courts chemins), relations superflues, cycles de dépendance.',
+      inputSchema: z.object({
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .default(ANALYZE_DEFAULT_LIMIT)
+          .describe('Lignes au plus par rubrique'),
+      }),
+      annotations: READ_ONLY,
+    },
+    run(analyze),
   );
 
   if (options.readOnly) return server;

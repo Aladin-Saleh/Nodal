@@ -2,6 +2,7 @@
  * Objets du modèle documentaire échangés entre main et renderer (§5.1).
  * Ce sont des vues : le contenu binaire des pièces jointes n'y figure jamais.
  */
+import type { Question } from './graph-analysis';
 import type { AssistantAction, ContentType, NodeType } from './domain';
 
 export interface NodeSummary {
@@ -194,6 +195,8 @@ export type HealthCheckId =
   | 'orphan'
   | 'brokenLink'
   | 'duplicate'
+  | 'redundantRelation'
+  | 'dependencyCycle'
   | 'assistantPending'
   | 'stale';
 
@@ -204,7 +207,7 @@ export interface HealthIssue {
   title: string;
   documentId?: string;
   documentTitle?: string;
-  /** Doublon probable : l'autre nœud. */
+  /** Doublon, relation superflue, cycle : l'autre nœud. */
   otherNodeId?: string;
   /** Précision : cible d'un lien cassé, titre du doublon… */
   detail?: string;
@@ -218,6 +221,8 @@ export interface HealthReport {
     count: number;
     issues: HealthIssue[];
   }[];
+  /** Questions que le graphe suggère. */
+  questions: Question[];
   /** Sujets à documenter encore ouverts, les plus demandés d'abord. */
   gaps: SearchGap[];
 }

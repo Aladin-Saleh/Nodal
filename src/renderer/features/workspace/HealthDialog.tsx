@@ -29,6 +29,9 @@ const HINTS: Partial<Record<HealthCheckId, string>> = {
   orphan: 'Ni relation ni enfant : à relier, ou à ranger.',
   brokenLink: 'Le nœud visé a été supprimé ou renommé (lien par titre).',
   duplicate: 'Titres presque identiques : à fusionner ou à distinguer.',
+  redundantRelation:
+    'La relation n’apprend rien de plus ; à retirer, ou à préciser par un libellé.',
+  dependencyCycle: 'Chaque nœud finit par dépendre de lui-même.',
   assistantPending: 'Ajouté par un assistant IA, pas encore vérifié.',
   stale:
     'Des fichiers du code ancrés au nœud ont changé depuis sa dernière mise à jour.',
@@ -100,6 +103,8 @@ export function HealthDialog({
           </button>
         );
       case 'duplicate':
+      case 'redundantRelation':
+      case 'dependencyCycle':
         return (
           <>
             {open}
@@ -256,6 +261,31 @@ export function HealthDialog({
               )}
             </section>
           ))}
+          {focus === 'all' && report.questions.length > 0 && (
+            <section className="health-check" aria-label="Questions suggérées">
+              <h3>
+                Questions suggérées{' '}
+                <span className="badge">{report.questions.length}</span>
+              </h3>
+              <ul className="health-list">
+                {report.questions.map((item) => (
+                  <li key={item.question}>
+                    <span className="health-title">{item.question}</span>
+                    <span className="muted">{item.why}</span>
+                    <span className="health-actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => onOpenNode(item.nodeIds[0]!)}
+                      >
+                        Ouvrir
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {focus === 'all' && gaps}
         </div>
       )}

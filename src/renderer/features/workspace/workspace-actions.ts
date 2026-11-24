@@ -45,6 +45,7 @@ export const NODE_MENU = [
   SEP,
   'node.center',
   'node.pathTo',
+  'node.impact',
   'node.toggleHidden',
   'node.solo',
   SEP,
@@ -64,6 +65,8 @@ export interface WorkspaceCommands {
   center(id: string): void;
   /** « Chemin vers… » : choisir le nœud d'arrivée depuis ce nœud. */
   pathFrom(id: string): void;
+  /** Ce qui dépend de ce nœud. */
+  impact(id: string): void;
   move(node: NodeSummary): void;
   duplicate(node: NodeSummary): void;
   validate(id: string): void;
@@ -178,6 +181,14 @@ export function nodeActions(
       keywords: 'relation lien plus court trajet',
       enabled: on,
       run: () => commands.pathFrom(id),
+    },
+    {
+      id: 'node.impact',
+      label: 'Impact d’un changement',
+      group: 'Nœud',
+      keywords: 'dépendance dépend touché revoir',
+      enabled: on,
+      run: () => commands.impact(id),
     },
     {
       id: 'node.validate',

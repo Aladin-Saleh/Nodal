@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  findShortestPath,
   hierarchyLinkId,
   pathLinkIds,
   shortestPath,
@@ -98,5 +99,63 @@ describe('plus court chemin', () => {
     // root ↓ b ← c (2 liens) : b est l'enfant du lien hiérarchique.
     expect(steps.map((step) => step.nodeId)).toEqual(['root', 'b', 'c']);
     expect(pathLinkIds(steps)).toEqual([hierarchyLinkId('b'), 'e2']);
+  });
+});
+
+const link = (sourceId: string, type: string, targetId: string) => ({
+  id: `${sourceId}${targetId}${type}`,
+  sourceId,
+  targetId,
+  relationTypeId: type,
+});
+
+describe('chemins aussi courts', () => {
+  const flat = ['a', 'b', 'v', 'h', 'p', 'x', 'y'].map((id) => ({
+    id,
+    parentId: null,
+  }));
+  const via = (list: PathGraphEdge[], options = {}) => {
+    const found = findShortestPath(flat, list, 'a', 'b', {
+      ...relationsOnly,
+      vagueTypes: new Set(['vague']),
+      ...options,
+    });
+    return found && [found.steps[1]!.nodeId, found.routes];
+  };
+  const vague = [link('a', 'vague', 'v'), link('v', 'vague', 'b')];
+  const hub = [
+    link('a', 'uses', 'h'),
+    link('h', 'uses', 'b'),
+    link('h', 'uses', 'x'),
+    link('h', 'uses', 'y'),
+  ];
+  const precise = [link('a', 'uses', 'p'), link('p', 'uses', 'b')];
+
+  it('évite les liens vagues, puis les nœuds reliés à tout', () => {
+    expect(via([...vague, ...hub])).toEqual(['h', 2]);
+    expect(via([...vague, ...hub, ...precise])).toEqual(['p', 3]);
+    // L'ordre des données ne décide qu'à défaut.
+    expect(via([...precise, ...hub, ...vague])).toEqual(['p', 3]);
+  });
+
+  it('compte les chemins par nœuds, pas par relations parallèles', () => {
+    expect(via([...precise, link('p', 'feeds', 'b')])).toEqual(['p', 1]);
+  });
+
+  it('garde la relation la plus précise entre deux nœuds', () => {
+    const steps = shortestPath(
+      flat,
+      [link('a', 'vague', 'b'), link('a', 'uses', 'b')],
+      'a',
+      'b',
+      { ...relationsOnly, vagueTypes: new Set(['vague']) },
+    )!;
+    expect(steps[1]!.via).toMatchObject({ relationTypeId: 'uses' });
+  });
+
+  it('suit le sens des relations si demandé', () => {
+    const back = [link('b', 'uses', 'p'), link('p', 'uses', 'a')];
+    expect(via(back)).toEqual(['p', 1]);
+    expect(via(back, { directed: true })).toBeNull();
   });
 });

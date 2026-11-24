@@ -7,6 +7,8 @@ export interface PathPanelProps {
   toTitle: string;
   /** `null` : aucun chemin trouvé. */
   steps: readonly PathStep[] | null;
+  /** Nombre de chemins de cette longueur. */
+  routes: number;
   maxDepth: number;
   includeHierarchy: boolean;
   onIncludeHierarchyChange(include: boolean): void;
@@ -40,6 +42,7 @@ export function PathPanel({
   fromTitle,
   toTitle,
   steps,
+  routes,
   maxDepth,
   includeHierarchy,
   onIncludeHierarchyChange,
@@ -82,6 +85,8 @@ export function PathPanel({
         <>
           <p role="status">
             {steps.length - 1 === 1 ? '1 lien' : `${steps.length - 1} liens`}
+            {routes > 1 &&
+              ` (le plus parlant de ${routes} chemins aussi courts)`}
           </p>
           <ol className="path-steps">
             {steps.map((step) => (

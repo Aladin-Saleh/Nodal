@@ -245,6 +245,34 @@ describe('nodal_path', () => {
     await client.close();
   });
 
+  it('dit s’il existe un chemin plus long, ou en sens inverse', async () => {
+    const client = await connect(file);
+    const find = async (extra: object) =>
+      toon(
+        await client.call('nodal_path', {
+          fromId: ids.other,
+          toId: ids.api,
+          includeHierarchy: true,
+          ...extra,
+        }),
+      );
+    expect((await find({ maxDepth: 1 })).note).toContain('en 3 liens');
+    const same = await client.call('nodal_path', {
+      fromId: ids.api,
+      toId: ids.api,
+    });
+    expect(same.isError).toBe(true);
+    const reverse = toon(
+      await client.call('nodal_path', {
+        fromId: ids.redis,
+        toId: ids.other,
+        directed: true,
+      }),
+    );
+    expect(reverse.note).toContain('sans tenir compte du sens');
+    await client.close();
+  });
+
   it('signale un nœud inconnu', async () => {
     const client = await connect(file);
     const result = await client.call('nodal_path', {
@@ -257,6 +285,46 @@ describe('nodal_path', () => {
   });
 });
 
+describe('nodal_impact et nodal_analyze', () => {
+  it('liste ce qui dépend d’un nœud ou d’un fichier', async () => {
+    const { context } = workspace();
+    const client = await connect(file);
+    // « Isolé » utilise Redis, descendant d'API.
+    const data = toon(await client.call('nodal_impact', { nodeId: ids.api }));
+    expect(data.affected).toEqual([
+      { id: short(ids.other), path: 'Isolé', depth: 1, via: 'utilise Redis' },
+    ]);
+    writeCodeRoots(context(), [path.join(workspace().dir, 'code')]);
+    setAnchors(context(), ids.redis, ['src/redis.ts']);
+    const byFile = toon(
+      await client.call('nodal_impact', { paths: ['src/redis.ts'] }),
+    );
+    expect(byFile.of).toEqual([
+      { id: short(ids.redis), path: 'API > Cache > Redis' },
+    ]);
+    expect(byFile.affectedCount).toBe(1);
+    expect(
+      toon(await client.call('nodal_impact', { paths: ['src/x.ts'] })).note,
+    ).toContain('Aucun nœud ancré');
+    for (const args of [{}, { nodeId: ids.api, relations: ['inconnue'] }])
+      expect((await client.call('nodal_impact', args)).isError).toBe(true);
+    await client.close();
+  });
+
+  it('analyse le graphe', async () => {
+    const client = await connect(file);
+    const data = toon(await client.call('nodal_analyze', {}));
+    expect(Object.keys(data)).toEqual([
+      'questions',
+      'connections',
+      'bridges',
+      'redundant',
+      'cycles',
+    ]);
+    await client.close();
+  });
+});
+
 describe('serveur MCP', () => {
   it('annonce des outils en lecture seule et des instructions', async () => {
     const client = await connect(file);
@@ -265,9 +333,11 @@ describe('serveur MCP', () => {
       tools: { name: string; annotations?: { readOnlyHint?: boolean } }[];
     };
     expect(tools.map((tool) => tool.name).toSorted()).toEqual([
+      'nodal_analyze',
       'nodal_for_files',
       'nodal_get_node',
       'nodal_health',
+      'nodal_impact',
       'nodal_neighborhood',
       'nodal_overview',
       'nodal_path',

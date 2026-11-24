@@ -19,9 +19,25 @@ import { assistantCreations } from '../main/knowledge/assistant-origin';
 import { asRows } from '../main/knowledge/rows';
 import { SearchService } from '../main/knowledge/search-service';
 import { TagService } from '../main/knowledge/tag-service';
+import { readAnalysisGraph } from '../main/knowledge/analysis-service';
 import {
+  bridges,
+  connections,
+  dependencyCycles,
+  redundantRelations,
+  suggestedQuestions,
+} from '../shared/graph-analysis';
+import {
+  IMPACT_DEFAULT_DEPTH,
+  impactDirection,
+  impactOf,
+  isVagueRelation,
+} from '../shared/graph-impact';
+import { foldText } from '../shared/text';
+import {
+  findShortestPath,
   PATH_DEFAULT_DEPTH,
-  shortestPath,
+  PATH_MAX_DEPTH,
   type PathGraphEdge,
   type PathLink,
 } from '../shared/graph-path';
@@ -777,25 +793,8 @@ function describeLink(link: PathLink, relationNames: Map<string, string>) {
   return `${link.forward ? '→' : '←'} ${name}`;
 }
 
-/**
- * Plus court chemin entre deux nœuds par les relations (dans les deux sens)
- * et, si demandé, par la hiérarchie : une ligne par nœud, avec le lien qui y
- * mène depuis le précédent.
- */
-export function findPath(
-  ctx: ReadContext,
-  input: {
-    fromId: string;
-    toId: string;
-    maxDepth?: number;
-    includeHierarchy?: boolean;
-  },
-) {
-  const outline = loadOutline(ctx);
-  for (const id of [input.fromId, input.toId]) {
-    if (!outline.byId.has(id)) throw notFound(`Nœud ${id}`);
-  }
-  const edges = asRows<PathGraphEdge>(
+function pathEdges(ctx: ReadContext): PathGraphEdge[] {
+  return asRows<PathGraphEdge>(
     ctx.db
       .prepare(
         `SELECT id, source_node_id AS sourceId, target_node_id AS targetId,
@@ -804,42 +803,215 @@ export function findPath(
       )
       .all(ctx.workspaceId),
   );
-  const relationNames = new Map(
-    listRelationTypes(ctx).map((type) => [type.id, type.name]),
-  );
+}
+
+const pathNodes = (outline: Outline) =>
+  [...outline.byId.values()].map((row) => ({
+    id: row.id,
+    parentId: row.parent_id,
+  }));
+
+/**
+ * Plus court chemin entre deux nœuds par les relations et, si demandé, par la
+ * hiérarchie : une ligne par nœud, avec le lien qui y mène depuis le
+ * précédent.
+ */
+export function findPath(
+  ctx: ReadContext,
+  input: {
+    fromId: string;
+    toId: string;
+    maxDepth?: number;
+    includeHierarchy?: boolean;
+    directed?: boolean;
+  },
+) {
+  const outline = loadOutline(ctx);
+  for (const id of [input.fromId, input.toId]) {
+    if (!outline.byId.has(id)) throw notFound(`Nœud ${id}`);
+  }
+  if (input.fromId === input.toId) {
+    throw new NodalError(
+      'VALIDATION_ERROR',
+      'Le départ et l’arrivée sont le même nœud.',
+    );
+  }
+  const edges = pathEdges(ctx);
+  const types = listRelationTypes(ctx);
+  const relationNames = new Map(types.map((type) => [type.id, type.name]));
   const maxDepth = input.maxDepth ?? PATH_DEFAULT_DEPTH;
   const includeHierarchy = input.includeHierarchy ?? false;
-  const steps = shortestPath(
-    [...outline.byId.values()].map((row) => ({
-      id: row.id,
-      parentId: row.parent_id,
-    })),
-    edges,
-    input.fromId,
-    input.toId,
-    { maxDepth, includeHierarchy },
-  );
+  const directed = input.directed ?? false;
+  const find = (depth: number, options = { includeHierarchy, directed }) =>
+    findShortestPath(pathNodes(outline), edges, input.fromId, input.toId, {
+      ...options,
+      maxDepth: depth,
+      vagueTypes: new Set(
+        types
+          .filter((type) => isVagueRelation(type.name))
+          .map((type) => type.id),
+      ),
+    });
+  const found = find(maxDepth);
   const ends = {
     from: pathOf(outline, input.fromId),
     to: pathOf(outline, input.toId),
   };
-  if (!steps) {
+  if (!found) {
+    const longer = maxDepth < PATH_MAX_DEPTH ? find(PATH_MAX_DEPTH) : null;
+    const reverse =
+      directed && !longer
+        ? find(PATH_MAX_DEPTH, { includeHierarchy, directed: false })
+        : null;
+    let hint = '';
+    if (longer) hint = ` Il en existe un en ${longer.steps.length - 1} liens.`;
+    else if (reverse) hint = ' Il en existe un sans tenir compte du sens.';
     return {
       ...ends,
       found: false,
       note:
         `Aucun chemin en ${maxDepth} liens au plus` +
-        (includeHierarchy ? '.' : ' (hiérarchie exclue : includeHierarchy).'),
+        (includeHierarchy ? '.' : ' (hiérarchie exclue : includeHierarchy).') +
+        hint,
     };
   }
   return {
     ...ends,
-    length: steps.length - 1,
-    steps: steps.map((step) => ({
+    length: found.steps.length - 1,
+    // D'autres chemins aussi courts : celui-ci est le plus parlant.
+    ...(found.routes > 1 ? { sameLength: found.routes } : {}),
+    steps: found.steps.map((step) => ({
       id: step.nodeId,
       title: outline.byId.get(step.nodeId)!.title,
       via: step.via ? describeLink(step.via, relationNames) : '',
     })),
+  };
+}
+
+/** Nœuds listés au plus par nodal_impact. */
+export const IMPACT_MAX_ROWS = 100;
+
+/**
+ * Nœuds à revoir si un nœud, ou les nœuds ancrés à des fichiers, changent.
+ * `relations` : types (en plus de ceux dont le sens est connu) où la source
+ * dépend de la cible.
+ */
+export function impact(
+  ctx: ReadContext,
+  input: {
+    nodeId?: string;
+    paths?: string[];
+    depth?: number;
+    relations?: string[];
+  },
+  roots: string[],
+) {
+  if (Boolean(input.nodeId) === Boolean(input.paths?.length)) {
+    throw new NodalError('VALIDATION_ERROR', 'Donnez soit nodeId, soit paths.');
+  }
+  const outline = loadOutline(ctx);
+  if (input.nodeId && !outline.byId.has(input.nodeId)) throw notFound('Nœud');
+  const relative = (input.paths ?? []).flatMap(
+    (raw) => toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE)?.path || [],
+  );
+  const seeds = input.nodeId
+    ? [input.nodeId]
+    : nodesForPaths(ctx, relative).map(({ node }) => node.nodeId);
+
+  const types = listRelationTypes(ctx);
+  const extra = new Set((input.relations ?? []).map((name) => foldText(name)));
+  for (const name of input.relations ?? []) {
+    if (!types.some((type) => foldText(type.name) === foldText(name))) {
+      throw new NodalError(
+        'VALIDATION_ERROR',
+        `Type de relation « ${name} » inconnu (${types.map((type) => type.name).join(', ')}).`,
+      );
+    }
+  }
+  const directions = new Map(
+    types.map((type) => [
+      type.id,
+      extra.has(foldText(type.name)) ? 'source' : impactDirection(type.name),
+    ]),
+  );
+  const names = new Map(types.map((type) => [type.id, type.name]));
+  const edges = pathEdges(ctx);
+  const hits = impactOf(
+    pathNodes(outline),
+    edges,
+    seeds,
+    (typeId) => directions.get(typeId) ?? 'none',
+    input.depth ?? IMPACT_DEFAULT_DEPTH,
+  );
+  const shown = hits.slice(0, IMPACT_MAX_ROWS);
+  // Relations écartées autour des nœuds vus : leur sens n'est pas connu.
+  const seen = new Set([...seeds, ...hits.map((hit) => hit.nodeId)]);
+  const ignored = new Set(
+    edges
+      .filter(
+        (edge) =>
+          directions.get(edge.relationTypeId) === 'none' &&
+          (seen.has(edge.sourceId) || seen.has(edge.targetId)),
+      )
+      .map((edge) => names.get(edge.relationTypeId)!),
+  );
+  return {
+    of: seeds.map((id) => ({ id, path: pathOf(outline, id) })),
+    affectedCount: hits.length,
+    affected: shown.map((hit) => ({
+      id: hit.nodeId,
+      path: pathOf(outline, hit.nodeId),
+      depth: hit.depth,
+      via:
+        directions.get(hit.relationTypeId) === 'source'
+          ? `${names.get(hit.relationTypeId)} ${outline.byId.get(hit.fromId)!.title}`
+          : `${outline.byId.get(hit.fromId)!.title} ${names.get(hit.relationTypeId)}`,
+    })),
+    ...(ignored.size > 0 ? { relationsIgnored: [...ignored].join(', ') } : {}),
+    ...(seeds.length === 0 ? { note: 'Aucun nœud ancré à ces fichiers.' } : {}),
+  };
+}
+
+/** Lignes par rubrique de nodal_analyze. */
+export const ANALYZE_DEFAULT_LIMIT = 5;
+
+/** Ce que la forme du graphe suggère de regarder. */
+export function analyze(ctx: ReadContext, input: { limit?: number }) {
+  const graph = readAnalysisGraph(ctx);
+  const limit = input.limit ?? ANALYZE_DEFAULT_LIMIT;
+  const title = new Map(graph.nodes.map((node) => [node.id, node.title]));
+  const edgeText = (edge: (typeof graph.edges)[number]) =>
+    `${title.get(edge.sourceId)} → ${edge.relation} → ${title.get(edge.targetId)}`;
+  return {
+    questions: suggestedQuestions(graph, limit).map((item) => ({
+      question: item.question,
+      why: item.why,
+    })),
+    connections: connections(graph)
+      .slice(0, limit)
+      .map(({ edge, reasons }) => ({
+        relation: edgeText(edge),
+        why: reasons.join(' ; '),
+      })),
+    bridges: bridges(graph)
+      .slice(0, limit)
+      .map(({ nodeId, score }) => ({
+        id: nodeId,
+        title: title.get(nodeId)!,
+        share: Math.round(score * 100) / 100,
+      })),
+    redundant: redundantRelations(graph)
+      .slice(0, limit)
+      .map(({ edge, reason, through }) => ({
+        relation: edgeText(edge),
+        reason,
+        through: through.map((id) => title.get(id)).join(' → '),
+      })),
+    cycles: dependencyCycles(graph)
+      .slice(0, limit)
+      .map((cycle) =>
+        [...cycle, cycle[0]!].map((id) => title.get(id)).join(' → '),
+      ),
   };
 }
 

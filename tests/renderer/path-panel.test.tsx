@@ -43,6 +43,7 @@ function renderPanel(props: Partial<Parameters<typeof PathPanel>[0]> = {}) {
       fromTitle="API"
       toTitle="Redis"
       steps={steps}
+      routes={1}
       maxDepth={12}
       includeHierarchy
       titleOf={(id) => titles[id]!}

@@ -22,12 +22,19 @@ import { CommandPalette } from '../commands/CommandPalette';
 import type { MarkdownImportPreview } from '../../../shared/markdown-import';
 import { MarkdownImportDialog } from './MarkdownImportDialog';
 import { maskedNodeIds } from '../graph/graph-model';
+import { ImpactPanel } from '../graph/ImpactPanel';
 import { PathPanel } from '../graph/PathPanel';
 import {
   PATH_MAX_DEPTH,
+  findShortestPath,
   pathLinkIds,
-  shortestPath,
 } from '../../../shared/graph-path';
+import {
+  IMPACT_DEFAULT_DEPTH,
+  impactDirection,
+  impactOf,
+  isVagueRelation,
+} from '../../../shared/graph-impact';
 import {
   createDocumentInput,
   type NewDocument,
@@ -133,6 +140,8 @@ function WorkspaceView({
     toId: string;
     includeHierarchy: boolean;
   } | null>(null);
+  /** « Impact » : nœud dont on regarde ce qui en dépend. */
+  const [impactFrom, setImpactFrom] = useState<string | null>(null);
   /** Choix du nœud d'arrivée en cours, depuis ce nœud. */
   const [pathPickFrom, setPathPickFrom] = useState<string | null>(null);
   /** Palette de commandes ouverte ; `actionsOnly` : Ctrl+Maj+P. */
@@ -475,6 +484,11 @@ function WorkspaceView({
     showAll: () => dispatch({ type: 'showAll' }),
     center,
     pathFrom: setPathPickFrom,
+    impact: (id) => {
+      setPathQuery(null);
+      setImpactFrom(id);
+      setView('graph');
+    },
     move: (node) => setDialog({ kind: 'move', nodes: [node], bulk: false }),
     duplicate: (node) => setDialog({ kind: 'duplicate', node }),
     validate: (id) => void validate([id]),
@@ -562,10 +576,10 @@ function WorkspaceView({
     index.byId.has(pathQuery.toId)
       ? pathQuery
       : null;
-  const pathSteps = useMemo(
+  const foundPath = useMemo(
     () =>
       activePath && graph
-        ? shortestPath(
+        ? findShortestPath(
             graph.nodes,
             graph.edges,
             activePath.fromId,
@@ -573,21 +587,49 @@ function WorkspaceView({
             {
               includeHierarchy: activePath.includeHierarchy,
               maxDepth: PATH_MAX_DEPTH,
+              vagueTypes: new Set(
+                graph.relationTypes
+                  .filter((type) => isVagueRelation(type.name))
+                  .map((type) => type.id),
+              ),
             },
           )
         : null,
     [activePath, graph],
   );
-  const pathHighlight = useMemo(
-    () =>
-      pathSteps
-        ? {
-            nodeIds: new Set(pathSteps.map((step) => step.nodeId)),
-            linkIds: new Set(pathLinkIds(pathSteps)),
-          }
-        : null,
-    [pathSteps],
-  );
+  const pathSteps = foundPath?.steps ?? null;
+
+  // --- Impact d'un changement -----------------------------------------------
+
+  const activeImpact =
+    impactFrom !== null && index.byId.has(impactFrom) ? impactFrom : null;
+  const impactHits = useMemo(() => {
+    if (activeImpact === null || !graph) return null;
+    const names = new Map(
+      graph.relationTypes.map((type) => [type.id, type.name]),
+    );
+    return impactOf(
+      graph.nodes,
+      graph.edges,
+      [activeImpact],
+      (typeId) => impactDirection(names.get(typeId) ?? ''),
+      IMPACT_DEFAULT_DEPTH,
+    );
+  }, [activeImpact, graph]);
+
+  const highlight = useMemo(() => {
+    if (pathSteps) {
+      return {
+        nodeIds: new Set(pathSteps.map((step) => step.nodeId)),
+        linkIds: new Set(pathLinkIds(pathSteps)),
+      };
+    }
+    if (activeImpact === null || !impactHits) return null;
+    return {
+      nodeIds: new Set([activeImpact, ...impactHits.map((hit) => hit.nodeId)]),
+      linkIds: new Set(impactHits.map((hit) => hit.edgeId)),
+    };
+  }, [pathSteps, activeImpact, impactHits]);
   const pathHiddenCount = useMemo(() => {
     if (!pathSteps) return 0;
     const masked = maskedNodeIds(nodes, { hidden, solo });
@@ -683,7 +725,9 @@ function WorkspaceView({
           actions={actions}
         />
 
-        <WorkspacePanes hasRight={Boolean(detail || activePath)}>
+        <WorkspacePanes
+          hasRight={Boolean(detail || activePath || activeImpact)}
+        >
           <TreePane
             index={index}
             searchMatches={searchMatches}
@@ -737,16 +781,17 @@ function WorkspaceView({
             onBulkDelete={() => void askBulkDelete()}
             onValidate={(ids) => void validate(ids)}
             graphViews={graphViews}
-            path={pathHighlight}
+            path={highlight}
           />
 
-          {(detail || activePath) && (
+          {(detail || activePath || activeImpact) && (
             <div className="right-pane">
               {activePath && (
                 <PathPanel
                   fromTitle={index.byId.get(activePath.fromId)?.title ?? ''}
                   toTitle={index.byId.get(activePath.toId)?.title ?? ''}
                   steps={pathSteps}
+                  routes={foundPath?.routes ?? 0}
                   maxDepth={PATH_MAX_DEPTH}
                   includeHierarchy={activePath.includeHierarchy}
                   onIncludeHierarchyChange={(includeHierarchy) =>
@@ -758,6 +803,16 @@ function WorkspaceView({
                   hiddenCount={pathHiddenCount}
                   onSelect={(id) => select(id)}
                   onClose={() => setPathQuery(null)}
+                />
+              )}
+              {activeImpact && impactHits && (
+                <ImpactPanel
+                  title={index.byId.get(activeImpact)?.title ?? ''}
+                  hits={impactHits}
+                  titleOf={(id) => index.byId.get(id)?.title ?? ''}
+                  relationTypes={graph?.relationTypes ?? []}
+                  onSelect={(id) => select(id)}
+                  onClose={() => setImpactFrom(null)}
                 />
               )}
               {detail && (
@@ -875,6 +930,7 @@ function WorkspaceView({
             label={`Chemin depuis « ${index.byId.get(pathPickFrom)?.title ?? ''} » vers…`}
             placeholder="Nœud d’arrivée…"
             onOpenNode={(toId) => {
+              setImpactFrom(null);
               setPathQuery((current) => ({
                 fromId: pathPickFrom,
                 toId,

@@ -61,6 +61,7 @@ const report: HealthReport = {
       ],
     },
   ],
+  questions: [],
   gaps: [
     {
       key: 'rollback',

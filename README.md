@@ -280,6 +280,9 @@ pièces jointes en BLOB).
     (empreintes insensibles à la mise en forme, migration 012, table
     `node_code_state`) au lieu des dates ; une mise à jour par l'IA ne vaut
     que pour les fichiers qu'elle a lus (hook, ou opération `review`) ;
+  - impact d’un changement (menu du nœud, `nodal_impact` pour un nœud ou des
+    fichiers), chemin le plus parlant à longueur égale, relations
+    superflues, cycles et questions (santé de la base, `nodal_analyze`) ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

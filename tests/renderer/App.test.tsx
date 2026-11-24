@@ -384,6 +384,20 @@ describe('App', () => {
       within(panel).getByRole('button', { name: 'Fermer le chemin' }),
     );
     expect(screen.queryByRole('region', { name: 'Chemin' })).toBeNull();
+
+    // « Impact d’un changement » : même menu.
+    fireEvent.contextMenu(within(screen.getByRole('tree')).getByText('Kafka'));
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: 'Impact d’un changement' }),
+    );
+    const impact = await screen.findByRole('region', { name: 'Impact' });
+    expect(within(impact).getByRole('status').textContent).toContain(
+      'Aucun nœud ne dépend de « Kafka »',
+    );
+    fireEvent.click(
+      within(impact).getByRole('button', { name: 'Fermer l’impact' }),
+    );
+    expect(screen.queryByRole('region', { name: 'Impact' })).toBeNull();
   });
 
   it('crée un nœud depuis un sujet à documenter, puis le marque traité', async () => {
@@ -391,6 +405,7 @@ describe('App', () => {
       'workspace:getCurrent': () => workspace,
       'health:report': () => ({
         checks: [],
+        questions: [],
         gaps: [
           {
             key: 'rollback',

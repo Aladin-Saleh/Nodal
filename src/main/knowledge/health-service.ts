@@ -16,8 +16,14 @@ import type {
   SearchGap,
 } from '../../shared/model';
 import type { StaleNode } from '../../shared/code-anchors';
+import {
+  dependencyCycles,
+  redundantRelations,
+  suggestedQuestions,
+} from '../../shared/graph-analysis';
 import { foldText } from '../../shared/text';
 import { parseWikiLinks, resolveTarget } from '../../shared/wiki-links';
+import { readAnalysisGraph } from './analysis-service';
 import { pendingAssistantNodeIds } from './assistant-origin';
 import type { ServiceContext } from './context';
 import { workspaceLinkResolver } from './link-service';
@@ -220,6 +226,42 @@ export const HEALTH_CHECKS: HealthCheck[] = [
     },
   },
   {
+    id: 'redundantRelation',
+    label: 'Relations superflues',
+    run: (ctx) => {
+      const graph = readAnalysisGraph(ctx);
+      const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+      return redundantRelations(graph).map(({ edge, reason, through }) => {
+        const source = byId.get(edge.sourceId)!;
+        const target = byId.get(edge.targetId)!;
+        const why = {
+          duplicate: 'une autre relation les lie déjà',
+          hierarchy: 'ils sont parent et enfant',
+          implied: `déjà impliqué par ${through.map((id) => byId.get(id)!.title).join(' → ')}`,
+        }[reason];
+        return issue('redundantRelation', source, {
+          otherNodeId: target.id,
+          detail: `${edge.relation} ${target.title} : ${why}`,
+        });
+      });
+    },
+  },
+  {
+    id: 'dependencyCycle',
+    label: 'Cycles de dépendance',
+    run: (ctx) => {
+      const graph = readAnalysisGraph(ctx);
+      const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+      return dependencyCycles(graph).map((cycle) => {
+        const titles = [...cycle, cycle[0]!].map((id) => byId.get(id)!.title);
+        return issue('dependencyCycle', byId.get(cycle[0]!)!, {
+          otherNodeId: cycle[1]!,
+          detail: titles.join(' → '),
+        });
+      });
+    },
+  },
+  {
     id: 'assistantPending',
     label: 'Ajouts de l’IA à relire',
     run: (ctx) => {
@@ -292,6 +334,7 @@ export function healthReport(
       count: check.issues.length,
       issues: check.issues.slice(0, limit),
     })),
+    questions: suggestedQuestions(readAnalysisGraph(ctx)),
     gaps: listSearchGaps(ctx, 'open', limit),
   };
 }
