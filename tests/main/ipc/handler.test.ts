@@ -181,7 +181,13 @@ function setup(pickedPath: string | null, confirmed = true) {
       shortcutRegistered: vi.fn(() => true),
     },
     terminals: {
-      create: vi.fn(() => ({ id: '1', shell: 'pwsh.exe', cwd: 'C:/' })),
+      listShells: vi.fn(async () => [{ id: 'pwsh', name: 'PowerShell 7' }]),
+      create: vi.fn(async () => ({
+        id: '1',
+        shell: 'PowerShell 7',
+        shellId: 'pwsh',
+        cwd: 'C:/',
+      })),
       write: vi.fn(),
       resize: vi.fn(),
       close: vi.fn(),

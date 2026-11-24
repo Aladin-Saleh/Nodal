@@ -15,7 +15,13 @@ import os from 'node:os';
 import path from 'node:path';
 import type { IPty, IPtyForkOptions } from 'node-pty';
 import { NodalError } from '../../shared/errors';
-import type { TerminalEvent, TerminalSession } from '../../shared/terminal';
+import {
+  TERMINAL_MAX_SESSIONS,
+  type TerminalEvent,
+  type TerminalSession,
+  type TerminalShell,
+} from '../../shared/terminal';
+import { detectShells, parseWslDistros, type DetectedShell } from './shells';
 
 type NodePty = typeof import('node-pty');
 
@@ -27,25 +33,19 @@ export function loadNodePty(resourcesPath: string | null): NodePty {
   ) as NodePty;
 }
 
-const isFile = (file: string) => {
-  try {
-    return fs.statSync(file).isFile();
-  } catch {
-    return false;
-  }
-};
-
-/** Shell par défaut : PowerShell 7 s'il est installé, sinon Windows PowerShell. */
-export function defaultShell(
-  platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env,
-): string {
-  if (platform !== 'win32') return env.SHELL || '/bin/bash';
-  const pathDirs = (env.Path ?? env.PATH ?? '').split(path.delimiter);
-  const pwsh = pathDirs
-    .map((dir) => path.join(dir, 'pwsh.exe'))
-    .find((file) => isFile(file));
-  return pwsh ?? 'powershell.exe';
+/** Distributions WSL installées, lues dans le registre. */
+function wslDistros(): Promise<string[]> {
+  if (process.platform !== 'win32') return Promise.resolve([]);
+  const key = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss';
+  return new Promise((resolve) => {
+    execFile(
+      'reg',
+      ['query', key, '/s', '/v', 'DistributionName'],
+      { timeout: 3000, windowsHide: true },
+      // Clé absente (WSL non installé) : aucune distribution.
+      (_error, stdout) => resolve(parseWslDistros(stdout)),
+    );
+  });
 }
 
 export interface TerminalServiceOptions {
@@ -56,11 +56,9 @@ export interface TerminalServiceOptions {
   cwd(): string;
   /** Fichier de l'espace ouvert, transmis au shell. */
   workspaceFile(): string | null;
-  shell?: string;
+  /** Shells disponibles (tests) ; par défaut, ceux du poste. */
+  shells?(): DetectedShell[];
 }
-
-/** Nombre maximal de terminaux ouverts en même temps. */
-const MAX_SESSIONS = 8;
 
 export class TerminalService {
   private readonly sessions = new Map<string, IPty>();
@@ -68,14 +66,25 @@ export class TerminalService {
 
   constructor(private readonly options: TerminalServiceOptions) {}
 
-  create(size: { cols: number; rows: number }): TerminalSession {
-    if (this.sessions.size >= MAX_SESSIONS) {
+  /** Shells proposés, le premier par défaut (sans programme ni arguments). */
+  async listShells(): Promise<TerminalShell[]> {
+    return (await this.shells()).map(({ id, name }) => ({ id, name }));
+  }
+
+  /** Ouvre le shell demandé, ou celui par défaut s'il n'existe pas (ou plus). */
+  async create(input: {
+    cols: number;
+    rows: number;
+    shell?: string;
+  }): Promise<TerminalSession> {
+    const shells = await this.shells();
+    const shell = shells.find(({ id }) => id === input.shell) ?? shells[0]!;
+    if (this.sessions.size >= TERMINAL_MAX_SESSIONS) {
       throw new NodalError(
         'LIMIT_EXCEEDED',
-        `${MAX_SESSIONS} terminaux au plus : fermez-en un.`,
+        `${TERMINAL_MAX_SESSIONS} terminaux au plus : fermez-en un.`,
       );
     }
-    const shell = this.options.shell ?? defaultShell();
     let cwd = this.options.cwd();
     if (!fs.existsSync(cwd)) cwd = os.homedir();
     const workspaceFile = this.options.workspaceFile();
@@ -88,15 +97,19 @@ export class TerminalService {
     delete env.NODAL_E2E_USER_DATA;
     env.TERM = 'xterm-256color';
     env.COLORTERM = 'truecolor';
-    if (workspaceFile) env.NODAL_WORKSPACE = workspaceFile;
+    if (workspaceFile) {
+      env.NODAL_WORKSPACE = workspaceFile;
+      // Transmise à WSL, chemin traduit (/mnt/c/…).
+      env.WSLENV = [env.WSLENV, 'NODAL_WORKSPACE/p'].filter(Boolean).join(':');
+    }
     const forkOptions: IPtyForkOptions = {
       name: 'xterm-256color',
-      cols: size.cols,
-      rows: size.rows,
+      cols: input.cols,
+      rows: input.rows,
       cwd,
       env,
     };
-    const pty = this.options.pty().spawn(shell, [], forkOptions);
+    const pty = this.options.pty().spawn(shell.file, shell.args, forkOptions);
     const id = String(this.nextId++);
     this.sessions.set(id, pty);
     pty.onData((data) => this.options.emit({ kind: 'data', id, data }));
@@ -104,7 +117,7 @@ export class TerminalService {
       this.sessions.delete(id);
       this.options.emit({ kind: 'exit', id, exitCode });
     });
-    return { id, shell: path.basename(shell), cwd };
+    return { id, shell: shell.name, shellId: shell.id, cwd };
   }
 
   write(id: string, data: string): void {
@@ -151,6 +164,13 @@ export class TerminalService {
         pty.kill();
       }
     }
+  }
+
+  private async shells(): Promise<DetectedShell[]> {
+    return (
+      this.options.shells?.() ??
+      detectShells(process.platform, process.env, await wslDistros())
+    );
   }
 
   private session(id: string): IPty {

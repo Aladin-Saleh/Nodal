@@ -337,10 +337,13 @@ export const ipcArgsSchemas = {
   'code:getRoots': noArgs,
   'code:addRoot': noArgs,
   'code:removeRoot': one(z.strictObject({ path: z.string().min(1).max(4096) })),
+  'terminal:listShells': noArgs,
   'terminal:create': one(
     z.strictObject({
       cols: z.number().int().min(1).max(TERMINAL_MAX_COLS),
       rows: z.number().int().min(1).max(TERMINAL_MAX_ROWS),
+      // Identifiant d'un shell détecté par le main, jamais un programme.
+      shell: z.string().min(1).max(100).optional(),
     }),
   ),
   'terminal:write': one(

@@ -1,204 +1,176 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { FitAddon } from '@xterm/addon-fit';
-import { Terminal } from '@xterm/xterm';
-import '@xterm/xterm/css/xterm.css';
-import type { TerminalEvent, TerminalSession } from '../../../shared/terminal';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  TERMINAL_MAX_SESSIONS,
+  type TerminalSession,
+  type TerminalShell,
+} from '../../../shared/terminal';
 import { useClient } from '../../app/context';
+import { MenuButton } from '../../components/MenuButton';
+import { Resizer, usePaneSize } from '../../components/Resizer';
+import { TerminalView } from './TerminalView';
 
-/** Hauteur du panneau (px), mémorisée pour ce poste. */
-const HEIGHT_KEY = 'nodal.terminal.height';
 const DEFAULT_HEIGHT = 280;
 const MIN_HEIGHT = 120;
 
-function savedHeight(): number {
+/** Shell des nouveaux terminaux, mémorisé pour ce poste. */
+const SHELL_KEY = 'nodal.terminal.shell';
+
+function savedShell(): string | null {
   try {
-    const value = Number(localStorage.getItem(HEIGHT_KEY));
-    return value >= MIN_HEIGHT ? value : DEFAULT_HEIGHT;
+    return localStorage.getItem(SHELL_KEY) || null;
   } catch {
-    return DEFAULT_HEIGHT;
+    return null;
   }
 }
 
-/** Couleurs du terminal : sombres dans les deux thèmes, comme une console. */
-const THEME = {
-  background: '#17181b',
-  foreground: '#e6e7ea',
-  cursor: '#e6e7ea',
-  selectionBackground: '#3b5bdb80',
-};
+interface TerminalTab {
+  key: number;
+  /** Shell demandé ; `null` : celui par défaut. */
+  shell: string | null;
+  session: TerminalSession | null;
+  /** Shell terminé de lui-même ou sur une erreur, ou qui n'a pas pu être lancé. */
+  ended: boolean;
+  restarts: number;
+}
+
+let nextKey = 1;
+const newTab = (shell: string | null): TerminalTab => ({
+  key: nextKey++,
+  shell,
+  session: null,
+  ended: false,
+  restarts: 0,
+});
+
+/** Noms des onglets, numérotés quand un shell est ouvert plusieurs fois. */
+function tabNames(tabs: readonly TerminalTab[]): string[] {
+  const counts = new Map<string, number>();
+  return tabs.map(({ session }) => {
+    const name = session?.shell ?? 'Terminal';
+    const count = (counts.get(name) ?? 0) + 1;
+    counts.set(name, count);
+    return count > 1 ? `${name} ${count}` : name;
+  });
+}
+
+/** Onglet actif visible quand la barre d'onglets défile. */
+const scrollToTab = (element: HTMLElement | null) =>
+  element?.parentElement?.scrollIntoView({
+    block: 'nearest',
+    inline: 'nearest',
+  });
 
 export interface TerminalPanelProps {
-  /** Masqué : la session continue (le panneau reste monté). */
+  /** Masqué : les sessions continuent (le panneau reste monté). */
   visible: boolean;
   onHide(): void;
+  /** Dernier onglet fermé : le panneau peut être démonté. */
+  onEmpty(): void;
   /** Raccourci d'ouverture / fermeture, affiché dans l'infobulle. */
   shortcut?: string;
 }
 
-/**
- * Terminal intégré (xterm.js) relié à un shell du main (node-pty) : dossier
- * de code de l'espace, variable NODAL_WORKSPACE. Ctrl+C copie la sélection
- * (sinon interrompt), Ctrl+V colle.
- */
+/** Terminal intégré : un onglet par shell, type de shell au choix. */
 export function TerminalPanel({
   visible,
   onHide,
+  onEmpty,
   shortcut,
 }: TerminalPanelProps) {
   const client = useClient();
-  const host = useRef<HTMLDivElement>(null);
-  const terminal = useRef<{ term: Terminal; fit: FitAddon } | null>(null);
-  const sessionId = useRef<string | null>(null);
-  const [session, setSession] = useState<TerminalSession | null>(null);
-  const [exited, setExited] = useState<number | null>(null);
-  const [height, setHeight] = useState(savedHeight);
-  const [restarts, setRestarts] = useState(0);
+  const { size, setSize, save } = usePaneSize('nodal.terminal.height');
+  const [shells, setShells] = useState<TerminalShell[]>([]);
+  const [preferred, setPreferred] = useState(savedShell);
+  const [tabs, setTabs] = useState(() => [newTab(preferred)]);
+  const [activeKey, setActiveKey] = useState<number | null>(null);
+  const active = tabs.find((tab) => tab.key === activeKey) ?? tabs.at(-1);
+  const names = tabNames(tabs);
+  const full = tabs.length >= TERMINAL_MAX_SESSIONS;
 
-  /** Ajuste la taille en caractères au panneau et la transmet au shell. */
-  const fit = useCallback(() => {
-    const current = terminal.current;
-    if (!current || !host.current?.offsetParent) return;
-    current.fit.fit();
-    const id = sessionId.current;
-    if (id) {
-      void client
-        .call('terminal:resize', {
-          id,
-          cols: current.term.cols,
-          rows: current.term.rows,
-        })
-        .catch(() => undefined);
-    }
-  }, [client]);
-
-  // Terminal xterm : créé une fois.
   useEffect(() => {
-    const element = host.current;
-    if (!element) return;
-    const term = new Terminal({
-      fontFamily: '"Cascadia Mono", Consolas, "Courier New", monospace',
-      fontSize: 13,
-      cursorBlink: true,
-      scrollback: 5000,
-      theme: THEME,
-    });
-    const addon = new FitAddon();
-    term.loadAddon(addon);
-    term.open(element);
-    term.attachCustomKeyEventHandler((event) => {
-      if (event.type !== 'keydown' || !event.ctrlKey) return true;
-      const key = event.key.toLowerCase();
-      if (key === 'c' && term.hasSelection()) {
-        void navigator.clipboard
-          .writeText(term.getSelection())
-          .catch(() => undefined);
-        term.clearSelection();
-        return false;
-      }
-      // Ctrl+V : collage par le navigateur ; Ctrl+J : masquer le panneau.
-      return key !== 'v' && key !== 'j';
-    });
-    terminal.current = { term, fit: addon };
-    const observer = new ResizeObserver(() => fit());
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-      term.dispose();
-      terminal.current = null;
-    };
-  }, [fit]);
-
-  // Session du shell : ouverte au montage et à chaque redémarrage.
-  useEffect(() => {
-    const current = terminal.current;
-    if (!current) return;
-    const { term } = current;
-    let id: string | null = null;
     let cancelled = false;
-    // Sorties reçues avant la réponse de terminal:create.
-    const early: TerminalEvent[] = [];
-    const apply = (event: TerminalEvent) => {
-      if (event.kind === 'data') term.write(event.data);
-      else {
-        term.write(
-          `\r\n\x1b[90m[Processus terminé, code ${event.exitCode}]\x1b[0m\r\n`,
-        );
-        sessionId.current = null;
-        setExited(event.exitCode);
-      }
-    };
-    const off = client.onTerminalEvent((event) => {
-      if (id === null) early.push(event);
-      else if (event.id === id) apply(event);
-    });
-    const input = term.onData((data) => {
-      if (id)
-        void client.call('terminal:write', { id, data }).catch(() => undefined);
-    });
-    // Redémarrage : écran effacé avant le nouveau shell.
-    if (restarts > 0) term.reset();
-    setExited(null);
-    if (host.current?.offsetParent) current.fit.fit();
-    client.call('terminal:create', { cols: term.cols, rows: term.rows }).then(
-      (created) => {
-        if (cancelled) {
-          void client.call('terminal:close', { id: created.id });
-          return;
-        }
-        id = created.id;
-        sessionId.current = created.id;
-        setSession(created);
-        for (const event of early) if (event.id === created.id) apply(event);
-        fit();
+    client.call('terminal:listShells').then(
+      (list) => {
+        if (!cancelled) setShells(list);
       },
-      (error: unknown) => {
-        term.write(
-          `\x1b[31mTerminal indisponible : ${error instanceof Error ? error.message : String(error)}\x1b[0m\r\n`,
-        );
-      },
+      () => undefined,
     );
     return () => {
       cancelled = true;
-      off();
-      input.dispose();
-      if (id) void client.call('terminal:close', { id }).catch(() => undefined);
-      sessionId.current = null;
     };
-  }, [client, fit, restarts]);
+  }, [client]);
 
-  // Affiché : taille à jour et focus dans le terminal.
+  const empty = tabs.length === 0;
   useEffect(() => {
-    if (!visible) return;
-    fit();
-    terminal.current?.term.focus();
-  }, [visible, fit]);
+    if (empty) onEmpty();
+  }, [empty, onEmpty]);
 
-  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const startY = event.clientY;
-    const startHeight = height;
-    const max = Math.round(window.innerHeight * 0.75);
-    let next = startHeight;
-    const onMove = (move: PointerEvent) => {
-      next = Math.min(
-        max,
-        Math.max(MIN_HEIGHT, startHeight + startY - move.clientY),
-      );
-      setHeight(next);
-    };
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      try {
-        localStorage.setItem(HEIGHT_KEY, String(next));
-      } catch {
-        // Hauteur non mémorisée.
-      }
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+  const update = useCallback(
+    (key: number, change: Partial<TerminalTab>) =>
+      setTabs((list) =>
+        list.map((tab) => (tab.key === key ? { ...tab, ...change } : tab)),
+      ),
+    [],
+  );
+  const close = useCallback(
+    (key: number) => setTabs((list) => list.filter((tab) => tab.key !== key)),
+    [],
+  );
+  const onSession = useCallback(
+    (key: number, session: TerminalSession) => update(key, { session }),
+    [update],
+  );
+  // `exit` ferme l'onglet ; sinon il reste, pour être lu.
+  const onExit = useCallback(
+    (key: number, asked: boolean) =>
+      asked ? close(key) : update(key, { ended: true }),
+    [close, update],
+  );
+
+  const open = (shell: string | null) => {
+    if (full) return;
+    const tab = newTab(shell);
+    setTabs((list) => [...list, tab]);
+    setActiveKey(tab.key);
+  };
+  const makeDefault = (shell: string) => {
+    setPreferred(shell);
+    try {
+      localStorage.setItem(SHELL_KEY, shell);
+    } catch {
+      // Choix non mémorisé.
+    }
   };
 
+  const defaultShell = shells.find(({ id }) => id === preferred) ?? shells[0];
+  const current = active?.session ?? null;
+  const menu = [
+    ...shells.map((shell) => ({
+      label: shell.name,
+      shortcut: shell.id === defaultShell?.id ? 'par défaut' : undefined,
+      disabled: full,
+      onSelect: () => open(shell.id),
+    })),
+    ...(current && current.shellId !== defaultShell?.id
+      ? [
+          {
+            label: `Utiliser « ${current.shell} » par défaut`,
+            separator: true,
+            onSelect: () => makeDefault(current.shellId),
+          },
+        ]
+      : []),
+  ];
+
+  const onTabKeyDown = (event: React.KeyboardEvent, index: number) => {
+    const step =
+      event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    setActiveKey(tabs[(index + step + tabs.length) % tabs.length]!.key);
+  };
+
+  const height = size ?? DEFAULT_HEIGHT;
   return (
     <section
       className="terminal-panel"
@@ -206,33 +178,109 @@ export function TerminalPanel({
       hidden={!visible}
       style={{ height }}
     >
-      <div
+      <Resizer
+        label="Redimensionner le terminal"
+        from="bottom"
         className="terminal-resizer"
-        role="separator"
-        aria-orientation="horizontal"
-        aria-label="Redimensionner le terminal"
-        onPointerDown={startResize}
+        value={height}
+        min={MIN_HEIGHT}
+        max={() => Math.round(window.innerHeight * 0.75)}
+        onResize={setSize}
+        onSave={save}
       />
       <header className="terminal-header">
-        <strong>Terminal</strong>
-        {session && (
-          <span className="muted terminal-cwd" title={session.cwd}>
-            {session.shell} · {session.cwd}
-          </span>
-        )}
-        <span className="toolbar-spacer" />
+        <div
+          className="terminal-tabs"
+          role="tablist"
+          aria-label="Terminaux ouverts"
+        >
+          {tabs.map((tab, index) => (
+            <span
+              key={tab.key}
+              role="presentation"
+              className={
+                tab === active ? 'terminal-tab selected' : 'terminal-tab'
+              }
+              // Clic du milieu : fermer, comme dans un navigateur.
+              onAuxClick={(event) => {
+                if (event.button === 1) close(tab.key);
+              }}
+            >
+              <button
+                type="button"
+                role="tab"
+                id={`terminal-tab-${tab.key}`}
+                aria-selected={tab === active}
+                aria-controls={`terminal-${tab.key}`}
+                tabIndex={tab === active ? 0 : -1}
+                ref={tab === active ? scrollToTab : undefined}
+                title={tab.session?.cwd}
+                onClick={() => setActiveKey(tab.key)}
+                onKeyDown={(event) => onTabKeyDown(event, index)}
+              >
+                {names[index]}
+                {tab.ended && ' (terminé)'}
+              </button>
+              <button
+                type="button"
+                className="terminal-tab-close"
+                aria-label={`Fermer ${names[index]}`}
+                title="Fermer ce terminal (arrête son shell)"
+                onClick={() => close(tab.key)}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
         <button
           type="button"
-          className="secondary"
+          className="secondary icon-button"
+          aria-label="Nouveau terminal"
           title={
-            exited === null
-              ? 'Arrêter le shell et en lancer un nouveau'
-              : undefined
+            full
+              ? `${TERMINAL_MAX_SESSIONS} terminaux au plus`
+              : `Nouveau terminal${defaultShell ? ` (${defaultShell.name})` : ''}`
           }
-          onClick={() => setRestarts((count) => count + 1)}
+          disabled={full}
+          onClick={() => open(preferred)}
         >
-          {exited === null ? 'Redémarrer' : 'Relancer'}
+          +
         </button>
+        <MenuButton
+          label="Type de terminal"
+          title="Choisir le type de terminal"
+          items={menu}
+          disabled={menu.length === 0}
+          caret={false}
+        >
+          ▾
+        </MenuButton>
+        <span className="toolbar-spacer" />
+        {current && (
+          <span className="muted terminal-cwd" title={current.cwd}>
+            {current.cwd}
+          </span>
+        )}
+        {active && (
+          <button
+            type="button"
+            className="secondary"
+            title={
+              active.ended
+                ? undefined
+                : 'Arrêter le shell et en lancer un nouveau'
+            }
+            onClick={() =>
+              update(active.key, {
+                restarts: active.restarts + 1,
+                ended: false,
+              })
+            }
+          >
+            {active.ended ? 'Relancer' : 'Redémarrer'}
+          </button>
+        )}
         <button
           type="button"
           className="secondary icon-button"
@@ -243,7 +291,18 @@ export function TerminalPanel({
           ×
         </button>
       </header>
-      <div className="terminal-host" ref={host} />
+      {tabs.map((tab) => (
+        <TerminalView
+          key={tab.key}
+          tabKey={tab.key}
+          shell={tab.shell}
+          active={tab === active}
+          visible={visible && tab === active}
+          restarts={tab.restarts}
+          onSession={onSession}
+          onExit={onExit}
+        />
+      ))}
     </section>
   );
 }

@@ -227,7 +227,10 @@
 
 /* Sans nœud sélectionné, la zone centrale prend la place du panneau droit. */
 .panes.no-properties {
-  grid-template-columns: minmax(200px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(160px, var(--tree-width, 280px)) minmax(
+      240px,
+      1fr
+    );
 }
 
 .graph-webgl {
@@ -558,7 +561,24 @@ mark {
 }
 
 .editor-panes.mode-split {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(160px, var(--editor-width, 1fr)) minmax(
+      160px,
+      1fr
+    );
+}
+
+.mode-split > :nth-child(1) {
+  grid-area: 1 / 1;
+}
+
+.mode-split > :nth-child(2) {
+  grid-area: 1 / 2;
+}
+
+/* Centré dans l'espace de 12 px entre l'éditeur et l'aperçu. */
+.mode-split > .editor-resizer {
+  grid-area: 1 / 2;
+  margin-left: -9px;
 }
 
 .editor-panes > * {

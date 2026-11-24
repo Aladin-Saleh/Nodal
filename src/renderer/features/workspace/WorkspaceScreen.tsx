@@ -39,6 +39,7 @@ import { ancestorIds, buildTreeIndex, siblingsOf } from '../nodes/tree';
 import { CenterPane } from './CenterPane';
 import { HealthDialog } from './HealthDialog';
 import { TopBar, type ViewMode } from './TopBar';
+import { WorkspacePanes } from './WorkspacePanes';
 import { TreePane } from './TreePane';
 import { TerminalPanel } from '../terminal/TerminalPanel';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
@@ -153,6 +154,10 @@ function WorkspaceView({
   // session du shell continue).
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalMounted, setTerminalMounted] = useState(false);
+  const closeTerminal = useCallback(() => {
+    setTerminalOpen(false);
+    setTerminalMounted(false);
+  }, []);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
   const [renamingId, setRenamingId] = useState<string | null>(null);
   /** Demande de centrage dans le graphe (même nœud : nouvelle demande). */
@@ -678,7 +683,7 @@ function WorkspaceView({
           actions={actions}
         />
 
-        <div className={detail || activePath ? 'panes' : 'panes no-properties'}>
+        <WorkspacePanes hasRight={Boolean(detail || activePath)}>
           <TreePane
             index={index}
             searchMatches={searchMatches}
@@ -781,13 +786,14 @@ function WorkspaceView({
               )}
             </div>
           )}
-        </div>
+        </WorkspacePanes>
 
         {terminalMounted && (
           <ErrorBoundary area="le terminal">
             <TerminalPanel
               visible={terminalOpen}
               onHide={() => setTerminalOpen(false)}
+              onEmpty={closeTerminal}
               shortcut="Ctrl + J"
             />
           </ErrorBoundary>

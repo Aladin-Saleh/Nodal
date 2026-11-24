@@ -299,7 +299,7 @@ describe('parcours principaux', () => {
   });
 
   it('ouvre un terminal dans le dossier de l’espace, avec NODAL_WORKSPACE', async () => {
-    await page.getByRole('button', { name: 'Terminal' }).click();
+    await page.getByRole('button', { name: 'Terminal', exact: true }).click();
     const terminal = page.getByRole('region', { name: 'Terminal' });
     await terminal
       .locator('.xterm-rows')
@@ -312,7 +312,50 @@ describe('parcours principaux', () => {
     );
     await page.keyboard.press('Enter');
     await terminal.getByText(/^e2e-.*\.nodal\s*$/).waitFor();
+    // Second terminal, d'un autre type : le premier reste ouvert.
+    await terminal.getByRole('button', { name: 'Type de terminal' }).click();
+    await page.getByRole('menuitem', { name: 'Invite de commandes' }).click();
+    await terminal
+      .getByRole('tab', { name: 'Invite de commandes', selected: true })
+      .waitFor();
+    await terminal
+      .locator('.terminal-host:not([hidden]) .xterm-rows')
+      .getByText(/Microsoft Windows \[/)
+      .waitFor({ timeout: 20_000 });
+    await page.keyboard.type('echo second-%NODAL_WORKSPACE:~-6%');
+    await page.keyboard.press('Enter');
+    await terminal.getByText(/^second-.nodal\s*$/).waitFor();
     await page.keyboard.press('Control+j');
     await terminal.waitFor({ state: 'hidden' });
+    await page.keyboard.press('Control+j');
+    // `exit` ferme l'onglet ; fermer le dernier masque le panneau.
+    await page.keyboard.type('exit');
+    await page.keyboard.press('Enter');
+    await terminal.getByText(/^e2e-.*\.nodal\s*$/).waitFor();
+    await terminal.getByRole('button', { name: /^Fermer / }).click();
+    await terminal.waitFor({ state: 'hidden' });
+  });
+
+  it('redimensionne l’arborescence et le panneau du nœud, mémorise leur largeur', async () => {
+    await page.getByRole('treeitem').first().click();
+    for (const [name, selector, direction] of [
+      ['Redimensionner l’arborescence', '.tree-pane', 1],
+      ['Redimensionner le panneau du nœud', '.right-pane', -1],
+    ] as const) {
+      const pane = page.locator(selector);
+      const handle = page.getByRole('separator', { name });
+      const width = async () => Math.round((await pane.boundingBox())!.width);
+      const before = await width();
+      const box = (await handle.boundingBox())!;
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + direction * 60, y, { steps: 5 });
+      await page.mouse.up();
+      expect(Math.abs((await width()) - before - 60)).toBeLessThanOrEqual(1);
+      await handle.dblclick();
+      expect(await width()).toBe(before);
+    }
   });
 });

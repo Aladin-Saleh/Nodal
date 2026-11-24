@@ -102,16 +102,18 @@ export function HelpDialog({
         l’espace, puis ancrez un nœud à des fichiers (src/mcp/** par exemple)
         depuis son panneau ; Nodal signale « possiblement obsolète » quand ils
         changent après la dernière mise à jour du nœud. Terminal : Ctrl + J (ou
-        le bouton « &gt;_ »), dans le dossier de code de l’espace. Capture
-        rapide : Ctrl + Maj + Espace (réglable dans les préférences), même quand
-        Nodal n’est pas au premier plan, range un titre et une note dans la «
-        Boîte de réception » ; glissez ensuite chaque capture à sa place.
-        Modèles de documents : choisissez un modèle (Procédure, Composant,
-        Donnée, Décision) en créant un nœud ou un document ; modifiez-les depuis
-        la palette (« Modèles de documents… »). Import Markdown / Obsidian :
-        menu « Espace », aperçu puis import sous une nouvelle racine, après une
-        sauvegarde. Le guide complet est fourni avec l’application
-        (docs/guide-utilisateur.md).
+        le bouton « &gt;_ »), dans le dossier de code de l’espace ; « + » ouvre
+        un autre terminal, « ▾ » choisit son type. Les bords des panneaux se
+        font glisser pour les redimensionner (double-clic : taille par défaut).
+        Capture rapide : Ctrl + Maj + Espace (réglable dans les préférences),
+        même quand Nodal n’est pas au premier plan, range un titre et une note
+        dans la « Boîte de réception » ; glissez ensuite chaque capture à sa
+        place. Modèles de documents : choisissez un modèle (Procédure,
+        Composant, Donnée, Décision) en créant un nœud ou un document ;
+        modifiez-les depuis la palette (« Modèles de documents… »). Import
+        Markdown / Obsidian : menu « Espace », aperçu puis import sous une
+        nouvelle racine, après une sauvegarde. Le guide complet est fourni avec
+        l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

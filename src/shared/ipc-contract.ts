@@ -6,7 +6,7 @@
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
 import type { ContextHookClient } from './context-hook';
-import type { TerminalEvent, TerminalSession } from './terminal';
+import type { TerminalEvent, TerminalSession, TerminalShell } from './terminal';
 import type { ContentType, NodeType } from './domain';
 import type { SerializedError } from './errors';
 import type { AppPreferences, PreferencesUpdate } from './preferences';
@@ -296,9 +296,11 @@ export interface IpcContract {
    * Contexte automatique : hook ajouté aux réglages d'un dossier de projet
    * choisi par le main ; chemin du fichier écrit, `null` si annulé.
    */
+  /** Types de terminal disponibles sur ce poste, le premier par défaut. */
+  'terminal:listShells': { args: []; result: TerminalShell[] };
   /** Terminal intégré : nouveau shell (dossier de code de l'espace). */
   'terminal:create': {
-    args: [{ cols: number; rows: number }];
+    args: [{ cols: number; rows: number; shell?: string }];
     result: TerminalSession;
   };
   'terminal:write': { args: [{ id: string; data: string }]; result: null };
@@ -466,6 +468,7 @@ export const IPC_CHANNELS = [
   'code:addRoot',
   'code:removeRoot',
   'assistant:installContextHook',
+  'terminal:listShells',
   'terminal:create',
   'terminal:write',
   'terminal:resize',

@@ -93,7 +93,7 @@ export interface IpcDependencies {
 
 export type TerminalControls = Pick<
   TerminalService,
-  'create' | 'write' | 'resize' | 'close'
+  'listShells' | 'create' | 'write' | 'resize' | 'close'
 >;
 
 export interface QuickCaptureControls {
@@ -253,7 +253,8 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return directory ? codeAnchors.addRoot(directory) : null;
     },
     'code:removeRoot': ({ path }) => codeAnchors.removeRoot(path),
-    'terminal:create': (size) => deps.terminals.create(size),
+    'terminal:listShells': () => deps.terminals.listShells(),
+    'terminal:create': (input) => deps.terminals.create(input),
     'terminal:write': ({ id, data }) => {
       deps.terminals.write(id, data);
       return null;

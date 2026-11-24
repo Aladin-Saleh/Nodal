@@ -81,9 +81,9 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
   const GIT_HISTORY = path.join('src', 'main', 'code', 'git-history.ts');
   /**
    * Seconde exception, voulue par l'utilisateur : le terminal intégré lance
-   * le shell par défaut. Rien de stocké ni venant du renderer n'en choisit
-   * la commande, les arguments ou le dossier : le renderer n'envoie que des
-   * frappes et une taille.
+   * un shell détecté sur le poste. Rien de stocké ni venant du renderer n'en
+   * choisit la commande, les arguments ou le dossier : le renderer n'envoie
+   * que des frappes, une taille et l'identifiant d'un shell de la liste.
    */
   const TERMINAL = path.join('src', 'main', 'terminal', 'terminal-service.ts');
 
@@ -96,16 +96,16 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
     expect(text).toMatch(/'--',\s*\n\s*\.\.\.patterns/);
   });
 
-  it('le terminal ne lance que le shell par défaut, sans commande reçue', () => {
+  it('le terminal ne lance qu’un shell détecté, sans commande reçue', () => {
     const text = files.find(({ file }) => file === TERMINAL)?.text ?? '';
-    // Shell sans argument ; taskkill seul autre programme, arguments fixes.
-    expect(text).toMatch(/\.spawn\(shell, \[\], forkOptions\)/);
+    // Shell de la liste ; autres programmes : taskkill et reg (lecture) seuls.
+    expect(text).toMatch(/\.spawn\(shell\.file, shell\.args, forkOptions\)/);
     expect(text.match(/\.spawn\(/g)).toHaveLength(1);
     for (const call of text.match(/execFile(Sync)?\(\s*'[^']*'/g) ?? []) {
-      expect(call).toMatch(/'taskkill'$/);
+      expect(call).toMatch(/'(taskkill|reg)'$/);
     }
     expect(text).not.toMatch(/exec\(|execSync\(|shell:\s*true/);
-    // L'IPC n'accepte qu'une taille pour créer un terminal.
+    // L'IPC n'accepte qu'une taille et un identifiant pour créer un terminal.
     expect(
       ipcArgsSchemas['terminal:create'].safeParse([
         { cols: 80, rows: 24, command: 'calc.exe' },

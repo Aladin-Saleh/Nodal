@@ -52,6 +52,11 @@ L'état d'enregistrement s'affiche au centre de la barre d'état (en bas) :
 _Enregistré_, _Modifications en attente…_, _Enregistrement…_ ou un message
 d'erreur.
 
+**Taille des panneaux** : faites glisser le bord de l'arborescence, du panneau
+du nœud (à droite), du terminal, ou celui entre l'éditeur et l'aperçu. Au
+clavier : Tab jusqu'au bord, puis les flèches. Un double-clic rétablit la
+taille par défaut. Les tailles sont mémorisées sur ce poste.
+
 ## 3. Le graphe (vue par défaut)
 
 | Action                                  | Geste                                               |
@@ -467,17 +472,25 @@ UTF-8 sont ignorés et listés dans le rapport.
 Bouton **>\_** de la barre supérieure, **Ctrl + J** (ou Ctrl + \`), ou la
 palette « Ouvrir le terminal » : un terminal s'ouvre en bas de la fenêtre.
 
-- Le shell est PowerShell 7 s'il est installé, sinon Windows PowerShell. Il
-  démarre dans le premier **dossier de code** de l'espace (Paramètres de
-  l'espace), sinon dans le dossier du fichier `.nodal`.
-- La variable `NODAL_WORKSPACE` contient le chemin de l'espace ouvert : un
-  assistant lancé ici (`claude`, `gemini`…) ou un script peut s'en servir.
+- **Plusieurs terminaux** : **+** ouvre un onglet de plus (8 au plus), **×**
+  de l'onglet (ou clic du milieu) le ferme et arrête son shell. Taper `exit`
+  ferme aussi l'onglet.
+- **Type de terminal** : **▾** liste les shells trouvés sur votre poste
+  (PowerShell 7, Windows PowerShell, Invite de commandes, Git Bash,
+  distributions WSL comme Ubuntu). **Utiliser « … » par défaut** choisit
+  celui de l'onglet actif pour les prochains terminaux ; sans choix,
+  PowerShell 7 s'il est installé, sinon Windows PowerShell.
+- Chaque shell démarre dans le premier **dossier de code** de l'espace
+  (Paramètres de l'espace), sinon dans le dossier du fichier `.nodal`.
+- La variable `NODAL_WORKSPACE` contient le chemin de l'espace ouvert
+  (chemin traduit sous WSL) : un assistant lancé ici (`claude`, `gemini`…) ou
+  un script peut s'en servir.
 - **Ctrl + C** copie la sélection (sans sélection : interrompt la commande),
   **Ctrl + V** colle. Les raccourcis de Nodal (Ctrl + P, Ctrl + F…) vont au
   shell tant que le terminal a le focus, sauf Ctrl + J qui le masque.
-- **Masquer** (×, Ctrl + J) garde la session ; **Redémarrer** lance un
-  nouveau shell. Faites glisser le bord supérieur pour changer la hauteur.
-  Les shells sont arrêtés à la fermeture de Nodal.
+- **Masquer** (×, Ctrl + J) garde les sessions ; **Redémarrer** lance
+  un nouveau shell dans l'onglet. Faites glisser le bord supérieur pour
+  changer la hauteur. Les shells sont arrêtés à la fermeture de Nodal.
 
 ## 9. Préférences
 

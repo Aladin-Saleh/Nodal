@@ -23,7 +23,8 @@ import {
   wikiLinkExtension,
 } from '../editor/wiki-link-extension';
 
-/** Erreur de syntaxe JSON affichée sans bloquer l'édition (§6.6). */
+/** Erreur de syntaxe JSON affichée sans bloquer l'édition (§6.6). */ import { EditorPanes } from './EditorPanes';
+
 export function jsonError(body: string): string | null {
   if (body.trim() === '') return null;
   try {
@@ -270,10 +271,7 @@ function LoadedDocumentEditor({
       </div>
 
       {hasPreview ? (
-        <div className={`editor-panes mode-${mode}`}>
-          {mode !== 'preview' && editor}
-          {mode !== 'edit' && preview}
-        </div>
+        <EditorPanes mode={mode} editor={editor} preview={preview} />
       ) : (
         editor
       )}

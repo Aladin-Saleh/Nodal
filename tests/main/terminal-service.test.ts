@@ -1,10 +1,10 @@
 import os from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  defaultShell,
   loadNodePty,
   TerminalService,
 } from '../../src/main/terminal/terminal-service';
+import { detectShells, parseWslDistros } from '../../src/main/terminal/shells';
 import type { TerminalEvent } from '../../src/shared/terminal';
 
 let service: TerminalService | null = null;
@@ -32,10 +32,53 @@ function waitFor(
 const output = (events: TerminalEvent[]) =>
   events.map((event) => (event.kind === 'data' ? event.data : '')).join('');
 
-describe('defaultShell', () => {
-  it('PowerShell sous Windows, $SHELL ailleurs', () => {
-    expect(defaultShell('win32', { PATH: '' })).toBe('powershell.exe');
-    expect(defaultShell('linux', { SHELL: '/bin/zsh' })).toBe('/bin/zsh');
+describe('detectShells', () => {
+  const env = {
+    SystemRoot: 'C:\\Windows',
+    PATH: 'C:\\pwsh;C:\\Git\\mingw64\\bin',
+  };
+  const ids = (files: string[], distros: string[] = []) =>
+    detectShells('win32', env, distros, (file) => files.includes(file)).map(
+      ({ id }) => id,
+    );
+
+  it('PowerShell et l’invite de commandes toujours proposés sous Windows', () => {
+    expect(ids([], ['Ubuntu'])).toEqual(['powershell', 'cmd']);
+  });
+
+  it('PowerShell 7, Git Bash et les distributions WSL s’ils sont installés', () => {
+    expect(
+      ids(
+        [
+          'C:\\pwsh\\pwsh.exe',
+          'C:\\Git\\mingw64\\bin\\git.exe',
+          'C:\\Git\\bin\\bash.exe',
+          'C:\\Windows\\System32\\wsl.exe',
+        ],
+        ['Ubuntu'],
+      ),
+    ).toEqual(['pwsh', 'powershell', 'cmd', 'git-bash', 'wsl:Ubuntu']);
+  });
+
+  it('$SHELL d’abord ailleurs', () => {
+    expect(
+      detectShells('linux', { SHELL: '/bin/zsh' }, [], () => true)[0],
+    ).toMatchObject({ id: 'zsh', file: '/bin/zsh', args: [] });
+  });
+});
+
+/** Réponse de `reg query` pour une distribution. */
+const line = (name: string) =>
+  `HKEY_CURRENT_USER\\Lxss\\{1}\r\n    DistributionName    REG_SZ    ${name}\r\n\r\n`;
+
+describe('parseWslDistros', () => {
+  it('lit le registre, sans Docker ni nom qui serait une option', () => {
+    expect(
+      parseWslDistros(
+        ['docker-desktop', 'Ubuntu-24.04', '--exec'].map(line).join(''),
+      ),
+    ).toEqual(['Ubuntu-24.04']);
+    expect(parseWslDistros('')).toEqual([]);
   });
 });
 
@@ -48,10 +91,31 @@ describe('TerminalService', () => {
       emit: (event) => events.push(event),
       cwd: () => cwd,
       workspaceFile: () => 'C:\\notes\\Projet.nodal',
-      shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
+      shells: () => [
+        { id: 'absent', name: 'Absent', file: 'absent.exe', args: [] },
+        {
+          id: 'test',
+          name: 'Shell de test',
+          file: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh',
+          args: [],
+        },
+      ],
     });
-    const session = service.create({ cols: 80, rows: 24 });
-    expect(session).toMatchObject({ id: '1', cwd });
+    const session = await service.create({
+      cols: 80,
+      rows: 24,
+      shell: 'test',
+    });
+    expect(session).toEqual({
+      id: '1',
+      shell: 'Shell de test',
+      shellId: 'test',
+      cwd,
+    });
+    expect(await service.listShells()).toContainEqual({
+      id: 'test',
+      name: 'Shell de test',
+    });
     service.write(
       session.id,
       process.platform === 'win32'
