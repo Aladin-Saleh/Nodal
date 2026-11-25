@@ -85,6 +85,18 @@ dernier banc (les consignes ont été affinées en route).
 - Charger `nodal_impact` d'emblée n'a rien changé (annulé) ; citer dans la
   recherche les nœuds touchés par le premier résultat : 71-86 → 100 %.
 
+### Fichier cité dans la demande, exception dans CLAUDE.md (3 runs)
+
+Les nœuds des fichiers nommés dans une demande arrivent avec le contexte
+automatique, et une question sur un seul fichier se lit directement.
+
+| Question    | Sans Nodal    | Nodal         | + contexte auto | + skill       |
+| ----------- | ------------- | ------------- | --------------- | ------------- |
+| code-seul   | 0,024 (100 %) | 0,024 (100 %) | 0,023 (100 %)   | 0,025 (100 %) |
+| avant-modif | 0,050 (100 %) | 0,023 (100 %) | 0,036 (96 %)    | 0,034 (96 %)  |
+
+Nodal ne perd plus sur le pur code (0,040 contre 0,010 avant).
+
 ### « Code mode » : les outils en commandes plutôt que par MCP
 
 Même banc, `nodal-cli` (aucun serveur MCP, `node nodal-mcp.cjs base search …`

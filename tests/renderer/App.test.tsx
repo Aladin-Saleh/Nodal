@@ -248,9 +248,11 @@ describe('App', () => {
       color: null,
       sortOrder: 0,
     });
-    act(() => emitExternalChange());
-
-    const tree = await screen.findByRole('tree');
+    // Émis avant que l'écran ne s'abonne, l'événement serait perdu.
+    const tree = await waitFor(() => {
+      act(() => emitExternalChange());
+      return screen.getByRole('tree');
+    });
     expect(
       await within(tree).findByText('Ajouté par l’IA', {}, { timeout: 5000 }),
     ).toBeTruthy();

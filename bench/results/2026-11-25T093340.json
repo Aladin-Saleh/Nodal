@@ -1,0 +1,1066 @@
+{
+  "meta": {
+    "date": "2026-11-25T09:33:40.260Z",
+    "label": "nœuds des fichiers cités, exception CLAUDE.md",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "1d204ae",
+    "runsPerCase": 3,
+    "model": "sonnet"
+  },
+  "rows": [
+    {
+      "question": "avant-modif",
+      "variant": "sans-nodal",
+      "runs": 3,
+      "turns": 6,
+      "input": 137625.33333333334,
+      "output": 1495.3333333333333,
+      "cost": 0.07804003333333333,
+      "warmCost": 0.04978975000000001,
+      "quality": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "runs": 3,
+      "turns": 4,
+      "input": 94278.33333333333,
+      "output": 1140.3333333333333,
+      "cost": 0.04664496666666667,
+      "warmCost": 0.022489099999999998,
+      "quality": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-hook",
+      "runs": 3,
+      "turns": 3.3333333333333335,
+      "input": 77932.33333333333,
+      "output": 1008.6666666666666,
+      "cost": 0.05613086666666667,
+      "warmCost": 0.03589565,
+      "quality": 0.9629629629629629
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "runs": 3,
+      "turns": 3.6666666666666665,
+      "input": 78079,
+      "output": 1158,
+      "cost": 0.059053266666666666,
+      "warmCost": 0.0338948,
+      "quality": 0.9629629629629629
+    },
+    {
+      "question": "code-seul",
+      "variant": "sans-nodal",
+      "runs": 3,
+      "turns": 3.3333333333333335,
+      "input": 83691.66666666667,
+      "output": 674.3333333333334,
+      "cost": 0.042356300000000006,
+      "warmCost": 0.023540750000000003,
+      "quality": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal",
+      "runs": 3,
+      "turns": 2,
+      "input": 62265,
+      "output": 552,
+      "cost": 0.0441124,
+      "warmCost": 0.0239548,
+      "quality": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-hook",
+      "runs": 3,
+      "turns": 2,
+      "input": 65819,
+      "output": 490.3333333333333,
+      "cost": 0.043944733333333326,
+      "warmCost": 0.0229888,
+      "quality": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "runs": 3,
+      "turns": 3,
+      "input": 96568.33333333333,
+      "output": 653.6666666666666,
+      "cost": 0.044191299999999996,
+      "warmCost": 0.025070750000000003,
+      "quality": 1
+    }
+  ],
+  "results": [
+    {
+      "question": "code-seul",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0844276,
+      "durationMs": 5166,
+      "inputTokens": 4,
+      "cacheWriteTokens": 18814,
+      "cacheReadTokens": 43436,
+      "outputTokens": 482,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont tenus pour le même mot si ces quatre conditions sont réunies :\n1. Le plus court a au moins 6 caractères. Sous 5, le résultat est faux d'emblée, et à 5 le test `shorter.length < 6` le rejette aussi.\n2. Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant est donc écartée, par exemple « synchrone » et « asynchrone ».\n3. Le plus long a exactement un caractère de plus que le plus court.\n4. Supprimer un caractère du plus long, à n'importe quelle position, donne exactement le plus court.\n\nAutrement dit, c'est une seule lettre insérée, ni en tête ni en fin selon le test `endsWith`. Je n'ai pas consulté Nodal, puisque la question portait sur un fichier précis.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0799874,
+      "durationMs": 7155,
+      "inputTokens": 6,
+      "cacheWriteTokens": 16243,
+      "cacheReadTokens": 67034,
+      "outputTokens": 830,
+      "tools": {
+        "Grep": 1,
+        "Read": 2
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|distance|levenshtein|similar|same",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content",
+            "-i": true
+          },
+          "resultChars": 1107
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 66,
+            "limit": 22
+          },
+          "resultChars": 946
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 8,
+            "limit": 10
+          },
+          "resultChars": 345
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont tenus pour le même mot si ces conditions sont toutes remplies :\n1. Le plus court fait au moins 6 caractères. En dessous de 5, la fonction renvoie `false` d'emblée, et à 5 exactement la règle `shorter.length < 6` renvoie aussi `false`.\n2. Le plus long ne se termine pas par le plus court. Une lettre ajoutée au début, comme « synchrone » et « asynchrone », est donc refusée.\n3. Le plus long a exactement un caractère de plus que le plus court.\n4. Supprimer un seul caractère du plus long, à n'importe quelle position, redonne exactement le plus court. C'est une coquille par lettre en trop.\n\nCes mots sont comparés après `titleKey`, qui retire accents, casse, ponctuation et le « s » ou « x » final des mots de plus de 3 lettres.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0966013,
+      "durationMs": 7963,
+      "inputTokens": 4,
+      "cacheWriteTokens": 20540,
+      "cacheReadTokens": 45333,
+      "outputTokens": 990,
+      "tools": {
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_search": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "recette outil MCP nodal_apply opération tests docs tokens",
+            "limit": 3
+          },
+          "resultChars": 3912
+        }
+      ],
+      "answer": "Source : Nodal (nœuds « Serveur MCP » et « Recettes »), sans lecture du code. Les deux nœuds sont signalés *stale*, donc vérifiez les détails dans `apply-tool.ts`.\n\n**Avant de coder**\n- Ajoutez un membre à `operationSchema` (union discriminée sur `op`) et un `case` dans `run()`. Ce `case` appelle une fonction de `write-tools.ts`, qui valide et appelle `recordAssistantChange`. N'y mettez pas de logique d'écriture.\n- `run()` renvoie `{ id, documentId? }`. `id` est la cible des `$n` suivants.\n- Un champ qui désigne un nœud doit être ajouté à `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`). Sinon `$n` et les préfixes courts ne sont pas résolus.\n- Levez des `NodalError` et n'attrapez rien dans le `case`. `applyOperations` préfixe le message et annule la transaction, car l'appel est tout ou rien (100 opérations au maximum).\n- Une nouvelle action de journal demande une migration, à cause du CHECK de `assistant_change`.\n\n**Ensuite**\n- Mettez à jour la description de `nodal_apply` dans `server.ts`, qui liste les opérations à la main. Mettez aussi à jour les consignes de `McpDialog.tsx` si besoin.\n- Ajoutez des tests dans `describe('nodal_apply…')` de `tests/mcp/server.test.ts`. Couvrez la réussite, les `$n`, l'annulation et le journal annulable.\n- Mesurez les tokens avec `tests/perf/mcp-tokens.perf.ts`, puis complétez `docs/benchmark-tokens-mcp.md`.\n- Refaites le build avec `npx vite build -c vite.mcp.config.mts`. Copiez le bundle vers `~/.nodal/mcp-dev/nodal-mcp.cjs`.\n- Mettez à jour le nœud Nodal « Serveur MCP » (liste des opérations).",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0949567,
+      "durationMs": 9880,
+      "inputTokens": 6,
+      "cacheWriteTokens": 18816,
+      "cacheReadTokens": 75507,
+      "outputTokens": 1213,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "apply-tool opération nodal_apply"
+          },
+          "resultChars": 3284
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "ID_FIELDS|case '|operationSchema|z\\.literal",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 800
+        }
+      ],
+      "answer": "Source : Nodal (nœuds « Serveur MCP » et « Recettes », signalés périmés depuis le 24/11) et un grep sur le fichier. Le code a déjà `review` et `lesson` en plus de ce que décrit la doc.\n\n**À faire dans `src/mcp/apply-tool.ts`**\n- Ajoutez un membre à `operationSchema` (l.59, union discriminée sur `op`) et un `case` dans `run()` (l.217 et suivantes). Le `case` appelle une fonction de `write-tools.ts`, qui valide et appelle `recordAssistantChange`.\n- `run()` renvoie `{ id, documentId? }`. `id` est la cible des références `$n` suivantes.\n- Si un champ du nouveau schéma désigne un nœud, ajoutez-le à `ID_FIELDS` (l.133). Seuls `id`, `parentId`, `nodeId`, `sourceId` et `targetId` résolvent aujourd'hui les `$n` et les préfixes courts.\n- Dans le `case`, ne capturez aucune erreur : levez des `NodalError`. `applyOperations` préfixe le message « Opération n (op) : … Rien n'a été enregistré. » et annule la transaction. Le maximum est de 100 opérations par appel.\n- Une nouvelle action de journal exige une migration SQLite, à cause du CHECK sur `assistant_change`.\n\n**À mettre à jour ensuite**\n- La description de `nodal_apply` dans `server.ts`, qui liste les opérations à la main.\n- Les consignes de `McpDialog.tsx`, si elles sont concernées.\n- `tests/mcp/server.test.ts`, dans `describe('nodal_apply…')`. Couvrez la réussite, les références `$n`, l'annulation en cas d'erreur et le journal annulable.\n- La mesure de tokens (`tests/perf/mcp-tokens.perf.ts` et `docs/benchmark-tokens-mcp.md`), puis le rebuild et la copie du bundle vers `~/.nodal/mcp-dev/`.\n- Le nœud Nodal « Serveur MCP » (liste des opérations), pour ne pas laisser la doc en retard.\n\nJe n'ai pas lu `write-tools.ts`, `server.ts` ni les tests : le détail vient de Nodal, sauf `ID_FIELDS` et la liste des opérations, que j'ai vérifiés dans le code.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.1093702,
+      "durationMs": 11266,
+      "inputTokens": 6,
+      "cacheWriteTokens": 21987,
+      "cacheReadTokens": 77802,
+      "outputTokens": 1363,
+      "tools": {
+        "mcp__nodal__nodal_get_node": 1,
+        "Grep": 2,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_get_node",
+          "input": {
+            "id": "eb8021c3"
+          },
+          "resultChars": 1103
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "case \"|op: z\\.literal|z\\.literal\\(\"",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 307
+        },
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "5fdaf433"
+          },
+          "resultChars": 5260
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "createNode|nodal_apply",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal",
+            "glob": "!{node_modules,.git}/**",
+            "output_mode": "files_with_matches"
+          },
+          "resultChars": 682
+        }
+      ],
+      "answer": "**À savoir avant**\n- `operationSchema` est une union discriminée sur `op`. Elle compte aujourd'hui 9 variantes (createNode, updateNode, addDocument, updateDocument, link, tag, anchor, review, lesson), alors que la doc Nodal n'en cite que 6. La doc est donc en retard.\n- Il faut ajouter la variante au schéma et au `run`. Réutilisez les fonctions de `write-tools.ts` pour garder la même validation et le même journal `assistant_change`, annulable, avec une entrée par opération.\n- Les références `$n` et les préfixes courts passent par `ShortIds`. `resolveIds` du serveur ne descend pas dans `operations`, donc résolvez vos identifiants vous-même.\n- Le traitement est tout ou rien (une transaction par appel, 100 opérations au maximum). L'erreur doit rester au format « Opération N (op) : … Rien n'a été enregistré. ».\n- Le schéma de `nodal_apply` n'est pas chargé d'emblée, et chaque variante ajoutée l'alourdit.\n\n**À mettre à jour**\n- La description de l'outil dans `src/mcp/server.ts`.\n- Les prompts dans `src/mcp/prompts.ts`.\n- `assets/skills/nodal/SKILL.md`, `.claude/skills/nodal/SKILL.md` et `docs/guide-utilisateur.md`, s'ils listent les opérations.\n- La section « nodal_apply » du nœud Nodal « Outils et fonctionnement ».\n- La mesure de tokens dans `tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`.\n\n**À tester**\n- `tests/mcp/server.test.ts`. Couvrez le cas nominal, une référence `$n`, un rollback sur erreur et l'annulation via le journal.\n- Ensuite `npx tsc --noEmit`, `npm run lint` (après `npx oxfmt --write src tests`) et `npx vitest run`.\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copiez le bundle vers `~/.nodal/mcp-dev/`.\n\nJe n'ai lu ni `apply-tool.ts` en entier ni `write-tools.ts`. Cette réponse s'appuie sur Nodal et sur un grep des variantes de `op`.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 8,
+      "costUsd": 0.1345406,
+      "durationMs": 15958,
+      "inputTokens": 12,
+      "cacheWriteTokens": 24592,
+      "cacheReadTokens": 170786,
+      "outputTokens": 1907,
+      "tools": {
+        "Read": 3,
+        "Grep": 4
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\mcp\\apply-tool.ts"
+          },
+          "resultChars": 9195
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|applyTool|apply_tool",
+            "output_mode": "files_with_matches",
+            "glob": "!package-lock.json"
+          },
+          "resultChars": 30
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "nodal_apply|operationSchema|'lesson'|addLesson",
+            "output_mode": "files_with_matches",
+            "glob": "!package-lock.json"
+          },
+          "resultChars": 585
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "nodal_apply|operationSchema|APPLY_MAX|applyOperations",
+            "output_mode": "content",
+            "glob": "!package-lock.json",
+            "head_limit": 40
+          },
+          "resultChars": 3627
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "addLesson|reviewFiles|'lesson'|\"lesson\"",
+            "output_mode": "content",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src",
+            "glob": "!apply-tool.ts"
+          },
+          "resultChars": 698
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\mcp\\write-tools.ts",
+            "offset": 505,
+            "limit": 90
+          },
+          "resultChars": 2754
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\main\\knowledge\\assistant-change-service.ts",
+            "offset": 290,
+            "limit": 70
+          },
+          "resultChars": 2661
+        }
+      ],
+      "answer": "Je finis de lire le code et je vous donne la synthèse.\n\n**À savoir avant**\n- Une opération a trois parties : un schéma zod dans `operationSchema` (`apply-tool.ts:59`), un `case` dans `run()` (l.216) et une fonction métier dans `write-tools.ts`. `run()` n'a pas de `default`, donc TypeScript signale un `case` oublié.\n- Si l'opération désigne un nœud ou un document, utilisez `target` et un champ de `ID_FIELDS` (l.133). Cela active les préfixes courts et les références `$n`. Un champ d'id de tableau, comme `nodeIds` pour `lesson`, demande un traitement explicite (l.186).\n- La fonction métier doit appeler `recordAssistantChange` avec `before` et `after`. Elle doit renvoyer `{ id }`, qui devient la valeur de `$n`. La transaction tout-ou-rien est gérée par l'appelant.\n\n**À mettre à jour ensuite**\n- **Annulation** : ajoutez un `case` dans `assistant-change-service.ts` (~l.335) et un type dans `ChangeStates`. Si l'action est nouvelle, ajoutez-la au `CHECK (action IN …)`, ce qui demande une nouvelle migration (voir `014-quality.ts:50`), ainsi que dans `shared/domain.ts:52`.\n- **Documentation** : `README.md` (~l.136 et 219), `docs/guide-utilisateur.md`, `assets/skills/nodal/SKILL.md`, `src/mcp/prompts.ts` et `McpDialog.tsx`.\n\n**À tester**\n- `tests/mcp/server.test.ts`, bloc « nodal_apply : écriture groupée » (~l.1355) : cas nominal, références `$n`, erreur avec retour arrière complet, journal et annulation.\n- `tests/perf/mcp-tokens.perf.ts` (taille de la définition de l'outil) et éventuellement `tests/e2e/assistant.e2e.ts`.\n\nJe n'ai pas lu `server.ts`, qui enregistre l'outil. Il faut vérifier qu'il réutilise `operationSchema` et qu'il ne garde pas une liste d'opérations en dur.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0239228,
+      "durationMs": 5038,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3043,
+      "cacheReadTokens": 59228,
+      "outputTokens": 582,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si les quatre conditions suivantes sont réunies :\n- Le plus court a au moins 6 caractères. En dessous de 5, c'est refusé d'emblée, et à 5 exactement la ligne 77 refuse aussi.\n- Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant, comme « synchrone » et « asynchrone », fait un mot dérivé, pas une coquille.\n- Le plus long a exactement une lettre de plus que le plus court.\n- Retirer une seule lettre, à n'importe quelle position, du plus long donne exactement le plus court.\n\nSinon, `sameWord` renvoie `false`. À longueur égale, c'est `oneTypo` qui décide (une lettre remplacée, ou deux voisines interverties). La clé de titre a déjà retiré le « s » ou « x » final des mots de plus de 3 lettres.\n\nJe n'ai pas consulté Nodal pour cette question. Elle porte sur la logique d'un seul fichier, donc je l'ai lu directement.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.023489700000000002,
+      "durationMs": 5621,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2326,
+      "cacheReadTokens": 81537,
+      "outputTokens": 602,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|Levenshtein|distance|similar|normalize",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content",
+            "-n": true
+          },
+          "resultChars": 796
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 5,
+            "limit": 95
+          },
+          "resultChars": 3526
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n1. Le plus court fait au moins 6 caractères. Les mots de moins de 5 caractères sont rejetés plus tôt, et le seuil de 6 s'applique ensuite aux longueurs différentes.\n2. Le plus long ne se termine pas par le plus court. Cela écarte une lettre ou un préfixe ajouté devant, comme synchrone et asynchrone.\n3. Le plus long a exactement un caractère de plus que le plus court.\n4. Supprimer un seul caractère du plus long, quelle que soit sa position, donne exactement le plus court.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0345602,
+      "durationMs": 7403,
+      "inputTokens": 4,
+      "cacheWriteTokens": 4725,
+      "cacheReadTokens": 63022,
+      "outputTokens": 935,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_for_files": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "recette outil MCP nodal_apply opération",
+            "limit": 3
+          },
+          "resultChars": 8014
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        }
+      ],
+      "answer": "Source : les nœuds Nodal « Serveur MCP » et « Recettes ». Je n'ai pas relu `apply-tool.ts`. Les deux nœuds sont signalés *stale* (fichiers modifiés depuis leur dernière mise à jour), donc vérifiez les détails dans le code.\n\n**Avant d'écrire**\n- Ajoutez un membre à `operationSchema` (union sur `op`) et un `case` dans `run()`. Ce `case` appelle une fonction de `write-tools.ts`, qui valide et appelle `recordAssistantChange`.\n- `run()` renvoie `{ id, documentId? }`. `id` est la cible des références `$n` suivantes.\n- Un champ qui désigne un nœud doit être ajouté à `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`). Sinon les `$n` et les préfixes courts ne sont pas résolus.\n- N'attrapez rien dans le `case`. Levez des `NodalError` : `applyOperations` préfixe « Opération n (op) : … » et la transaction est annulée en entier.\n- Une nouvelle action de journal exige une migration (CHECK de `assistant_change`).\n\n**À mettre à jour ensuite**\n- La description de `nodal_apply` dans `server.ts`, qui liste les opérations à la main.\n- Les consignes de `McpDialog.tsx`, si besoin.\n- Le nœud Nodal « nodal_apply : ajouter une opération », qui liste les opérations (état v1.4).\n\n**À tester**\n- Dans `tests/mcp/server.test.ts`, bloc `describe('nodal_apply…')` : réussite, références `$n`, annulation, journal annulable.\n- La mesure de tokens : `tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`.\n- Le rebuild avec `npx vite build -c vite.mcp.config.mts`, puis la copie du bundle vers `~/.nodal/mcp-dev/`.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0319218,
+      "durationMs": 7033,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3992,
+      "cacheReadTokens": 62958,
+      "outputTokens": 965,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "recette outil MCP nodal_apply opération",
+            "limit": 3,
+            "maxChars": 5000
+          },
+          "resultChars": 7311
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "operationSchema|applyOperations|createNode",
+            "glob": "**/*.{ts,md}",
+            "output_mode": "files_with_matches"
+          },
+          "resultChars": 339
+        }
+      ],
+      "answer": "D'après Nodal (le nœud « Serveur MCP » est signalé obsolète, et je n'ai pas relu le code) :\n\n**Avant d'écrire**\n- Ajoutez un membre à `operationSchema` et un `case` dans `run()`. Ce `case` appelle une fonction de `write-tools.ts`, qui fait la validation et `recordAssistantChange`. Il ne doit rien attraper et lever des `NodalError`.\n- `run()` renvoie `{ id, documentId? }`. `id` sert de cible aux références `$n` suivantes.\n- Si un champ désigne un nœud, ajoutez-le à `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`). Sinon les `$n` et les préfixes courts ne seront pas résolus.\n- Si l'opération a besoin d'une nouvelle action de journal, il faut une migration (CHECK de `assistant_change`).\n- La limite est de 100 opérations, et l'exécution est tout ou rien (une transaction par appel).\n\n**Ensuite**\n- Mettez à jour la description de `nodal_apply` dans `server.ts`, car elle liste les opérations à la main. Si besoin, mettez aussi à jour les consignes de `McpDialog.tsx`.\n- Dans `tests/mcp/server.test.ts`, bloc `describe('nodal_apply…')`, testez la réussite, les `$n`, l'annulation et le journal annulable.\n- Refaites la mesure de tokens (`tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`).\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copiez le bundle vers `~/.nodal/mcp-dev/`.\n- Mettez à jour la section « nodal_apply : ajouter une opération » du nœud Nodal « Serveur MCP » et le README si les opérations y sont citées.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0224191,
+      "durationMs": 9160,
+      "inputTokens": 6,
+      "cacheWriteTokens": 491,
+      "cacheReadTokens": 93731,
+      "outputTokens": 1107,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "apply-tool opération nodal_apply"
+          },
+          "resultChars": 3284
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "ID_FIELDS|case '|z\\.literal\\('",
+            "path": "src/mcp/apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 676
+        }
+      ],
+      "answer": "Sources : Nodal (nœuds « Serveur MCP » et « Recettes »), recoupés par un grep sur `apply-tool.ts`. Le nœud est marqué périmé : il liste 7 opérations, et le code en a 9 (il y a aussi `review` et `lesson`).\n\n**Avant de commencer**\n- Ajoutez un membre à `operationSchema` (l'union discriminée sur `op`, vers les lignes 61 à 122) et un `case` dans `run()` (vers la ligne 217). Ce `case` appelle une fonction de `write-tools.ts`, qui fait la validation et le journal `assistant_change`.\n- `run()` renvoie `{ id, documentId? }`. Cet `id` est la cible des références `$n` suivantes.\n- Seuls les champs de `ID_FIELDS` (ligne 133 : `id`, `parentId`, `nodeId`, `sourceId`, `targetId`) résolvent `$n` et les préfixes courts. Si votre opération a un autre champ qui désigne un nœud, ajoutez-le à cette liste.\n- Dans le `case`, ne capturez rien et levez des `NodalError`. `applyOperations` ajoute le préfixe « Opération n (op) : … Rien n'a été enregistré. », et la transaction est annulée.\n- Si l'opération crée une nouvelle action de journal, il faut une migration, car `assistant_change` a une contrainte CHECK. Le maximum est de 100 opérations par appel.\n\n**Ensuite**\n- Mettez à jour la description de `nodal_apply` dans `server.ts`. Elle liste les opérations à la main.\n- Ajustez les consignes de `McpDialog.tsx` si nécessaire.\n- Dans `tests/mcp/server.test.ts`, section `describe('nodal_apply…')`, testez la réussite, les `$n`, l'annulation sur erreur et l'annulation via le journal.\n- Refaites la mesure de tokens (`tests/perf/mcp-tokens.perf.ts`, `docs/benchmark-tokens-mcp.md`).\n- Reconstruisez le bundle et copiez-le vers `~/.nodal/mcp-dev/`.\n- Complétez le nœud Nodal « Serveur MCP » avec la nouvelle opération.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0239868,
+      "durationMs": 5795,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3034,
+      "cacheReadTokens": 59228,
+      "outputTokens": 592,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n- Ils ne sont pas identiques, et le plus court a au moins 6 lettres (sous 5 lettres on refuse d'emblée, et à 5 lettres la règle « shorter.length < 6 » refuse aussi).\n- Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant, comme synchrone et asynchrone, n'est pas une coquille.\n- Le plus long a exactement une lettre de plus que le plus court (`longer.length === shorter.length + 1`).\n- Retirer une lettre du plus long, à n'importe quelle position, donne exactement le plus court.\n\nAutrement dit, la seule différence admise est une lettre insérée ou omise au milieu ou à la fin du mot. Cela suppose que le mot soit déjà passé par `titleKey`, qui retire accents, casse, ponctuation et le « s » ou « x » final des mots de plus de 3 lettres.\n\nJ'ai lu le fichier directement, sans passer par Nodal, parce que la question portait sur ce que fait ce fichier précis.",
+      "run": 3
+    },
+    {
+      "question": "avant-modif",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.043473200000000004,
+      "durationMs": 8975,
+      "inputTokens": 6,
+      "cacheWriteTokens": 6008,
+      "cacheReadTokens": 85492,
+      "outputTokens": 1088,
+      "tools": {
+        "Read": 1,
+        "Grep": 2
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\mcp\\apply-tool.ts"
+          },
+          "resultChars": 9195
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|applyTool",
+            "output_mode": "files_with_matches",
+            "glob": "!node_modules"
+          },
+          "resultChars": 30
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "nodal_apply|operationSchema|applyOperations|APPLY_MAX_OPERATIONS|'lesson'|addLesson",
+            "output_mode": "content",
+            "glob": "!node_modules/**",
+            "head_limit": 40
+          },
+          "resultChars": 3004
+        }
+      ],
+      "answer": "**À savoir avant**\n- `apply-tool.ts` ne fait que valider et router. La logique métier vit dans `write-tools.ts`. Il vous faut donc d'abord une fonction d'écriture (comme `addLesson`, `tagNode`…) qui journalise en `assistant_change`.\n- Ajoutez un `z.object({ op: z.literal('…') })` à `operationSchema`, puis un `case` dans `run()`. Le `switch` n'a pas de `default`, donc TypeScript signale l'oubli.\n- Si l'opération désigne un nœud ou un document, utilisez `target` et un nom de champ déjà dans `ID_FIELDS`, sinon `$n` et les préfixes courts ne seront pas résolus. Un tableau d'ids doit être résolu à la main, comme `nodeIds` pour `lesson`. Le résultat doit renvoyer un `id`, qui alimente `$n`.\n- Tout est atomique, et les appels sont limités à 100 opérations (`APPLY_MAX_OPERATIONS`). Une action nouvelle peut aussi demander une valeur dans `domain.ts` (le journal `action` contient déjà `lesson`) et une annulation (undo).\n\n**À mettre à jour**\n- `src/mcp/server.ts`: les instructions (~l.116) et la description de `nodal_apply` (~l.799).\n- Les docs: `README.md` (~l.136), `docs/guide-utilisateur.md` (~l.244), `assets/skills/nodal/SKILL.md` (~l.28).\n\n**À tester**\n- Dans `tests/mcp/server.test.ts`, bloc « nodal_apply : écriture groupée » (~l.1355): cas nominal, référence `$n`, rollback en cas d'erreur, journal et annulation.\n- `tests/perf/mcp-tokens.perf.ts`: la taille de la définition change. Lancez aussi lint, typecheck et vitest.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.023591800000000003,
+      "durationMs": 5332,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2379,
+      "cacheReadTokens": 81538,
+      "outputTokens": 591,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|Levenshtein|distance|similar|normaliz",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content",
+            "-n": true
+          },
+          "resultChars": 796
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 1,
+            "limit": 95
+          },
+          "resultChars": 3633
+        }
+      ],
+      "answer": "Dans `sameWord` (`duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n- La longueur du plus court est d'au moins 6. En dessous de 5, la fonction renvoie faux avant tout test, et `shorter.length < 6` renvoie faux ensuite.\n- Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant donne un mot dérivé, comme synchrone et asynchrone, pas une coquille.\n- Le plus long a exactement une lettre de plus que le plus court.\n- Retirer une seule lettre du plus long, à n'importe quelle position, donne exactement le plus court.",
+      "run": 3
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0372311,
+      "durationMs": 10134,
+      "inputTokens": 6,
+      "cacheWriteTokens": 4152,
+      "cacheReadTokens": 96011,
+      "outputTokens": 1101,
+      "tools": {
+        "mcp__nodal__nodal_get_node": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_get_node",
+          "input": {
+            "id": "eb8021c3"
+          },
+          "resultChars": 1103
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "5fdaf433"
+          },
+          "resultChars": 5260
+        }
+      ],
+      "answer": "**À savoir avant** (d'après Nodal; les nœuds sont signalés périmés depuis le 23-24/11, donc relisez le fichier pour les détails):\n- `apply-tool.ts` contient `operationSchema`, une union discriminée sur `op` (createNode, updateNode, addDocument, updateDocument, link, tag), et `applyOperations(ctx, ops, shortIds)`. Il est limité à 100 opérations.\n- Il réutilise les fonctions de `write-tools.ts`. Vous gardez ainsi la même validation et le même journal `assistant_change`, avec une entrée annulable par opération. Écrivez donc d'abord la fonction d'écriture là, puis appelez-la depuis `apply-tool.ts`.\n- Les références `$n` (1-based) pointent vers le résultat de la n-ième opération. Les préfixes courts passent par `ShortIds`, car le `resolveIds` du serveur ne descend pas dans `operations`.\n- Tout est exécuté dans une seule transaction. Une erreur renvoie « Opération N (op) : … Rien n'a été enregistré. ».\n\n**À mettre à jour ensuite:**\n- La description de l'outil dans `src/mcp/server.ts` et, si besoin, `READ_INSTRUCTIONS`.\n- Le nœud Nodal « Serveur MCP », section nodal_apply (la liste des opérations).\n- `docs/benchmark-tokens-mcp.md`, car le schéma de `nodal_apply` grossit. Mesurez avec `tests/perf/mcp-tokens.perf.ts`.\n- Le guide utilisateur et le README si l'opération est visible côté utilisateur.\n\n**À tester:**\n- `tests/mcp/server.test.ts` (`connect(file, false)`, `toon()`, `changes()`). Couvrez le cas nominal, une référence `$n`, un préfixe court, le retour arrière en cas d'erreur et l'annulation via le journal.\n- Les vérifications de fin d'étape: `npx oxfmt --write src tests`, `npx tsc --noEmit`, `npm run lint`, `npx vitest run`.\n- Rebuild du serveur: `npx vite build -c vite.mcp.config.mts`, puis copie vers `~/.nodal/mcp-dev/nodal-mcp.cjs`.\n\nJe n'ai lu que Nodal, pas le code source.",
+      "run": 3
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0358678,
+      "durationMs": 8224,
+      "inputTokens": 4,
+      "cacheWriteTokens": 4526,
+      "cacheReadTokens": 62958,
+      "outputTokens": 1146,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "recette outil MCP nodal_apply opération",
+            "limit": 3,
+            "maxChars": 6000
+          },
+          "resultChars": 8014
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "op:|z\\.literal|applyOperations|case \"",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 862
+        }
+      ],
+      "answer": "Le code a dépassé le document Nodal : il contient déjà `review` et `lesson` en plus des opérations listées (le nœud est signalé « stale »). Vérifiez donc dans le fichier.\n\n**À savoir avant**\n- Une opération, c'est un membre de `operationSchema` (`apply-tool.ts`, union discriminée sur `op`) et un `case` dans `run()`. Ce `case` appelle une fonction de `write-tools.ts`, qui porte la validation et `recordAssistantChange`.\n- `run()` renvoie `{ id, documentId? }`. L'`id` sert de cible aux `$n` des opérations suivantes.\n- Seuls les champs de `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`) résolvent `$n` et les préfixes courts. Si votre champ désigne un nœud, ajoutez-le à `ID_FIELDS`.\n- Dans le `case`, ne rien attraper : levez des `NodalError`. `applyOperations` préfixe le message et annule la transaction (tout ou rien, 100 opérations au plus).\n- Une nouvelle action de journal exige une migration SQLite, à cause du CHECK de `assistant_change`.\n\n**À mettre à jour ensuite**\n- La description de `nodal_apply` dans `server.ts`, qui liste les opérations à la main.\n- `McpDialog.tsx` (consignes), si besoin.\n- Le document « Outils et fonctionnement » de Nodal (nœud 279dd0c6), pour la liste des opérations.\n\n**À tester**\n- Dans `tests/mcp/server.test.ts`, bloc `describe('nodal_apply…')` : réussite, référence `$n`, annulation sur erreur, entrée de journal annulable.\n- Mesure de tokens : `tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`.\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copie de `nodal-mcp.cjs` vers `~/.nodal/mcp-dev/`.\n\nSource : les nœuds Nodal « Serveur MCP » et « Recettes », plus un grep sur `apply-tool.ts`. Je n'ai pas lu le fichier en entier.",
+      "run": 3
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.0225591,
+      "durationMs": 9428,
+      "inputTokens": 6,
+      "cacheWriteTokens": 541,
+      "cacheReadTokens": 93731,
+      "outputTokens": 1101,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "apply-tool opération nodal_apply"
+          },
+          "resultChars": 3284
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "ID_FIELDS|case '|z\\.literal\\(",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 676
+        }
+      ],
+      "answer": "Source : Nodal (nœuds Serveur MCP et Recettes). Ces nœuds sont signalés périmés. Le code confirme que `ID_FIELDS` et la structure en `case` sont toujours là. Il compte déjà 9 opérations, alors que Nodal en liste 7 (`review` et `lesson` en plus).\n\n**Avant d'écrire**\n- Ajoutez un membre à `operationSchema` (`src/mcp/apply-tool.ts:61-122`) et un `case` dans `run()` (l. 217-255). Ce `case` doit appeler une fonction de `write-tools.ts`, qui fait la validation et `recordAssistantChange`.\n- `run()` renvoie `{ id, documentId? }`. `id` est la cible des références `$n` suivantes.\n- Seuls les champs de `ID_FIELDS` (l. 133) sont résolus, pour les `$n` comme pour les préfixes courts. Si votre opération a un champ qui désigne un nœud et qui n'y figure pas, ajoutez-le.\n- N'attrapez rien dans le `case`. Levez des `NodalError`. `applyOperations` préfixe le message par « Opération N (op) : … » et annule toute la transaction. Maximum 100 opérations par appel.\n- Une nouvelle action de journal exige une migration SQLite, à cause du CHECK de `assistant_change`.\n\n**À mettre à jour ensuite**\n- La description de `nodal_apply` dans `server.ts`, qui liste les opérations à la main.\n- Les consignes de `McpDialog.tsx`, si besoin.\n- Le nœud Nodal « Outils et fonctionnement », périmé.\n\n**À tester**\n- Dans `describe('nodal_apply…')` de `tests/mcp/server.test.ts` : réussite, références `$n`, annulation en cas d'erreur, et journal annulable.\n- La mesure de tokens (`tests/perf/mcp-tokens.perf.ts`, `docs/benchmark-tokens-mcp.md`).\n- Le rebuild, puis la copie du bundle vers `~/.nodal/mcp-dev/`.",
+      "run": 3
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.08585659999999999,
+      "durationMs": 5585,
+      "inputTokens": 4,
+      "cacheWriteTokens": 18925,
+      "cacheReadTokens": 46886,
+      "outputTokens": 546,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-hook\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces quatre conditions sont réunies :\n- Le plus court a au moins 6 lettres. Le code vérifie d'abord `min < 5`, puis `shorter.length < 6`, et le second test est le plus strict.\n- Le plus long a exactement une lettre de plus (`longer.length === shorter.length + 1`).\n- Retirer une lettre du plus long, à n'importe quelle position, redonne exactement le plus court.\n- Le plus long ne se termine pas par le plus court (`!longer.endsWith(shorter)`). Cela exclut une lettre ajoutée au début, comme « synchrone » et « asynchrone ».\n\nCes mots sont des clés de `titleKey`, donc déjà sans accents ni casse. Ils sont comparés mot à mot, et seulement si les deux titres ont le même nombre de mots.\n\nJe n'ai pas consulté Nodal : le contexte automatique ne couvrait pas ce fichier, et la question ne portait que sur son contenu. Je l'ai donc lu directement.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.08243239999999999,
+      "durationMs": 6793,
+      "inputTokens": 6,
+      "cacheWriteTokens": 17101,
+      "cacheReadTokens": 78864,
+      "outputTokens": 613,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|distance|similar|same",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 1107
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 66,
+            "limit": 22
+          },
+          "resultChars": 946
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces quatre conditions sont réunies :\n- Le plus court a au moins 6 caractères. Sous 5, la fonction renvoie `false` plus tôt. À exactement 5, le test `shorter.length < 6` le rejette ensuite.\n- Le plus long dépasse le plus court d'exactement 1 caractère.\n- Le plus long ne se termine pas par le plus court. Une lettre ajoutée au début (synchrone/asynchrone) n'est donc pas une coquille.\n- Supprimer un caractère du plus long, à une position quelconque, redonne exactement le plus court.\n\nJe n'ai pas consulté Nodal. La question portait sur ce que fait un fichier précis, donc j'ai lu le fichier directement.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "sans-nodal",
+      "ok": true,
+      "turns": 6,
+      "costUsd": 0.05610630000000001,
+      "durationMs": 11800,
+      "inputTokens": 8,
+      "cacheWriteTokens": 7329,
+      "cacheReadTokens": 118643,
+      "outputTokens": 1491,
+      "tools": {
+        "Read": 2,
+        "Grep": 3
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\mcp\\apply-tool.ts"
+          },
+          "resultChars": 9195
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|applyTool",
+            "output_mode": "files_with_matches"
+          },
+          "resultChars": 30
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "operationSchema|nodal_apply|applyOperations|'anchor'|\"anchor\"",
+            "output_mode": "content",
+            "glob": "!node_modules",
+            "head_limit": 40
+          },
+          "resultChars": 3348
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src\\shared\\domain.ts",
+            "offset": 35,
+            "limit": 30
+          },
+          "resultChars": 750
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "operationSchema|applyOperations|APPLY_MAX",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\sans-nodal\\Nodal\\src",
+            "output_mode": "content"
+          },
+          "resultChars": 823
+        }
+      ],
+      "answer": "**À savoir avant**\n- Une opération = un `z.object` dans `operationSchema` (`apply-tool.ts:59`), plus un `case` dans `run()` (`:216`). Le `switch` n'a pas de `default`, donc TypeScript signale un `case` manquant.\n- `run()` doit déléguer à une fonction de `write-tools.ts`, comme les autres opérations. C'est là que se trouvent les règles, la journalisation `assistant_change` et l'annulation. Si cette fonction n'existe pas, il faut d'abord la créer.\n- Les champs `id`, `parentId`, `nodeId`, `sourceId` et `targetId` sont résolus automatiquement (`ID_FIELDS`, `:133`), y compris les références `$n`. Un nouveau champ qui désigne un nœud doit rejoindre `ID_FIELDS`. Un champ tableau, comme `lesson.nodeIds`, demande un traitement dédié (`:186`).\n- Une journalisation nouvelle exige une valeur dans `ASSISTANT_ACTIONS` (`shared/domain.ts:43`). Cela implique probablement une migration SQL, comme les migrations 004 et 010 à 014 mentionnées dans le commentaire.\n- Le comportement est tout ou rien (la première erreur annule tout), et l'appel est limité à `APPLY_MAX_OPERATIONS` (100).\n\n**À mettre à jour**\n- `src/mcp/prompts.ts:54`, la description de l'outil dans `server.ts` (~`:815`), `assets/skills/nodal/SKILL.md`, `README.md` (~`:136`) et `docs/guide-utilisateur.md` (~`:244`).\n\n**À tester**\n- Ajoutez des cas dans `tests/mcp/server.test.ts`, section « nodal_apply : écriture groupée » (~`:1355`). Calquez-les sur le test `anchor` (`:1604`) : succès, références `$n`, erreur avec retour arrière, entrée de journal et annulation.\n- Surveillez `tests/perf/mcp-tokens.perf.ts` (`:360`). Le schéma grossit, donc la taille de la définition de l'outil change.",
+      "run": 3
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0233178,
+      "durationMs": 4810,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3015,
+      "cacheReadTokens": 62798,
+      "outputTokens": 497,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-hook\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont tenus pour le même mot si les quatre conditions suivantes sont réunies :\n1. Le plus court fait au moins 5 lettres. Sinon c'est une variante, comme « Serveur A » et « Serveur B ».\n2. Le plus court fait au moins 6 lettres.\n3. Le plus long n'est pas le plus court précédé de lettres, c'est-à-dire que `longer.endsWith(shorter)` est faux. Cela écarte « synchrone » et « asynchrone ».\n4. Le plus long fait exactement 1 lettre de plus, et le retrait d'une seule lettre, à n'importe quelle position, donne le plus court.\n\nCes mots sont comparés par `sameTitle`, qui exige aussi le même nombre de mots et les mêmes nombres dans les deux titres. Je n'ai pas consulté Nodal, la question portant sur un seul fichier.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.024566900000000003,
+      "durationMs": 6541,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2050,
+      "cacheReadTokens": 94649,
+      "outputTokens": 689,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|distance|levenshtein|prefix|stem|plural",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content",
+            "-i": true
+          },
+          "resultChars": 796
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 8,
+            "limit": 80
+          },
+          "resultChars": 2934
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont tenus pour le même mot si les quatre conditions suivantes sont réunies :\n1. Le plus court fait au moins 6 lettres. Le test `Math.min < 5` écarte déjà le cas où il en a moins de 5, et `shorter.length < 6` écarte le cas où il en a exactement 5.\n2. La longueur du plus long est celle du plus court plus 1, soit un seul caractère d'écart.\n3. Le plus long ne se termine pas par le plus court. Une lettre ajoutée au début, comme dans « synchrone » et « asynchrone », est donc exclue.\n4. Retirer un caractère du plus long, à n'importe quelle position, donne exactement le plus court. C'est le cas d'une lettre oubliée ou en trop.\n\nJe n'ai pas consulté Nodal pour cette réponse. Je suis parti directement du code de ce fichier.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0226598,
+      "durationMs": 4286,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3023,
+      "cacheReadTokens": 62798,
+      "outputTokens": 428,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-hook\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n1. Ils ne sont pas identiques, et le plus court a au moins 6 lettres. Sous 5 lettres, le rejet est immédiat, et le seuil de 6 s'applique ensuite au plus court.\n2. Le plus long ne se termine pas par le plus court. Cela écarte une lettre ajoutée devant, comme dans synchrone/asynchrone.\n3. Le plus long a exactement 1 lettre de plus que le plus court.\n4. Retirer une lettre quelconque du plus long donne le plus court. C'est donc une seule lettre insérée, ailleurs qu'en tête.",
+      "run": 3
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.025574600000000003,
+      "durationMs": 6461,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2377,
+      "cacheReadTokens": 94646,
+      "outputTokens": 659,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|distance|levenshtein|prefix|plural",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content",
+            "-n": true
+          },
+          "resultChars": 796
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-PPQeQJ\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 1,
+            "limit": 95
+          },
+          "resultChars": 3633
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si toutes ces conditions sont réunies :\n- Le plus court a au moins 6 lettres. En dessous de 5, la réponse est toujours non, et à 5 le test `shorter.length < 6` la refuse aussi.\n- Le plus long n'a qu'une lettre de plus (`longer.length === shorter.length + 1`).\n- Le plus long ne se termine pas par le plus court (`!longer.endsWith(shorter)`). Cela exclut une lettre ajoutée devant, comme synchrone/asynchrone.\n- Retirer une lettre du plus long, à n'importe quelle position, donne exactement le plus court (une lettre oubliée).\n\nJe n'ai lu que le code, sans passer par Nodal, parce que la question porte sur ce que fait une fonction précise.",
+      "run": 3
+    }
+  ]
+}
