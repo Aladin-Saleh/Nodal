@@ -280,7 +280,7 @@ describe('parcours principaux', () => {
       .selectOption({ label: 'Gemini CLI' });
     await dialog.getByText('Configuration manuelle').click();
     await dialog.getByText(/^gemini mcp add nodal node "/).waitFor();
-    await dialog.getByText(/GEMINI\.md/).waitFor();
+    await dialog.getByText('Consignes : GEMINI.md').waitFor();
 
     // Serveur, contexte automatique et skills ajoutés au projet choisi.
     const project = path.join(work, 'Projet');
