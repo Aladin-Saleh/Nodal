@@ -33,6 +33,8 @@ export function assistantInstructions(
     '',
     `Avant de répondre sur ce sujet, de parcourir des fichiers ou de répondre de mémoire, consultez Nodal (serveur MCP \`${SERVER_NAME}\`, en commençant par \`nodal_search\`). Ne lisez les fichiers sources que si Nodal ne suffit pas, et dites-le.`,
     '',
+    'Exception : la question porte seulement sur ce que fait un fichier précis. Lisez-le directement ; les nœuds qui lui sont liés arrivent d’eux-mêmes avec le contexte automatique, ou par `nodal_for_files` s’il faut le pourquoi.',
+    '',
     'Avant de modifier des fichiers du code, appelez `nodal_for_files` avec leurs chemins : il donne les nœuds qui les documentent.',
   ];
   if (allowWrites) {

@@ -17,6 +17,7 @@ import {
   writeCodeRoots,
 } from '../../src/main/knowledge/anchor-service';
 import { recordLesson } from '../../src/main/knowledge/lesson-service';
+import { readLogFile } from '../../src/mcp/read-proof';
 import { toolFiles } from '../../src/mcp/file-hook';
 import { useTempDir } from '../helpers/temp-dir';
 import { testWorkspaceFixture } from '../helpers/test-workspace';
@@ -323,5 +324,37 @@ describe('rappel avant un fichier ancré (PreToolUse)', () => {
     } finally {
       for (const state of states) fs.rmSync(state, { force: true });
     }
+  });
+
+  it('cite les nœuds d’un fichier nommé dans la demande, sans le tenir pour lu', () => {
+    const ask = (prompt: string) => {
+      const output = contextHookOutput(
+        file,
+        JSON.stringify({
+          prompt,
+          hook_event_name: 'UserPromptSubmit',
+          cwd: root,
+        }),
+      );
+      return output
+        ? (
+            JSON.parse(output) as {
+              hookSpecificOutput: { additionalContext: string };
+            }
+          ).hookSpecificOutput.additionalContext
+        : '';
+    };
+    for (const name of [
+      'src/mcp/server.ts',
+      '`src/mcp/server.ts:12`',
+      source,
+      '(src\\mcp\\server.ts)',
+    ])
+      expect(ask(`zzz ${name} ?`)).toContain(
+        'nœuds qui documentent src/mcp/server.ts',
+      );
+    expect(ask('zzz src/mcp/absent.ts')).not.toContain('qui documentent');
+    expect(ask('/commande src/mcp/server.ts')).toBe('');
+    expect(fs.existsSync(readLogFile(file))).toBe(false);
   });
 });

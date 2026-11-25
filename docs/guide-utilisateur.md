@@ -494,8 +494,8 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   documents, les autres avec leur seul résumé ; un nœud déjà donné dans la
   session n'est pas répété, sauf s'il a changé, et les secrets
   reconnaissables (clés d'API, jetons…) sont masqués. Avec Claude Code,
-  l'assistant reçoit aussi, avant de lire ou de modifier un fichier du code,
-  le résumé des nœuds ancrés à ce fichier (3 au plus, une fois par session ;
+  l'assistant reçoit aussi, avant de lire ou de modifier un fichier du code
+  (ou quand votre demande en cite un), le résumé des nœuds ancrés à ce fichier (3 au plus, une fois par session ;
   rien n'est bloqué). Hook installé avec une version précédente :
   réinstallez-le pour en profiter. Plus
   besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,

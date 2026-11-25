@@ -36,7 +36,7 @@ import {
   writeContextSession,
   type ContextSession,
 } from './context-session';
-import { fileNodes, toolFiles } from './file-hook';
+import { fileNodes, promptFiles, toolFiles, type FileUse } from './file-hook';
 import { formatFoundDocument } from './server';
 import { loadShortIds, shortenIds } from './short-ids';
 import { listLessons } from '../main/knowledge/lesson-service';
@@ -90,14 +90,15 @@ const PASTE_TAG = /<\/?pasted_content\b[^>]*>/g;
 const ABSOLUTE_PATH =
   /(?<![\p{L}\p{N}:/\\.])(?:[a-z]:[\\/]|~?\/(?=[^\s/]+\/))[^\s"'`<>()]*/giu;
 
+const withoutHarness = (prompt: string) =>
+  prompt.replace(HARNESS_BLOCK, ' ').replace(PASTE_TAG, ' ');
+
 /**
  * Texte de la demande, sans les blocs de l'assistant ; un chemin absolu n'est
  * gardé que par son dernier nom (les dossiers parents ne sont pas un sujet).
  */
 export function promptText(prompt: string): string {
-  return prompt
-    .replace(HARNESS_BLOCK, ' ')
-    .replace(PASTE_TAG, ' ')
+  return withoutHarness(prompt)
     .replace(
       ABSOLUTE_PATH,
       (found) => found.split(/[\\/]+/).findLast(Boolean) ?? '',
@@ -297,7 +298,7 @@ export function fileContext(
   files: readonly string[],
   projectRoot: string | null,
   session: ContextSession | null = null,
-  edit = false,
+  use: FileUse = 'read',
 ): string | null {
   const keep = notSentYet(ctx, session);
   const found = fileNodes(
@@ -306,7 +307,7 @@ export function fileContext(
     files,
     projectRoot,
     (id) => keep(id, false),
-    edit,
+    use,
   );
   if (found.nodes.length === 0) return null;
   // « changed » seulement s'il y a quelque chose à dire.
@@ -322,6 +323,31 @@ export function fileContext(
         : ''),
     { result: { nodes }, documents: [] },
   );
+}
+
+/**
+ * Contexte d'une demande : les nœuds des fichiers qu'elle cite, d'abord, puis
+ * ceux de son sujet.
+ */
+function requestContext(
+  ctx: ReadContext,
+  workspaceFile: string,
+  prompt: string,
+  cwd: string,
+  maxChars: number,
+  session: ContextSession | null,
+): string | null {
+  const projectRoot = projectRootOf(cwd);
+  const roots = codeRootsFor(ctx, workspaceFile, projectRoot);
+  const text = prompt.trimStart().startsWith('/') ? '' : withoutHarness(prompt);
+  const files = promptFiles(text, [cwd, ...roots]);
+  const parts = [
+    files.length > 0
+      ? fileContext(ctx, workspaceFile, files, projectRoot, session, 'mention')
+      : null,
+    promptContext(ctx, prompt, maxChars, session, roots),
+  ].filter((part) => part !== null);
+  return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
 /** Dépôt git du projet : dossier de code si l'espace n'en déclare aucun. */
@@ -393,14 +419,15 @@ export function contextHookOutput(
             files,
             projectRootOf(cwd),
             session,
-            EDIT_TOOLS.test(textOr(input.tool_name, '')),
+            EDIT_TOOLS.test(textOr(input.tool_name, '')) ? 'edit' : 'read',
           )
-        : promptContext(
+        : requestContext(
             ctx,
+            workspaceFile,
             prompt as string,
+            cwd,
             maxChars,
             session,
-            codeRootsFor(ctx, workspaceFile, projectRootOf(cwd)),
           ),
     );
     if (file && session && (context || !isTool))

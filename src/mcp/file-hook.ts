@@ -79,6 +79,32 @@ export function toolFiles(input: unknown, cwd: string): string[] {
   });
 }
 
+/**
+ * Fichiers existants cités dans une demande (`src/mcp/server.ts`, chemin
+ * absolu), relatifs au dossier courant ou à un dossier de code.
+ */
+export function promptFiles(
+  prompt: string,
+  bases: readonly string[],
+): string[] {
+  const words = prompt
+    .split(/[\s"'`«»()<>,;]+/)
+    .map((word) => fromGitBash(word.replace(/(?::\d+(?:-\d+)?)?[.?!:]*$/, '')))
+    .filter((word) => /[\\/]/.test(word) && /\.\w{1,8}$/.test(word))
+    .filter((word) => !/[*{}]|:\/\//.test(word));
+  const found = new Set<string>();
+  for (const word of words.slice(0, MAX_COMMAND_FILES)) {
+    for (const base of bases) {
+      const file = path.resolve(base, word);
+      if (fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
+        found.add(file);
+        break;
+      }
+    }
+  }
+  return [...found];
+}
+
 /** Précision des motifs qui couvrent ces fichiers : le fichier lui-même d'abord. */
 function precision(node: AnchoredNode, files: readonly string[]): number {
   return Math.max(
@@ -89,6 +115,9 @@ function precision(node: AnchoredNode, files: readonly string[]): number {
     }),
   );
 }
+
+/** Pourquoi le fichier est en cause. */
+export type FileUse = 'read' | 'edit' | 'mention';
 
 /** Nœud rappelé : ses documents sont cités, à lire au besoin. */
 export interface FileNode {
@@ -103,7 +132,8 @@ export interface FileNode {
 /**
  * Nœuds ancrés à ces fichiers, les plus précis d'abord, avec les chemins
  * relatifs concernés. `keep` écarte ceux déjà donnés dans la session. Les
- * fichiers ancrés sont notés comme lus, ou en cours de modification (`edit`).
+ * fichiers ancrés sont notés comme lus ou en cours de modification ; un
+ * fichier seulement cité dans une demande ne l'est pas.
  */
 export function fileNodes(
   ctx: ReadContext,
@@ -111,7 +141,7 @@ export function fileNodes(
   files: readonly string[],
   projectRoot: string | null,
   keep: (nodeId: string) => boolean,
-  edit = false,
+  use: FileUse = 'read',
 ): { files: string[]; nodes: FileNode[] } {
   const roots = codeRootsFor(ctx, workspaceFile, projectRoot);
   // Chemin relatif → dossier de code (nom) et empreinte actuelle.
@@ -134,13 +164,15 @@ export function fileNodes(
     const target = targets.get(name)!;
     target.content = fileFingerprintSync(target.file);
   }
-  recordReads(
-    workspaceFile,
-    [...anchored]
-      .map((name) => targets.get(name)!)
-      .filter((target) => edit || target.content !== null)
-      .map(({ file, content }) => ({ file, content: edit ? null : content })),
-  );
+  const edit = use === 'edit';
+  if (use !== 'mention')
+    recordReads(
+      workspaceFile,
+      [...anchored]
+        .map((name) => targets.get(name)!)
+        .filter((target) => edit || target.content !== null)
+        .map(({ file, content }) => ({ file, content: edit ? null : content })),
+    );
   const matches = all
     .map((match) => ({ ...match, rank: precision(match.node, match.paths) }))
     .toSorted((a, b) => b.rank - a.rank)
