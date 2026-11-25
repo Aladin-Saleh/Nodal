@@ -267,7 +267,7 @@ describe('parcours principaux', () => {
     ).toBe(true);
   });
 
-  it('donne la commande de l’assistant choisi et installe le contexte automatique (Gemini CLI)', async () => {
+  it('connecte l’assistant choisi à un projet (Gemini CLI)', async () => {
     await page.getByRole('button', { name: 'Assistant IA' }).click();
     await page
       .getByRole('menuitem', { name: /Connecter un assistant IA/ })
@@ -278,23 +278,30 @@ describe('parcours principaux', () => {
     await dialog
       .getByLabel('Assistant', { exact: true })
       .selectOption({ label: 'Gemini CLI' });
+    await dialog.getByText('Configuration manuelle').click();
     await dialog.getByText(/^gemini mcp add nodal node "/).waitFor();
-    await dialog.getByText('GEMINI.md').waitFor();
+    await dialog.getByText(/GEMINI\.md/).waitFor();
 
-    // Contexte automatique : hook BeforeAgent ajouté au projet choisi.
+    // Serveur, contexte automatique et skills ajoutés au projet choisi.
     const project = path.join(work, 'Projet');
     fs.mkdirSync(project);
     await stubDialogs({ open: project });
     await dialog
-      .getByRole('button', { name: 'Installer dans un projet…' })
+      .getByRole('button', { name: 'Connecter Gemini CLI à un projet…' })
       .click();
-    await dialog.getByText(/Ajouté à .*settings\.json/).waitFor();
+    await dialog.getByText('Connecté.').waitFor();
     const settings = JSON.parse(
       fs.readFileSync(path.join(project, '.gemini', 'settings.json'), 'utf8'),
     );
     expect(settings.hooks.BeforeAgent[0].hooks[0].command).toMatch(
       /nodal-mcp\.cjs" ".*\.nodal" --context$/,
     );
+    expect(settings.mcpServers.nodal.args[0]).toMatch(/nodal-mcp\.cjs$/);
+    expect(
+      fs.existsSync(
+        path.join(project, '.agents', 'skills', 'nodal-init', 'SKILL.md'),
+      ),
+    ).toBe(true);
     await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();
   });
 
