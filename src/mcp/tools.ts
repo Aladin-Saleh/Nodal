@@ -520,6 +520,12 @@ export function search(
           (summaryOf.get(hit.nodeId) as { summary: string | null } | undefined)
             ?.summary ?? null,
       })),
+      // Un assistant pense rarement à demander l'impact (banc du 2026-11-25).
+      ...affectedBy(
+        ctx,
+        outline,
+        hits.slice(0, 1).map((hit) => hit.nodeId),
+      ),
       // Documents trouvés mais hors budget : à lire avec nodal_read_document.
       ...(snippets.length > 0 ? { otherMatches: snippets } : {}),
       // 0 : extraits seuls, demandés.

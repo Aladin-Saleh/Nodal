@@ -9,29 +9,28 @@ réponses MCP, outil par outil, restent dans
 ## Lancer un banc
 
 ```sh
-node bench/run-bench.mjs --runs 2 --label "ce qui a changé"
-# options : --only ipc,capture   --variants nodal,sans-nodal
+npx vite build -c vite.mcp.config.mts   # serveur mesuré : dist/nodal-mcp.cjs
+node bench/run-bench.mjs --runs 2 --model sonnet --label "ce qui a changé"
+# options : --only ipc,capture   --jobs 4
+#           --variants sans-nodal,nodal,nodal-hook,nodal-skill
 ```
 
-- Chaque run est un `claude -p` neuf, lancé depuis la racine du dépôt (le
-  `CLAUDE.md` du projet est donc chargé), en `--output-format stream-json`.
-- `--strict-mcp-config` : la variante « nodal » ne charge que le serveur Nodal,
-  **en lecture seule** (`--read-only`, rien n'est écrit dans la base) ; la
-  variante « sans-nodal » ne charge aucun serveur.
-- Outils autorisés : lecture seule (Read, Grep, Glob, `git log`, `git show`,
-  `ls`, outils de lecture de Nodal) ; Edit et Write interdits.
-- Relevé dans l'événement `result` : tours, tokens d'entrée (non cachés + écrits
-  en cache + lus en cache), sortie, coût, durée ; outils appelés et réponse
-  dans le JSON.
-- Questions : [questions.json](questions.json). Les garder stables pour
-  comparer les bancs ; en ajouter plutôt qu'en modifier.
-- Variables : `NODAL_BENCH_BASE` (fichier .nodal), `NODAL_BENCH_SERVER`
-  (bundle du serveur, par défaut `~/.nodal/mcp-dev/nodal-mcp.cjs`),
+- Chaque run est un `claude -p` neuf, dans une **copie propre du dépôt** par
+  variante (dernier commit, donc committer avant) : sans `bench/` (il contient
+  les réponses), sans réglages d'assistant ni mémoire, sans `CLAUDE.md` quand
+  Nodal est absent. Avant le 24/11/2026, le contexte automatique du projet et
+  la mémoire pouvaient aider la variante « sans Nodal ».
+- `nodal` : serveur MCP en lecture seule ; `nodal-hook` : avec le contexte
+  automatique ; `nodal-skill` : avec le skill en plus.
+- Lecture seule : Edit et Write interdits ; base copiée.
+- Questions : [questions.json](questions.json), dont une sur une décision, une
+  sur les relations et une absente de Nodal (où il ne peut que coûter).
+- Variables : `NODAL_BENCH_BASE`, `NODAL_BENCH_SERVER`,
+  `NODAL_BENCH_SERVERS='nom=chemin;…'` (autres serveurs à comparer),
   `CLAUDE_BIN`.
 
-Chaque banc écrit `results/<date>.json` (détail, réponses comprises) et
-`results/<date>.md` (tableau). Le coût d'un banc complet (3 questions ×
-2 variantes × 2 runs) est de l'ordre de 3 à 4 $.
+Chaque banc écrit `results/<date>.json` (réponses comprises) et `.md`. Compter
+0,07 $ par run environ (Sonnet).
 
 ## Limites
 
@@ -40,9 +39,8 @@ Chaque banc écrit `results/<date>.json` (détail, réponses comprises) et
 - Qualité : part des faits attendus (`expect` dans `questions.json`) présents
   dans la réponse, notée par `score.mjs` (aussi utilisable seul sur un ancien
   résultat). Indicateur grossier : relire `answer` dans le JSON en cas de doute.
-- La variante « sans-nodal » lit le `CLAUDE.md`, qui demande de consulter
-  Nodal : l'assistant constate l'absence du serveur puis lit les fichiers,
-  comme dans une session où Nodal ne répond pas.
+- 2 runs par cas et 6 questions, dont 3 écrites par l'auteur des fiches : des
+  ordres de grandeur, pas une preuve.
 
 ## Historique
 
@@ -59,11 +57,35 @@ il n'est pas comparé.
 | 2026-11-01 14:44 | `nodal_get_node` et `nodal_read_document` chargés d'emblée           | 0,029 · 3 t. · 67 %  | 0,025 · 3 t. · 61 %  | 0,067 · 4 t. · 89 %  | [144407](results/2026-11-01T144407.md) |
 | 2026-11-02 12:31 | Base enrichie (mécanismes exacts) + consigne « le code fait foi »    | 0,051 · 3 t. · 100 % | 0,052 · 3 t. · 100 % | 0,045 · 4 t. · 100 % | [123145](results/2026-11-02T123145.md) |
 
-État actuel avec Nodal, à chaud : **−77 %** (ipc), **−52 %** (capture),
+Le 02/11/2026, à chaud : **−77 %** (ipc), **−52 %** (capture),
 **−53 %** (avant-modif) de coût par rapport à la lecture des fichiers, avec
 une qualité égale ou supérieure (100 % contre 89 à 100 %).
 
-### Ce que les bancs ont montré
+## Banc du 25/11/2026 (Sonnet, dépôt isolé, 6 questions, 2 runs)
+
+Coût à chaud par question, qualité entre parenthèses. « Avant » : serveur avant
+les lots. Réponses renotées avec les motifs actuels ; pour chaque case, le
+dernier banc (les consignes ont été affinées en route).
+
+| Question               | Sans Nodal    | Avant         | Nodal         | + contexte auto | + skill       |
+| ---------------------- | ------------- | ------------- | ------------- | --------------- | ------------- |
+| ipc                    | 0,054 (94 %)  | 0,025 (100 %) | 0,015 (100 %) | 0,010 (100 %)   | 0,009 (100 %) |
+| capture                | 0,043 (89 %)  | 0,012 (100 %) | 0,022 (100 %) | 0,008 (100 %)   | 0,008 (100 %) |
+| avant-modif            | 0,058 (100 %) | 0,039 (100 %) | 0,026 (100 %) | 0,039 (89 %)    | 0,030 (89 %)  |
+| pourquoi (décision)    | 0,102 (0 %)   | 0,054 (100 %) | 0,046 (100 %) | 0,011 (70 %)    | 0,024 (90 %)  |
+| impact (relations)     | 0,034 (93 %)  | 0,041 (71 %)  | 0,044 (100 %) | 0,010 (71 %)    | 0,009 (71 %)  |
+| code-seul (hors Nodal) | 0,010 (100 %) | 0,029 (100 %) | 0,040 (100 %) | 0,026 (100 %)   | 0,011 (100 %) |
+| **Moyenne à chaud**    | 0,050 (79 %)  | 0,033 (95 %)  | 0,032 (100 %) | 0,017 (88 %)    | 0,015 (92 %)  |
+| Coût, 1er run compris  | 0,087         | 0,066         | 0,076         | 0,064           | 0,059         |
+| Tours / durée          | 6,8 / 13 s    | 3,3 / 7 s     | 3,4 / 7 s     | 1,8 / 6 s       | 1,8 / 6 s     |
+
+- Gain surtout sur ce que le code ne dit pas (décision : 0 % sans Nodal).
+- Nodal **perd** sur une question de pur code ; le skill l'annule presque.
+- Le contexte automatique divise le coût, mais répond parfois sans compléter.
+- Charger `nodal_impact` d'emblée n'a rien changé (annulé) ; citer dans la
+  recherche les nœuds touchés par le premier résultat : 71-86 → 100 %.
+
+### Ce que les bancs précédents ont montré
 
 - Le coût suit le nombre de tours (chaque tour renvoie environ 25 000 tokens
   de contexte), bien plus que la taille des réponses de Nodal (moins de

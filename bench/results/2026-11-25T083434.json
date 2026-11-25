@@ -1,0 +1,399 @@
+{
+  "meta": {
+    "date": "2026-11-25T08:34:34.306Z",
+    "label": "nœuds touchés dans la recherche",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "6d0fe1a",
+    "runsPerCase": 2,
+    "model": "sonnet"
+  },
+  "rows": [
+    {
+      "question": "pourquoi",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 2.5,
+      "input": 67691.5,
+      "output": 729,
+      "cost": 0.10519804999999999,
+      "warmCost": 0.045651399999999995,
+      "quality": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 31847,
+      "output": 744,
+      "cost": 0.07272624999999999,
+      "warmCost": 0.010918500000000001,
+      "quality": 0.5
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 2,
+      "input": 65440,
+      "output": 826,
+      "cost": 0.08390595,
+      "warmCost": 0.0236146,
+      "quality": 0.7
+    },
+    {
+      "question": "impact",
+      "variant": "nodal",
+      "runs": 2,
+      "turns": 5,
+      "input": 95915,
+      "output": 924.5,
+      "cost": 0.07006065,
+      "warmCost": 0.0437032,
+      "quality": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 32764,
+      "output": 620.5,
+      "cost": 0.04317535,
+      "warmCost": 0.010000199999999999,
+      "quality": 0.7142857142857143
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 1,
+      "input": 32732,
+      "output": 598.5,
+      "cost": 0.042889750000000004,
+      "warmCost": 0.009137000000000001,
+      "quality": 0.7142857142857143
+    }
+  ],
+  "results": [
+    {
+      "question": "pourquoi",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.134534,
+      "durationMs": 5776,
+      "inputTokens": 2,
+      "cacheWriteTokens": 31845,
+      "cacheReadTokens": 0,
+      "outputTokens": 715,
+      "tools": {},
+      "calls": [],
+      "answer": "**IDF :** une mesure sur une copie de la base (31 nœuds, 21 relations, 18 questions) montre qu'il n'apporte rien.\n- Le hook actuel met le bon nœud en 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n- L'IDF seul tombe à 7 sur 18 en 1er et 13 sur 18 dans les 3 premiers, ce qui est pire.\n- L'IDF avec des poids par champ (titre 3, résumé 2, corps 1) donne 13 et 16, soit un résultat équivalent.\n- L'IDF n'est donc pas prioritaire sur une petite base.\n\n**Silence :** le seuil actuel de « 2 mots » est trop faible, mais un score IDF absolu ne le remplace pas.\n- Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne.\n- Les scores IDF des demandes pertinentes commencent dès 4,4, alors que ceux des demandes hors sujet montent jusqu'à 13,3. Les deux plages se chevauchent, donc aucun seuil ne les sépare.\n\nCes chiffres viennent du nœud « Idées tirées de graphify » (propositions non validées, non codées). Je n'ai pas relu le code du hook pour les vérifier.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.1647447,
+      "durationMs": 7209,
+      "inputTokens": 4,
+      "cacheWriteTokens": 38608,
+      "cacheReadTokens": 29547,
+      "outputTokens": 735,
+      "tools": {
+        "mcp__nodal__nodal_search": 2
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IDF rareté recherche contexte automatique silence",
+            "limit": 8
+          },
+          "resultChars": 17330
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "pondération IDF",
+            "limit": 5
+          },
+          "resultChars": 1500
+        }
+      ],
+      "answer": "Source : le nœud « Idées tirées de graphify » (mesures du 24/11/2026 sur une copie de la base : 31 nœuds, 18 questions). Ce sont des propositions, pas du code livré.\n\n**IDF**\n- Le hook actuel place le bon nœud en 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n- L'IDF seul fait 7/18 en 1er et 13/18 dans les 3 premiers, donc pire.\n- L'IDF avec poids titre 3, résumé 2 et corps 1 fait 13/18 et 16/18, soit équivalent.\n- L'IDF n'est donc pas prioritaire sur une petite base.\n- Il ne sépare pas non plus les hors-sujet : les scores positifs commencent à 4,4 et les hors-sujet montent jusqu'à 13,3.\n\n**Règle de silence stricte**\n- Le nœud « Lecture par paquets » dit qu'une règle de silence stricte faisait tomber le bon nœud de 17/18 à 13/18, donc elle a été écartée.\n- Ce qui a été fait à la place (non-répétition, contenu ou résumé, masquage des secrets) a gardé 17/18.\n- Cela a réduit les caractères par question de 6 294 à 2 924, et de 4 290 à 1 280 sur les demandes hors sujet.\n- Le point de départ posait problème : 5 demandes hors sujet sur 7 recevaient du contexte (4 181 caractères en moyenne), car le seuil « ≥ 2 mots-clés » est trop faible.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.1441973,
+      "durationMs": 7927,
+      "inputTokens": 4,
+      "cacheWriteTokens": 33247,
+      "cacheReadTokens": 31813,
+      "outputTokens": 802,
+      "tools": {
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "52f65ff3"
+          },
+          "resultChars": 2577
+        }
+      ],
+      "answer": "**IDF.** Ce n'est pas encore codé, et l'IDF n'a pas montré de gain sur la base de test (31 nœuds, 18 questions) :\n- Le hook actuel place le bon nœud 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n- L'IDF seul est moins bon : 7 cas sur 18 en 1er, 13 dans les 3 premiers.\n- L'IDF avec pondération titre 3, résumé 2, corps 1 est équivalent au hook actuel : 13 en 1er, 16 dans les 3 premiers.\n- La base est petite, donc l'IDF n'est pas prioritaire.\n\n**Silence.** Le contexte automatique n'a pas de règle de silence stricte parce que je n'ai pas trouvé de critère fiable pour séparer les demandes pertinentes des hors sujet :\n- Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne. Le seuil « 2 mots » est trop faible.\n- Un score absolu IDF ne sépare pas mieux : les demandes pertinentes commencent dès 4,4, et les hors sujet montent jusqu'à 13,3. Les deux plages se chevauchent.\n\n« Dire quand se taire » figure donc parmi les idées retenues (A) mais n'est pas implémentée. Ces chiffres viennent d'une analyse du 24/11/2026 dont les propositions ne sont pas validées. Je n'ai pas relu le code du hook.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.010918500000000001,
+      "durationMs": 5847,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 31845,
+      "outputTokens": 773,
+      "tools": {},
+      "calls": [],
+      "answer": "**IDF :** sur une petite base, il n'apporte rien (mesures sur une copie de la base Nodal : 31 nœuds, 21 relations, 18 questions).\n- Le hook actuel place le bon nœud en 1er 12 fois sur 18, et dans les 3 premiers 17 fois sur 18.\n- L'IDF seul fait pire : 7 en 1er et 13 dans les 3 premiers.\n- L'IDF avec pondération titre 3, résumé 2 et corps 1 est équivalent au hook actuel : 13 en 1er et 16 dans les 3 premiers.\n- Conclusion du nœud « Idées tirées de graphify » : l'IDF n'est pas prioritaire.\n\n**Silence strict :** aucun seuil ne sépare proprement les demandes pertinentes des autres.\n- Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne. Le seuil actuel de « 2 mots » est trop faible.\n- Un score absolu IDF ne sépare pas mieux : les demandes pertinentes commencent dès 4,4 et les hors sujet montent jusqu'à 13,3. Les deux plages se recouvrent.\n\nCes chiffres viennent du document Nodal « Analyse approfondie et mesures ». Je n'ai pas relu le code. Le nœud précise aussi que ce sont des propositions non validées ni codées. Le document ne dit pas explicitement pourquoi la règle de silence est absente, donc cette explication est ma lecture des mesures.",
+      "run": 2
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.045651399999999995,
+      "durationMs": 7161,
+      "inputTokens": 4,
+      "cacheWriteTokens": 8126,
+      "cacheReadTokens": 59094,
+      "outputTokens": 723,
+      "tools": {
+        "mcp__nodal__nodal_search": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "IDF rareté recherche contexte automatique silence",
+            "limit": 8
+          },
+          "resultChars": 17330
+        }
+      ],
+      "answer": "Source : le nœud Nodal « Idées tirées de graphify » (mesures du 24/11/2026 sur une copie de la base : 31 nœuds, 21 relations, 18 questions).\n\n- **IDF écarté** : le hook actuel place le bon nœud en 1er 12/18 fois et dans les 3 premiers 17/18 fois. L'IDF seul tombe à 7 en 1er et 13 dans les 3 premiers, donc c'est pire.\n- **IDF avec pondération** (titre 3, résumé 2, corps 1) : 13 en 1er et 16 dans les 3 premiers. C'est équivalent au hook actuel, sans gain. Sur une petite base, l'IDF n'est donc pas prioritaire.\n- **Un score absolu IDF ne sépare pas non plus le bruit** : les cas pertinents commencent à 4,4, et les hors-sujet montent jusqu'à 13,3.\n- **Règle de silence stricte écartée** (lot 1, 18 questions dont 11 hors sujet) : le bon nœud tombait de 17/18 à 13/18.\n- **Ce qui a été fait à la place** : contenu ou résumé selon le cas, non-répétition et masquage des secrets. Le bon nœud reste à 17/18. Le rang avec son contenu passe de 12 à 8. Le volume passe de 6 294 à 2 924 caractères par question, et de 4 290 à 1 280 pour les questions hors sujet.\n- **Silence imparfait** : avant ces correctifs, 5 demandes hors sujet sur 7 recevaient quand même du contexte (4 181 caractères en moyenne). Le seuil « ≥ 2 mots-clés » reste faible.\n\nJe me suis appuyé sur les extraits Nodal et je n'ai pas relu le code.",
+      "run": 2
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0236146,
+      "durationMs": 7202,
+      "inputTokens": 4,
+      "cacheWriteTokens": 2186,
+      "cacheReadTokens": 63626,
+      "outputTokens": 850,
+      "tools": {
+        "mcp__nodal__nodal_search": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "contexte automatique silence seuil hook",
+            "limit": 5,
+            "maxChars": 5000
+          },
+          "resultChars": 4244
+        }
+      ],
+      "answer": "**IDF (mesuré le 24/11/2026 sur une copie de la base : 31 nœuds, 21 relations, 18 questions) :**\n- Le hook actuel place le bon nœud en 1er sur 12/18 questions, et dans les 3 premiers sur 17/18.\n- L'IDF seul tombe à 7/18 en 1er et 13/18 dans les 3 premiers, donc c'est pire.\n- IDF avec poids titre 3, résumé 2 et corps 1 donne 13/18 et 16/18, soit équivalent.\n- Sur une petite base, l'IDF n'est donc pas prioritaire.\n- Un score IDF absolu ne sépare pas non plus les demandes hors sujet : les positifs commencent à 4,4 et les hors sujet montent jusqu'à 13,3.\n\n**Règle de silence stricte :**\n- Avant la modification, 7 demandes hors sujet sur 18 recevaient quand même du contexte : 5 sur 7, avec 4 181 caractères en moyenne. Le seuil « 2 mots » est trop faible.\n- Un autre test sur ces 18 questions, dont 11 hors sujet, a donné ceci. Le bon nœud reste à 17/18 avant et après la modification. Le contexte passe de 6 294 à 2 924 caractères par question, et à 1 280 au lieu de 4 290 pour les hors sujet.\n- Une règle de silence stricte faisait tomber le bon nœud à 13/18 : elle a été écartée.\n\nCes propositions sont non validées et non codées. Le seuil « 2 mots » reste donc en place.\n\nSource : le nœud Nodal « Idées tirées de graphify » (documents 52f65ff3 et 71dc34a1).",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0763505,
+      "durationMs": 4949,
+      "inputTokens": 2,
+      "cacheWriteTokens": 17277,
+      "cacheReadTokens": 15485,
+      "outputTokens": 569,
+      "tools": {},
+      "calls": [],
+      "answer": "Réponse fondée sur Nodal (extraits et nœuds « affected »). Je n'ai pas lu le code source.\n\n**Directement touchées**\n1. **Persistance SQLite** (`src/main/database`): il faut une migration versionnée par `PRAGMA user_version`. Pour modifier un CHECK, il faut reconstruire la table, avec ses index et ses triggers.\n2. **Services métier**: les requêtes et les écritures sur les tables concernées.\n3. **Recherche plein texte**: ses index et triggers (migration 003) sont liés aux tables `node` et `document`.\n\n**Indirectement touchées**\n4. **Serveur MCP** (`src/mcp`): les outils de lecture et d'écriture, `nodal_apply` et les tests. Un serveur de schéma N refuse une base N+1 en écriture. Il faut donc rebuilder et recopier le bundle après la migration par l'application.\n5. **Modèle documentaire** et **État de la vue** (positions 3D du graphe): ils dépendent des tables modifiées.\n6. **Relecture des ajouts de l'IA**: le journal `assistant_change`, annulable, est lié au schéma.\n7. **Tests et docs**: tests de migration, tests MCP, mesure de tokens (`docs/benchmark-tokens-mcp.md`).",
+      "run": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0766425,
+      "durationMs": 4851,
+      "inputTokens": 2,
+      "cacheWriteTokens": 17245,
+      "cacheReadTokens": 15485,
+      "outputTokens": 611,
+      "tools": {},
+      "calls": [],
+      "answer": "Voici ce que Nodal indique (je n'ai pas relu les sources) :\n\n**Directement**\n1. **Migrations** (`src/main/database/migrations/`): il faut une nouvelle migration versionnée par `PRAGMA user_version`. Pour modifier un CHECK, il faut reconstruire la table, avec ses index et ses triggers.\n2. **Persistance SQLite** (`src/main/database`): schéma, requêtes et pièces jointes en BLOB.\n3. **Recherche plein texte**: index et triggers de recherche (migration 003), à recréer si `node` ou `document` change.\n\n**Indirectement**\n4. **Services métier et Modèle documentaire**: nœuds, documents, relations et tags lisent et écrivent ces tables.\n5. **Serveur MCP** (`src/mcp`): `tools.ts`, `write-tools.ts` et `apply-tool.ts` utilisent le schéma. Un serveur N+1 refuse une base N, donc il faut recopier le bundle `nodal-mcp.cjs` de dev une fois la base migrée.\n6. **Relecture des ajouts de l'IA**: la table `assistant_change` (journal annulable) en dépend.\n7. **État de la vue (view-state)**: les positions 3D enregistrées et les réglages d'espace dépendent aussi du schéma.\n8. **Tests et docs**: `tests/mcp/server.test.ts` et les mesures de tokens MCP sont à mettre à jour.",
+      "run": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.09641809999999999,
+      "durationMs": 8466,
+      "inputTokens": 8,
+      "cacheWriteTokens": 19884,
+      "cacheReadTokens": 75761,
+      "outputTokens": 929,
+      "tools": {
+        "mcp__nodal__nodal_search": 2,
+        "ToolSearch": 1,
+        "mcp__nodal__nodal_impact": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "schéma SQLite base de données migration",
+            "limit": 8
+          },
+          "resultChars": 1280
+        },
+        {
+          "name": "ToolSearch",
+          "input": {
+            "query": "select:mcp__nodal__nodal_impact",
+            "max_results": 1
+          },
+          "resultChars": 0
+        },
+        {
+          "name": "mcp__nodal__nodal_impact",
+          "input": {
+            "paths": ["src/main/database/migrations.ts"],
+            "depth": 3
+          },
+          "resultChars": 1266
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "Schéma et migrations",
+            "limit": 4,
+            "maxChars": 5000
+          },
+          "resultChars": 7964
+        }
+      ],
+      "answer": "Changer le schéma SQLite touche ces parties (d'après Nodal) :\n\n**Directement**\n1. **Migrations** : `src/main/database/migrations.ts` et `migrations/0NN-*.ts`. Il faut une nouvelle migration. Un CHECK modifié oblige à reconstruire la table (voir la migration 011). Les triggers et index sont à recréer.\n2. **Persistance SQLite** : `PRAGMA user_version` et le schéma lui-même.\n3. **Modèle du domaine** : `src/shared/domain.ts` doit refléter les CHECK.\n4. **Export/import natifs** : `export-service.ts` et `import-service.ts`.\n5. **Tests** : `tests/main/database/migrations.test.ts`.\n\n**Indirectement**\n6. **Services métier**, qui lisent et écrivent la base. De là, le **Contrat IPC** et le **Renderer React** sont concernés.\n7. **Recherche plein texte** : l'index FTS5 et ses triggers dépendent de `node` et `document`.\n8. **Serveur MCP** : un serveur de schéma N+1 refuse une base N. Les outils de santé de la base en dépendent aussi.\n9. **État de la vue** (view-state), puis Graphe 3D, Arborescence et Palette de commandes.\n10. **Relecture des ajouts de l'IA** : la table `assistant_change` en dépend.\n\nJe me suis appuyé sur Nodal et n'ai pas ouvert les fichiers sources. Plusieurs nœuds sont marqués « stale », donc des détails ont pu changer.",
+      "run": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.009137000000000001,
+      "durationMs": 4838,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 32730,
+      "outputTokens": 586,
+      "tools": {},
+      "calls": [],
+      "answer": "Ce qui suit vient de Nodal (nœuds Persistance SQLite, Recettes et Serveur MCP, et la liste « affected »). Je n'ai pas relu le code source.\n\n**Direct**\n1. **Migrations** (`src/main/database/migrations`): il faut une nouvelle migration versionnée par `PRAGMA user_version`. Pour modifier un CHECK, il faut reconstruire la table, et recréer ses index et triggers.\n2. **Couche base** (`src/main/database`, `node:sqlite`): requêtes et types des lignes.\n3. **Services métier**: ils lisent et écrivent ces tables.\n\n**Indirect**\n4. **Recherche plein texte**: index et triggers liés à `node` et `document` (migration 003).\n5. **Modèle documentaire** et **état de la vue** (view-state): ils dépendent de la forme des données stockées.\n6. **Relecture des ajouts de l'IA**: la table `assistant_change` et le journal annulable.\n7. **Serveur MCP** (`src/mcp`): un serveur de schéma N refuse une base N+1 en écriture. Il faut donc reconstruire et recopier `nodal-mcp.cjs` après la migration de la base par l'application.\n8. **Tests, docs et mesure de tokens MCP**: `tests/mcp/server.test.ts` et le benchmark tokens à refaire si les réponses changent.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.010000199999999999,
+      "durationMs": 5832,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 32762,
+      "outputTokens": 672,
+      "tools": {},
+      "calls": [],
+      "answer": "Voici ce que la base Nodal indique. Je n'ai pas relu le code source.\n\n**Directement touchées**\n1. **Migrations** (`src/main/database/migrations/`, versionnées par `PRAGMA user_version`). Il faut une nouvelle migration. Pour modifier un CHECK, il faut reconstruire la table (voir la migration 011), puis recréer ses index et triggers.\n2. **Persistance SQLite** (`src/main/database`). Elle regroupe le schéma, les requêtes et les pièces jointes en BLOB.\n3. **Serveur MCP** (`src/mcp/tools.ts`, `write-tools.ts`, `apply-tool.ts`). Un serveur de schéma N refuse une base N+1 en écriture, et un serveur N+1 refuse une base N. Il faut donc rebuilder le bundle `nodal-mcp.cjs` après la migration.\n\n**Indirectement touchées** (selon Nodal)\n4. **Services métier**, qui lisent et écrivent ces tables.\n5. **Recherche plein texte**, dont les index et triggers de la migration 003 sont à recréer.\n6. **Modèle documentaire**, c'est-à-dire les documents typés.\n7. **État de la vue** (view-state), par exemple les positions 3D enregistrées du graphe.\n8. **Relecture des ajouts de l'IA**, qui s'appuie sur le journal `assistant_change` et son annulation.\n\nLes tests (`tests/mcp/server.test.ts` et ceux de la base) et la doc sont aussi à mettre à jour.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.0437032,
+      "durationMs": 8283,
+      "inputTokens": 8,
+      "cacheWriteTokens": 6377,
+      "cacheReadTokens": 89792,
+      "outputTokens": 920,
+      "tools": {
+        "mcp__nodal__nodal_search": 2,
+        "ToolSearch": 1,
+        "mcp__nodal__nodal_impact": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "schéma SQLite base de données",
+            "limit": 8
+          },
+          "resultChars": 1270
+        },
+        {
+          "name": "ToolSearch",
+          "input": {
+            "query": "select:mcp__nodal__nodal_impact",
+            "max_results": 1
+          },
+          "resultChars": 0
+        },
+        {
+          "name": "mcp__nodal__nodal_impact",
+          "input": {
+            "paths": ["src/main/database/migrations.ts"],
+            "depth": 3
+          },
+          "resultChars": 1266
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "Schéma et migrations",
+            "limit": 5
+          },
+          "resultChars": 9158
+        }
+      ],
+      "answer": "Changer le schéma SQLite touche ces parties de Nodal, d'après la base de connaissances (je n'ai lu aucun fichier source).\n\n**Directement**\n1. **Persistance SQLite** : `src/main/database/migrations.ts` et `migrations/0NN-*.ts`. `PRAGMA user_version` suit la version. Pour modifier un CHECK, il faut reconstruire la table (exemple : la migration 011).\n2. **Modèle du domaine** : `src/shared/domain.ts` doit refléter les CHECK, et les schémas zod sont concernés avec lui.\n3. **Export, import et sauvegarde** : `export-service.ts` et `import-service.ts`.\n4. **Tests** : `tests/main/database/migrations.test.ts`.\n\n**Indirectement**\n5. **Services métier**, qui lisent et écrivent ces tables, puis **Contrat IPC** et **Renderer React**, qui s'appuient sur eux.\n6. **Recherche plein texte** : l'index FTS5 et ses triggers (migration 003). Une reconstruction de `node` ou `document` oblige à les recréer.\n7. **Serveur MCP** : un serveur de schéma N+1 refuse une base N, et un serveur N lit une base N+1 en lecture seule. Il faut aussi recopier le bundle MCP après la migration. Le journal `assistant_change` en dépend, ainsi que la relecture des ajouts de l'IA.\n8. **État de la vue (view-state)**, donc le graphe 3D, l'arborescence et la palette de commandes. Cela couvre notamment les tables `graph_view` et `node.position_z`.",
+      "run": 2
+    }
+  ]
+}

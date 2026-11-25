@@ -318,7 +318,7 @@ export function createNodalMcpServer(
         'à utiliser en premier. Renvoie les nœuds trouvés (chemin, résumé) puis, du plus pertinent au ' +
         'moins pertinent, chaque document trouvé : entier s’il est court, sinon ses sections qui ' +
         'contiennent les mots (avec leur offset), dans la limite de maxChars ; ' +
-        'les autres documents trouvés sont cités par un extrait (otherMatches). Un nœud est retenu ' +
+        'les autres documents trouvés sont cités par un extrait (otherMatches). affected : nœuds qui dépendent du premier. Un nœud est retenu ' +
         's’il contient tous les mots, sinon (allTerms: false) au moins l’un d’eux. ' +
         'Question à plusieurs volets : plusieurs recherches en parallèle.',
       inputSchema: z.object({
@@ -646,9 +646,6 @@ export function createNodalMcpServer(
         relations: z.array(z.string().min(1).max(100)).max(50).optional(),
       }),
       annotations: READ_ONLY,
-      // Chargé d'emblée : sinon l'assistant s'en passe et répond moins bien
-      // (banc du 2026-11-25).
-      _meta: { 'anthropic/alwaysLoad': true },
     },
     run((ctx, args: Parameters<typeof impact>[1]) =>
       impact(ctx, args, codeRootsOf(ctx)),

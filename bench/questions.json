@@ -53,10 +53,10 @@
     "prompt": "Pourquoi la recherche de Nodal ne pondère-t-elle pas les mots par leur rareté (IDF), et pourquoi le contexte automatique n'a-t-il pas de règle de silence stricte ? Donne les chiffres s'il y en a. Réponds en 8 lignes au plus.",
     "expect": [
       "moins bon|pire|n'améliore pas|pas mieux|équivalent",
-      "12\\s*/\\s*18|12 sur 18|7\\s*/\\s*18|\\b7 et 13",
+      "12\\s*/\\s*18|12 (?:cas )?sur 18|7\\s*/\\s*18|\\b7 et 13",
       "petite base|31 nœuds",
-      "13\\s*/\\s*18|13 sur 18",
-      "17\\s*/\\s*18|17 sur 18"
+      "13\\s*/\\s*18|13 (?:cas )?sur 18",
+      "17\\s*/\\s*18|17 (?:cas )?sur 18"
     ]
   },
   {
