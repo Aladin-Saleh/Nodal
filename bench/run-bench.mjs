@@ -65,6 +65,14 @@ const VARIANTS = {
   nodal: { server: defaultServer, hook: false, skill: false },
   'nodal-hook': { server: defaultServer, hook: true, skill: false },
   'nodal-skill': { server: defaultServer, hook: true, skill: true },
+  // « Code mode » : pas de serveur MCP, les mêmes outils en commandes.
+  'nodal-cli': { server: defaultServer, hook: false, skill: false, cli: true },
+  'nodal-cli-hook': {
+    server: defaultServer,
+    hook: true,
+    skill: false,
+    cli: true,
+  },
 };
 for (const pair of (process.env.NODAL_BENCH_SERVERS ?? '').split(';')) {
   const at = pair.indexOf('=');
@@ -115,10 +123,27 @@ function prepare(name) {
       "UPDATE workspace_settings SET value = ? WHERE key = 'code.roots'",
     ).run(JSON.stringify([project]));
     db.close();
-    mcpServers.nodal = {
-      command: 'node',
-      args: [variant.server, copy, '--read-only'],
-    };
+    if (variant.cli) {
+      const command = `node ${[variant.server, copy].map((part) => JSON.stringify(part.replaceAll('\\', '/'))).join(' ')} --read-only`;
+      fs.writeFileSync(
+        path.join(project, 'CLAUDE.md'),
+        `## Base de connaissances Nodal
+
+Avant de répondre ou de parcourir des fichiers, consultez Nodal par l'outil Bash. Commande (notée NODAL) :
+
+${command}
+
+NODAL search <2 à 4 mots> | files <chemins> | node <id> | doc <id> [offset] | impact <id ou chemins> | path <id> <id> | lessons <mots>. Plusieurs à la fois, séparées par --, ex. : NODAL search capture rapide -- search canaux ipc
+
+Ce que fait exactement un fichier nommé, et rien d'autre : lisez-le directement. Nodal décrit, le code fait foi.
+`,
+      );
+    } else {
+      mcpServers.nodal = {
+        command: 'node',
+        args: [variant.server, copy, '--read-only'],
+      };
+    }
     if (variant.hook) {
       const command = `node "${variant.server}" "${copy}" --context`;
       const hooks = [{ type: 'command', command, timeout: 10 }];
@@ -156,6 +181,7 @@ const ALLOWED = [
   'Bash(ls:*)',
   'Bash(cat:*)',
   'Bash(grep:*)',
+  'Bash(node:*)',
   'mcp__nodal',
 ];
 

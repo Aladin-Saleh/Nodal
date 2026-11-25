@@ -505,6 +505,10 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   projet…** écrit `.claude/skills/nodal/SKILL.md`, le mode d’emploi de Nodal,
   lu par l’assistant seulement quand il sert (ou par `/nodal`). Un fichier que
   Nodal n’a pas écrit n’est pas remplacé.
+- **En ligne de commande** : le serveur exécute aussi une commande et
+  s’arrête, pour un script ou un assistant sans MCP :
+  `node nodal-mcp.cjs espace.nodal search capture rapide -- files src/a.ts`
+  (`--help` : liste ; `--read-only` : sans écriture).
 - **Commandes** : le serveur en propose cinq (« / » puis `nodal` dans Claude
   Code) : `explique`, `avant-modif`, `documenter`, `a-revoir` (fiches
   dépassées) et `lecon`.
