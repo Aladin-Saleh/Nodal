@@ -3,10 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ServicesProvider } from '../../src/renderer/app/context';
 import { McpDialog } from '../../src/renderer/features/workspace/McpDialog';
-import {
-  MCP_CLIENTS,
-  mcpSetup,
-} from '../../src/renderer/features/workspace/mcp-clients';
+import { MCP_CLIENTS, mcpSetup } from '../../src/shared/mcp-clients';
 import type { NodalClient } from '../../src/renderer/services/nodal-client';
 import { SaveTracker } from '../../src/renderer/services/save-tracker';
 
@@ -60,7 +57,11 @@ describe('mcpSetup', () => {
 
 describe('McpDialog', () => {
   it('affiche la commande de l’assistant choisi', async () => {
-    const call = vi.fn(async () => ({ mcpServerPath: files[0] }));
+    const call = vi.fn(async (channel: string) =>
+      channel === 'assistant:connect'
+        ? { files: ['C:/projet/.mcp.json'], note: null }
+        : { mcpServerPath: files[0], nodePath: 'node' },
+    );
     render(
       <ServicesProvider
         client={{ call } as unknown as NodalClient}
@@ -76,13 +77,23 @@ describe('McpDialog', () => {
       </ServicesProvider>,
     );
     expect(await screen.findByText(/^claude mcp add nodal/)).toBeTruthy();
-    expect(screen.getByText('CLAUDE.md')).toBeTruthy();
+    expect(screen.getByText(/facultatives : CLAUDE\.md/)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole('button', { name: /Connecter Claude Code/ }),
+    );
+    expect(
+      await screen.findByText(/\/nodal-init pour documenter le projet/),
+    ).toBeTruthy();
+    expect(call).toHaveBeenCalledWith('assistant:connect', {
+      client: 'claude-code',
+      allowWrites: true,
+    });
 
     fireEvent.change(screen.getByLabelText('Assistant'), {
       target: { value: 'gemini-cli' },
     });
     expect(screen.getByText(/^gemini mcp add nodal node/)).toBeTruthy();
-    expect(screen.getByText('GEMINI.md')).toBeTruthy();
+    expect(screen.getByText(/facultatives : GEMINI\.md/)).toBeTruthy();
     expect(screen.queryByText(/^claude mcp add/)).toBeNull();
   });
 });

@@ -17,10 +17,9 @@ import type {
   CaptureTarget,
 } from '../../shared/quick-capture';
 import type { FileDialogs } from '../file-dialogs';
-import { installContextHook } from '../context-hook-install';
-import { installSkills } from '../skill-install';
+import { connectAssistant } from '../assistant-connect';
 import type { TerminalService } from '../terminal/terminal-service';
-import { contextHookCommand } from '../../shared/context-hook';
+import { isProjectClient } from '../../shared/mcp-clients';
 import { CodeAnchorService } from '../code/code-anchor-service';
 import { AssistantChangeService } from '../knowledge/assistant-change-service';
 import { AttachmentService } from '../knowledge/attachment-service';
@@ -90,6 +89,8 @@ export interface IpcDependencies {
   /** Place un fichier dans la corbeille du système. */
   trash(filePath: string): Promise<void>;
   getAppInfo(): AppInfo;
+  /** Dossiers des configurations d'assistants. */
+  userFolders: { home: string; appData: string };
   setUnsavedChanges(unsaved: boolean): void;
   getPreferences(): AppPreferences;
   /** Enregistre et applique (thème, zoom) ; retourne les préférences à jour. */
@@ -277,23 +278,28 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       deps.terminals.close(id);
       return null;
     },
-    'assistant:installSkills': async () => {
-      const [root] = codeAnchors.getRoots().filter((item) => item.exists);
-      const directory = await dialogs.pickProjectFolder(root?.path ?? null);
-      return directory ? { directory: installSkills(directory) } : null;
-    },
-    'assistant:installContextHook': async ({ client }) => {
+    'assistant:connect': async ({ client, allowWrites }) => {
       const { filePath } = requireCurrent();
-      const [root] = codeAnchors.getRoots().filter((item) => item.exists);
-      const directory = await dialogs.pickProjectFolder(root?.path ?? null);
-      if (!directory) return null;
-      const command = contextHookCommand(
-        deps.getAppInfo().mcpServerPath,
-        filePath,
-      );
-      return {
-        settingsFile: installContextHook(directory, client, command),
-      };
+      let projectDir: string | null = null;
+      if (isProjectClient(client)) {
+        const [root] = codeAnchors.getRoots().filter((item) => item.exists);
+        projectDir = await dialogs.pickProjectFolder(root?.path ?? null);
+        if (!projectDir) return null;
+        // L'espace a pu être fermé ou changé pendant le choix du dossier.
+        if (requireCurrent().filePath !== filePath) return null;
+      }
+      const { mcpServerPath, nodePath } = deps.getAppInfo();
+      const result = connectAssistant({
+        client,
+        projectDir,
+        ...deps.userFolders,
+        nodePath,
+        serverPath: mcpServerPath,
+        workspaceFile: filePath,
+        allowWrites,
+      });
+      if (projectDir) codeAnchors.addRoot(projectDir);
+      return result;
     },
     'anchor:listForNode': ({ id }) => codeAnchors.listForNode(id),
     'anchor:set': ({ nodeId, patterns }) =>

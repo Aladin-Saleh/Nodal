@@ -56,6 +56,7 @@ function fakeClient(overrides: Handlers = {}) {
       nodeVersion: '24',
       sqliteVersion: '3.53.0',
       mcpServerPath: 'C:/Nodal/resources/nodal-mcp.cjs',
+      nodePath: 'node',
     }),
     'app:setUnsavedChanges': () => null,
     'preferences:get': () => DEFAULT_PREFERENCES,

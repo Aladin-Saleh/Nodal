@@ -4,6 +4,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { stageNode } from './scripts/stage-node.mjs';
 import { stageNodePty } from './scripts/stage-node-pty.mjs';
 
 const config: ForgeConfig = {
@@ -14,9 +15,13 @@ const config: ForgeConfig = {
     icon: 'assets/icon',
     asar: true,
     appCopyright: "© 2026 Aladin SALEH — Aladinvention's Software",
-    // Serveur MCP exécuté par Node.js, et node-pty (terminal : binaires
+    // Serveur MCP, Node.js qui l'exécute, et node-pty (terminal : binaires
     // natifs, worker) : hors de l'archive asar.
-    extraResource: ['.vite/build/nodal-mcp.cjs', '.native/node-pty'],
+    extraResource: [
+      '.vite/build/nodal-mcp.cjs',
+      '.native/node',
+      '.native/node-pty',
+    ],
     win32metadata: {
       CompanyName: "Aladinvention's Software",
       ProductName: 'Nodal',
@@ -27,9 +32,10 @@ const config: ForgeConfig = {
   // recompilation (qui demanderait les outils de build C++).
   rebuildConfig: { onlyModules: [] },
   hooks: {
-    // Copie allégée de node-pty pour la plateforme visée (extraResource).
+    // Node et copie allégée de node-pty pour la plateforme visée.
     prePackage: async (_config, platform, arch) => {
       stageNodePty(platform, arch);
+      stageNode(platform, arch);
     },
   },
   makers: [

@@ -35,12 +35,25 @@ const HOOK_NAME = 'nodal-context';
 /** Argument entre guillemets doubles (PowerShell, cmd et shells POSIX). */
 const quote = (value: string) => `"${value.replaceAll('"', '\\"')}"`;
 
-/** Commande du hook : le serveur de Nodal en mode contexte. */
+/**
+ * Commande du hook : le serveur de Nodal en mode contexte. Chemin de Node en
+ * barres obliques et sans guillemets quand c'est possible : PowerShell
+ * prendrait un premier mot entre guillemets pour un texte (d'où `&` pour
+ * Gemini CLI, qui l'utilise sous Windows) et bash, des barres inverses nues
+ * pour des échappements.
+ */
 export function contextHookCommand(
   serverPath: string,
   workspaceFile: string,
+  nodePath = 'node',
+  client: ContextHookClient = 'claude-code',
 ): string {
-  return `node ${quote(serverPath)} ${quote(workspaceFile)} --context`;
+  const windows = /^[a-z]:[\\/]/i.test(nodePath);
+  const plain = windows ? nodePath.replaceAll('\\', '/') : nodePath;
+  const node = /^[\w:/.~-]+$/.test(plain)
+    ? plain
+    : `${windows && client === 'gemini-cli' ? '& ' : ''}${quote(plain)}`;
+  return `${node} ${quote(serverPath)} ${quote(workspaceFile)} --context`;
 }
 
 /** Commande installée par Nodal (à remplacer plutôt qu'à dupliquer). */

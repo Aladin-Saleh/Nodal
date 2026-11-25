@@ -1,8 +1,7 @@
 ---
 name: nodal-init
-description: Créer (ou reprendre) la base de connaissances Nodal d'un projet à partir de son code - inventaire, architecture, modules, contrats JSON, schémas Mermaid, CSV, procédures, décisions. Long et coûteux, lancé par l'utilisateur.
+description: Créer (ou reprendre) la base de connaissances Nodal d'un projet à partir de son code - inventaire, architecture, modules, contrats JSON, schémas Mermaid, CSV, procédures, décisions. À utiliser seulement quand l'utilisateur demande de documenter tout son projet ou son code dans Nodal (long).
 argument-hint: '[rapide | complet] [dossier]'
-disable-model-invocation: true
 ---
 
 <!-- Installé par Nodal : remplacé à chaque installation. -->

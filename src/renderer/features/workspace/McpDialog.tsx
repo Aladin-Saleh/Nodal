@@ -2,20 +2,20 @@ import { useEffect, useId, useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { useClient, useRunner } from '../../app/context';
 import {
-  CONTEXT_HOOK_EVENT,
-  CONTEXT_HOOK_SETTINGS_FILE,
   contextHookCommand,
   contextHookSnippet,
   isContextHookClient,
   type ContextHookClient,
 } from '../../../shared/context-hook';
 import {
+  AFTER_CONNECT,
+  isProjectClient,
   MCP_CLIENTS,
   MCP_CLIENT_LABELS,
   SERVER_NAME,
   mcpSetup,
   type McpClient,
-} from './mcp-clients';
+} from '../../../shared/mcp-clients';
 
 /**
  * Consignes à placer dans CLAUDE.md / AGENTS.md pour que l'assistant consulte
@@ -54,98 +54,57 @@ const USER_SETTINGS_FILE: Record<ContextHookClient, string> = {
   'gemini-cli': '~/.gemini/settings.json',
 };
 
-/**
- * Contexte automatique : un hook de l'assistant ajoute à chaque demande les
- * nœuds et documents pertinents, sans qu'il faille lui dire de consulter Nodal.
- */
-function ContextHookSection({
+/** Connexion en un clic : configuration, skills et contexte automatique. */
+function ConnectSection({
   assistant,
-  serverPath,
-  workspaceFile,
+  allowWrites,
 }: {
-  assistant: ContextHookClient;
-  serverPath: string;
-  workspaceFile: string;
+  assistant: McpClient;
+  allowWrites: boolean;
 }) {
   const client = useClient();
   const run = useRunner();
-  const [installed, setInstalled] = useState<string | null>(null);
-  const install = async () => {
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<{
+    files: string[];
+    note: string | null;
+  } | null>(null);
+  const connect = async () => {
+    setBusy(true);
     const result = await run(() =>
-      client.call('assistant:installContextHook', { client: assistant }),
+      client.call('assistant:connect', { client: assistant, allowWrites }),
     );
-    if (result) setInstalled(result.settingsFile);
+    setBusy(false);
+    if (result) setDone(result);
   };
   return (
     <>
-      <h3>Contexte automatique (recommandé)</h3>
-      <p className="muted">
-        À chaque demande, avant de répondre, l’assistant reçoit les nœuds et
-        documents de cet espace qui correspondent aux mots de la demande
-        (environ 1 000 tokens au plus, rien si aucun ne correspond) : plus
-        besoin de lui dire de consulter Nodal.
-        {assistant === 'claude-code' &&
-          ' Avant de lire ou de modifier un fichier du code, il reçoit aussi, une fois, le résumé des nœuds ancrés à ce fichier.'}{' '}
-        Hook « {CONTEXT_HOOK_EVENT[assistant]} »
-        {assistant === 'claude-code' && ' (et PreToolUse, SessionStart)'},
-        ajouté à {CONTEXT_HOOK_SETTINGS_FILE[assistant]} dans le dossier du
-        projet choisi.
-      </p>
       <div className="mcp-hook-actions">
-        <button type="button" onClick={() => void install()}>
-          Installer dans un projet…
+        <button type="button" disabled={busy} onClick={() => void connect()}>
+          {isProjectClient(assistant)
+            ? `Connecter ${MCP_CLIENT_LABELS[assistant]} à un projet…`
+            : `Connecter ${MCP_CLIENT_LABELS[assistant]}`}
         </button>
-        {installed && (
-          <span className="muted" role="status">
-            Ajouté à {installed}. Relancez l’assistant dans ce dossier.
-          </span>
-        )}
       </div>
-      <details className="mcp-manual">
-        <summary>
-          Pour tous vos projets ({USER_SETTINGS_FILE[assistant]})
-        </summary>
-        <CopyBlock
-          label={`${USER_SETTINGS_FILE[assistant]} — à fusionner avec les réglages présents`}
-          text={contextHookSnippet(
-            assistant,
-            contextHookCommand(serverPath, workspaceFile),
-          )}
-        />
-      </details>
-    </>
-  );
-}
-
-/** Skills : modes d'emploi de Nodal, lus par l'assistant seulement quand ils servent. */
-function SkillsSection() {
-  const client = useClient();
-  const run = useRunner();
-  const [directory, setDirectory] = useState<string | null>(null);
-  const install = async () => {
-    const result = await run(() => client.call('assistant:installSkills'));
-    if (result) setDirectory(result.directory);
-  };
-  return (
-    <>
-      <h3>Skills</h3>
-      <p className="muted">
-        Modes d’emploi pour l’assistant (.claude/skills). /nodal : consulter la
-        base, quoi vérifier et enregistrer. /nodal-init : créer la base d’un
-        projet à partir de son code. /nodal-module, /nodal-contrats (JSON, CSV),
-        /nodal-schemas (Mermaid) : en documenter une partie. /nodal-maj : suivre
-        les changements du code.
-      </p>
-      <div className="mcp-hook-actions">
-        <button type="button" onClick={() => void install()}>
-          Installer les skills dans un projet…
-        </button>
-        {directory && (
-          <span className="muted" role="status">
-            Écrits dans {directory}.
-          </span>
-        )}
-      </div>
+      {isProjectClient(assistant) && (
+        <p className="muted">
+          Choisissez le dossier du projet : Nodal y ajoute sa connexion, ses
+          skills (/nodal-init pour documenter le code, /nodal-maj pour suivre
+          ses changements…)
+          {isContextHookClient(assistant) &&
+            ' et le contexte automatique : à chaque demande, l’assistant reçoit ce que l’espace en sait'}
+          . Vos autres réglages sont conservés.
+        </p>
+      )}
+      {done && (
+        <div role="status">
+          <p>
+            <strong>Connecté.</strong> {AFTER_CONNECT[assistant]}
+          </p>
+          {done.note && <p>{done.note}</p>}
+          <p className="muted">Écrit : {done.files.join(' ; ')}</p>
+        </div>
+      )}
     </>
   );
 }
@@ -190,7 +149,10 @@ export function McpDialog({
   onClose(): void;
 }) {
   const client = useClient();
-  const [serverPath, setServerPath] = useState<string | null>(null);
+  const [paths, setPaths] = useState<{
+    server: string;
+    node: string;
+  } | null>(null);
   const [allowWrites, setAllowWrites] = useState(true);
   const [assistant, setAssistant] = useState<McpClient>('claude-code');
   const writesId = useId();
@@ -199,16 +161,22 @@ export function McpDialog({
   useEffect(() => {
     let active = true;
     void client.call('app:getInfo').then(
-      (info) => active && setServerPath(info.mcpServerPath),
-      () => active && setServerPath(null),
+      (info) =>
+        active && setPaths({ server: info.mcpServerPath, node: info.nodePath }),
+      () => active && setPaths(null),
     );
     return () => {
       active = false;
     };
   }, [client]);
 
-  const setup = serverPath
-    ? mcpSetup(assistant, [serverPath, workspaceFile], !allowWrites)
+  const setup = paths
+    ? mcpSetup(
+        assistant,
+        [paths.server, workspaceFile],
+        !allowWrites,
+        paths.node,
+      )
     : null;
 
   return (
@@ -225,8 +193,7 @@ export function McpDialog({
         Un assistant compatible MCP peut consulter cet espace : recherche,
         lecture des nœuds et documents, exploration du graphe, avec des réponses
         au format TOON, économes en tokens. Nodal peut rester ouvert :
-        l’affichage se met à jour quand l’assistant écrit. Node.js 22.13 ou plus
-        récent doit être installé.
+        l’affichage se met à jour quand l’assistant écrit.
       </p>
       <label htmlFor={assistantId}>Assistant</label>
       <select
@@ -255,43 +222,44 @@ export function McpDialog({
           ? 'Rien n’est jamais supprimé ; chaque modification est listée dans « Activité IA » et peut y être annulée.'
           : 'L’assistant pourra seulement lire l’espace.'}
       </p>
-      {setup ? (
-        <>
+      <ConnectSection
+        key={assistant}
+        assistant={assistant}
+        allowWrites={allowWrites}
+      />
+      <p className="muted">
+        Les mises à jour de Nodal ne demandent rien. Si le fichier de l’espace
+        change de place, reconnectez l’assistant.
+      </p>
+      {setup && paths && (
+        <details className="mcp-manual">
+          <summary>Configuration manuelle</summary>
           <CopyBlock
             label={`${MCP_CLIENT_LABELS[assistant]} — ${setup.label}`}
             text={setup.text}
           />
           <p className="muted">{setup.hint}</p>
-          <p className="muted">
-            Les mises à jour de Nodal ne demandent rien : le serveur est
-            remplacé au même endroit. Si le fichier de l’espace change de place,
-            refaites cette configuration.
-          </p>
-          {serverPath && isContextHookClient(assistant) && (
-            <ContextHookSection
-              assistant={assistant}
-              serverPath={serverPath}
-              workspaceFile={workspaceFile}
+          {isContextHookClient(assistant) && (
+            <CopyBlock
+              label={`Contexte automatique pour tous vos projets : ${USER_SETTINGS_FILE[assistant]}, à fusionner avec les réglages présents`}
+              text={contextHookSnippet(
+                assistant,
+                contextHookCommand(
+                  paths.server,
+                  workspaceFile,
+                  paths.node,
+                  assistant,
+                ),
+              )}
             />
           )}
-          {assistant === 'claude-code' && <SkillsSection />}
           {setup.instructionsFile && (
-            <>
-              <h3>Consulter Nodal d’abord</h3>
-              <p className="muted">
-                Ajoutez ces consignes au fichier d’instructions de votre projet
-                pour que l’assistant interroge Nodal avant de parcourir les
-                fichiers ou de répondre de mémoire.
-              </p>
-              <CopyBlock
-                label={setup.instructionsFile}
-                text={assistantInstructions(workspaceName, allowWrites)}
-              />
-            </>
+            <CopyBlock
+              label={`Consignes facultatives : ${setup.instructionsFile}`}
+              text={assistantInstructions(workspaceName, allowWrites)}
+            />
           )}
-        </>
-      ) : (
-        <p className="muted">Chargement…</p>
+        </details>
       )}
     </Modal>
   );

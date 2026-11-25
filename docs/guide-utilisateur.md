@@ -422,16 +422,19 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   la case « Autoriser l'assistant à enrichir l'espace » est cochée, de
   l'alimenter : créer des nœuds, ajouter ou compléter des documents, relier
   des nœuds, poser des tags. L'assistant ne supprime jamais rien. Choisissez
-  votre assistant dans la liste : la fenêtre affiche la commande à lancer
-  (`claude mcp add …`, `gemini mcp add …`, `codex mcp add …`) ou le bloc JSON
-  à coller dans son fichier de configuration, avec l'endroit où le mettre, et
-  le fichier d'instructions du projet à compléter (`CLAUDE.md`, `GEMINI.md`,
-  `AGENTS.md`…). Node.js 22.13 ou plus récent doit être
-  installé. Le serveur est recopié à chaque démarrage de Nodal dans
+  votre assistant dans la liste puis **Connecter…** et le dossier du projet
+  (Codex et Claude Desktop : pour tout le poste, sans dossier). Nodal écrit
+  tout ce qu'il faut : serveur MCP, skills, contexte automatique, dossier de
+  code de l'espace. Vos autres réglages sont conservés ; un fichier qu'il ne
+  sait pas lire n'est pas touché. Les fichiers de connexion qu'il crée dans un
+  dépôt git, propres à votre poste, sont exclus par `.git/info/exclude`.
+  Relancez ensuite l'assistant ; il n'y a rien d'autre à installer (Windows :
+  Node.js est fourni). **Configuration manuelle** garde les commandes et blocs
+  à copier. Le serveur est recopié à chaque démarrage de Nodal dans
   `%APPDATA%\Nodal\mcp\` : après une mise à jour, la configuration reste
   valable et l'assistant utilise le nouveau serveur, qui met à jour de
   lui-même un espace d'une version précédente. Seul un déplacement du
-  fichier de l'espace oblige à refaire la configuration. Une configuration
+  fichier de l'espace oblige à reconnecter l'assistant. Une configuration
   faite avec Nodal 1.4.0 ou plus ancien (chemin contenant le numéro de
   version) est corrigée automatiquement au premier démarrage : Nodal y
   remplace seulement ce chemin, dans les fichiers de configuration des
@@ -484,7 +487,7 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
   ou de répondre de mémoire.
 - **Contexte automatique** (Claude Code, Gemini CLI) : dans la même
-  fenêtre, **Installer dans un projet…** ajoute un hook aux réglages du
+  fenêtre, la connexion ajoute un hook aux réglages du
   dossier choisi (`.claude/settings.local.json` ou `.gemini/settings.json`,
   le reste du fichier est conservé). À chaque demande, avant de répondre,
   l'assistant reçoit alors les nœuds et documents de l'espace qui
@@ -497,22 +500,22 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   l'assistant reçoit aussi, avant de lire ou de modifier un fichier du code
   (ou quand votre demande en cite un), le résumé des nœuds ancrés à ce fichier (3 au plus, une fois par session ;
   rien n'est bloqué). Hook installé avec une version précédente :
-  réinstallez-le pour en profiter. Plus
+  reconnectez l’assistant pour en profiter. Plus
   besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,
   copiez le bloc proposé dans `~/.claude/settings.json` (ou
   `~/.gemini/settings.json`). Le hook ne fait que lire l'espace.
-- **Skills** (Claude Code) : même fenêtre, **Installer les skills dans un
-  projet…** écrit dans `.claude/skills` des modes d’emploi lus par l’assistant
-  seulement quand ils servent. Un fichier que Nodal n’a pas écrit n’est pas
-  remplacé. Le serveur MCP doit être connecté en écriture pour tous sauf
-  `/nodal` :
+- **Skills** : la connexion installe dans le projet (`.claude/skills`, ou
+  `.agents/skills` hors Claude Code) des modes d’emploi lus par l’assistant
+  seulement quand ils servent, remis à jour au démarrage de Nodal. Un fichier
+  que Nodal n’a pas écrit n’est pas remplacé. Pour documenter votre code, il
+  suffit de taper `/nodal-init` (ou de le demander en clair) :
   - `/nodal` : consulter la base, vérifier avant une modification, enregistrer
     après ;
   - `/nodal-init [rapide | complet] [dossier]` : créer la base d’un projet à
     partir de son code (modules, contrats JSON, inventaires CSV, schémas
     Mermaid, procédures, décisions). Le plan vous est soumis d’abord ; long sur
     un grand dépôt, il se reprend là où il s’est arrêté (document
-    « Couverture ») et ne part que si vous le lancez ;
+    « Couverture ») ;
   - `/nodal-module <dossier ou nom>` : documenter une partie en profondeur ;
   - `/nodal-contrats [portée]` : entrées et sorties (API, IPC, événements,
     configuration, tables) en JSON Schema, exemples JSON et CSV ;

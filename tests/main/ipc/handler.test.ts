@@ -168,6 +168,7 @@ function setup(pickedPath: string | null, confirmed = true) {
     recent,
     dialogs,
     trash,
+    userFolders: { home: '', appData: '' },
     getAppInfo: () => {
       throw new Error('non utilisé');
     },

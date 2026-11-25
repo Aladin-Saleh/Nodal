@@ -26,6 +26,33 @@ export const MCP_CLIENT_LABELS: Record<McpClient, string> = {
   vscode: 'VS Code (GitHub Copilot)',
 };
 
+/** Configurés dans le dossier d'un projet (les autres : pour tout le poste). */
+export const isProjectClient = (client: McpClient): boolean =>
+  client !== 'codex' && client !== 'claude-desktop';
+
+/** Ce qu'il reste à faire après la connexion automatique. */
+export const AFTER_CONNECT: Record<McpClient, string> = {
+  'claude-code':
+    'Relancez Claude Code dans ce dossier, puis tapez /nodal-init pour documenter le projet.',
+  'gemini-cli': 'Relancez Gemini CLI dans ce dossier.',
+  codex: 'Relancez Codex. Le serveur vaut pour tous vos projets.',
+  'claude-desktop': 'Quittez puis relancez Claude Desktop.',
+  cursor: 'Rouvrez le projet dans Cursor et activez « nodal » s’il le demande.',
+  vscode: 'Rouvrez le projet dans VS Code et acceptez le serveur « nodal ».',
+};
+
+/** Commande du serveur, telle que la lisent les assistants. */
+export function mcpServerEntry(
+  nodePath: string,
+  files: readonly string[],
+  readOnly: boolean,
+): { command: string; args: string[] } {
+  return {
+    command: nodePath,
+    args: [...files, ...(readOnly ? ['--read-only'] : [])],
+  };
+}
+
 export interface McpSetup {
   /** `command` : à lancer dans un terminal ; `file` : à coller dans un fichier. */
   kind: 'command' | 'file';
@@ -44,24 +71,26 @@ const json = (config: unknown) => JSON.stringify(config, null, 2);
 
 /**
  * Configuration pour un assistant. `files` : script du serveur puis fichier de
- * l'espace ; `readOnly` ajoute `--read-only`.
+ * l'espace ; `readOnly` ajoute `--read-only` ; `nodePath` : Node à lancer.
  */
 export function mcpSetup(
   client: McpClient,
   files: readonly [serverPath: string, workspaceFile: string],
   readOnly: boolean,
+  nodePath = 'node',
 ): McpSetup {
   const paths = files.map(quote).join(' ');
-  const args = [...files, ...(readOnly ? ['--read-only'] : [])];
+  const node = nodePath === 'node' ? nodePath : quote(nodePath);
+  const entry = mcpServerEntry(nodePath, files, readOnly);
   const mcpServers = json({
-    mcpServers: { [SERVER_NAME]: { command: 'node', args } },
+    mcpServers: { [SERVER_NAME]: entry },
   });
   switch (client) {
     case 'claude-code':
       return {
         kind: 'command',
         label: 'Commande (terminal, dans le dossier du projet)',
-        text: `claude mcp add ${SERVER_NAME} -- node ${paths}${readOnly ? ' --read-only' : ''}`,
+        text: `claude mcp add ${SERVER_NAME} -- ${node} ${paths}${readOnly ? ' --read-only' : ''}`,
         hint: 'Le serveur est ajouté pour ce projet ; ajoutez « -s user » après « add » pour tous vos projets. Puis /mcp pour vérifier la connexion.',
         instructionsFile: 'CLAUDE.md',
       };
@@ -70,7 +99,7 @@ export function mcpSetup(
         kind: 'command',
         label: 'Commande (terminal, dans le dossier du projet)',
         // Les options destinées au serveur passent après « -- ».
-        text: `gemini mcp add ${SERVER_NAME} node ${paths}${readOnly ? ' -- --read-only' : ''}`,
+        text: `gemini mcp add ${SERVER_NAME} ${node} ${paths}${readOnly ? ' -- --read-only' : ''}`,
         hint: 'Le serveur est ajouté au projet (.gemini/settings.json) ; ajoutez « -s user » après « add » pour tous vos projets. Puis /mcp dans Gemini CLI pour vérifier.',
         instructionsFile: 'GEMINI.md',
       };
@@ -78,7 +107,7 @@ export function mcpSetup(
       return {
         kind: 'command',
         label: 'Commande (terminal)',
-        text: `codex mcp add ${SERVER_NAME} -- node ${paths}${readOnly ? ' --read-only' : ''}`,
+        text: `codex mcp add ${SERVER_NAME} -- ${node} ${paths}${readOnly ? ' --read-only' : ''}`,
         hint: 'Le serveur est ajouté à ~/.codex/config.toml, pour tous vos projets.',
         instructionsFile: 'AGENTS.md',
       };
@@ -103,7 +132,7 @@ export function mcpSetup(
         kind: 'file',
         label: '.vscode/mcp.json',
         text: json({
-          servers: { [SERVER_NAME]: { type: 'stdio', command: 'node', args } },
+          servers: { [SERVER_NAME]: { type: 'stdio', ...entry } },
         }),
         hint: 'Dans le dossier du projet, puis « Start » au-dessus du serveur dans ce fichier. Le mode Agent de Copilot Chat utilise alors les outils de Nodal.',
         instructionsFile: '.github/copilot-instructions.md',

@@ -30,6 +30,8 @@ import {
   workspaceCodeRoots,
 } from './mcp-config-update';
 import { installMcpServer, MCP_SERVER_FILE_NAME } from './mcp-server-install';
+import { installNode } from './node-install';
+import { refreshSkills } from './skill-install';
 import { registerIpcHandlers } from './ipc/register';
 import { PreferencesStore, WindowStateStore } from './preferences-store';
 import {
@@ -87,6 +89,13 @@ function bootstrap(): void {
         path.join(app.getPath('userData'), 'mcp'),
       )
     : path.join(app.getAppPath(), '.vite', 'build', MCP_SERVER_FILE_NAME);
+  // Node livré avec l'application : rien à installer pour les assistants.
+  const nodePath = app.isPackaged
+    ? installNode(
+        path.join(process.resourcesPath, 'node'),
+        path.join(app.getPath('userData'), 'mcp'),
+      )
+    : 'node';
 
   // Assistants configurés avec le chemin d'une version installée (Nodal
   // 1.4.0 et avant) : basculés sur le chemin stable, sans action de
@@ -94,13 +103,14 @@ function bootstrap(): void {
   const updateAssistants = () => {
     if (!app.isPackaged || mcpServerPath === bundledMcpServer) return;
     const home = app.getPath('home');
+    const projectDirs = [
+      ...claudeCodeProjects(home),
+      ...workspaceCodeRoots(recent.list().map((entry) => entry.filePath)),
+    ];
     const files = assistantConfigFiles({
       home,
       appData: app.getPath('appData'),
-      projectDirs: [
-        ...claudeCodeProjects(home),
-        ...workspaceCodeRoots(recent.list().map((entry) => entry.filePath)),
-      ],
+      projectDirs,
     });
     const changed = updateAssistantConfigs(
       files,
@@ -111,6 +121,8 @@ function bootstrap(): void {
     if (changed.length > 0) {
       console.info('[mcp] configuration des assistants mise à jour', changed);
     }
+    const skills = refreshSkills(projectDirs);
+    if (skills.length > 0) console.info('[mcp] skills mis à jour', skills);
   };
 
   // Terminal intégré : shell dans le premier dossier de code de l'espace,
@@ -139,6 +151,7 @@ function bootstrap(): void {
       nodeVersion: process.versions.node,
       sqliteVersion: getSqliteVersion(),
       mcpServerPath,
+      nodePath,
     });
 
   const closeWorkspace = () => {
@@ -286,6 +299,10 @@ function bootstrap(): void {
       dialogs,
       trash: (filePath) => shell.trashItem(filePath),
       getAppInfo,
+      userFolders: {
+        home: app.getPath('home'),
+        appData: app.getPath('appData'),
+      },
       setUnsavedChanges,
       getPreferences: () => preferences.get(),
       updatePreferences,

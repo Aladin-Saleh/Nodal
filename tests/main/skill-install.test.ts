@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import {
   installSkills,
+  refreshSkills,
   SKILL_FILES,
   SKILL_MARKER,
 } from '../../src/main/skill-install';
@@ -23,10 +24,8 @@ it('livre les skills, nommés comme leur dossier', () => {
   for (const [file, content] of SKILL_FILES) {
     expect(content).toContain(SKILL_MARKER);
     const [folder, name] = file.split('/');
-    if (name === 'SKILL.md')
-      expect(content).toMatch(
-        new RegExp(`^---\\r?\\nname: ${folder}\\r?\\ndescription: `),
-      );
+    const header = new RegExp(`^---\\r?\\nname: ${folder}\\r?\\ndescription: `);
+    expect(header.test(content)).toBe(name === 'SKILL.md');
     // Renvois d'un skill à l'autre : fichiers livrés.
     for (const [, target] of content.matchAll(/`\.\.\/([^`]+\.md)`/g))
       expect(SKILL_FILES.has(target!)).toBe(true);
@@ -36,7 +35,7 @@ it('livre les skills, nommés comme leur dossier', () => {
 it('écrit les skills, les remplace, mais pas un fichier d’un autre', () => {
   const dir = tempDir();
   const skills = path.join(dir, '.claude', 'skills');
-  expect(installSkills(dir)).toBe(skills);
+  expect(installSkills(skills)).toBe(skills);
   for (const [file, content] of SKILL_FILES)
     expect(fs.readFileSync(path.join(skills, file), 'utf8')).toBe(content);
   expect(fs.readdirSync(path.join(skills, 'nodal')).toSorted()).toEqual([
@@ -50,15 +49,29 @@ it('écrit les skills, les remplace, mais pas un fichier d’un autre', () => {
   const changed = new Map(
     [...SKILL_FILES].map(([file, content]) => [file, `${content}\n`]),
   );
-  expect(() => installSkills(dir, changed)).toThrow(/pas été écrit par Nodal/);
+  expect(() => installSkills(skills, changed)).toThrow(
+    /pas été écrit par Nodal/,
+  );
   expect(fs.readFileSync(mine, 'utf8')).toBe('le mien');
   expect(fs.readFileSync(path.join(skills, 'nodal/SKILL.md'), 'utf8')).toBe(
     SKILL_FILES.get('nodal/SKILL.md'),
   );
 
   fs.rmSync(mine);
-  installSkills(dir, changed);
+  installSkills(skills, changed);
   expect(fs.readFileSync(mine, 'utf8')).toBe(
     changed.get('nodal-module/SKILL.md'),
   );
+});
+
+it('met à jour les skills déjà installés, et eux seuls', () => {
+  const dir = tempDir();
+  expect(refreshSkills([dir])).toEqual([]);
+  expect(fs.readdirSync(dir)).toEqual([]);
+  const skills = path.join(dir, '.agents', 'skills');
+  installSkills(skills);
+  expect(refreshSkills([dir])).toEqual([]);
+  fs.rmSync(path.join(skills, 'nodal-maj'), { recursive: true });
+  expect(refreshSkills([dir])).toEqual([skills]);
+  expect(fs.existsSync(path.join(skills, 'nodal-maj', 'SKILL.md'))).toBe(true);
 });

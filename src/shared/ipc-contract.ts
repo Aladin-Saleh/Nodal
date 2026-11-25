@@ -5,7 +5,7 @@
  * rester léger dans le bundle preload. Les schémas de validation sont dans
  * `ipc-schemas.ts`, utilisés uniquement côté main.
  */
-import type { ContextHookClient } from './context-hook';
+import type { McpClient } from './mcp-clients';
 import type { Confidence } from './evidence';
 import type { Lesson } from './lessons';
 import type { TerminalEvent, TerminalSession, TerminalShell } from './terminal';
@@ -65,6 +65,8 @@ export interface AppInfo {
   sqliteVersion: string;
   /** Script du serveur MCP (exécuté par Node.js, hors de l'archive asar). */
   mcpServerPath: string;
+  /** Node qui le lance : celui livré avec Nodal, sinon `node`. */
+  nodePath: string;
 }
 
 export interface WorkspaceInfo {
@@ -304,10 +306,6 @@ export interface IpcContract {
   /** Choix d'un dossier par le main ; `null` si annulé. */
   'code:addRoot': { args: []; result: CodeRootInfo[] | null };
   'code:removeRoot': { args: [{ path: string }]; result: CodeRootInfo[] };
-  /**
-   * Contexte automatique : hook ajouté aux réglages d'un dossier de projet
-   * choisi par le main ; chemin du fichier écrit, `null` si annulé.
-   */
   /** Types de terminal disponibles sur ce poste, le premier par défaut. */
   'terminal:listShells': { args: []; result: TerminalShell[] };
   /** Terminal intégré : nouveau shell (dossier de code de l'espace). */
@@ -321,14 +319,13 @@ export interface IpcContract {
     result: null;
   };
   'terminal:close': { args: [{ id: string }]; result: null };
-  /** Skills Nodal (Claude Code) dans un projet choisi ; `null` si annulé. */
-  'assistant:installSkills': {
-    args: [];
-    result: { directory: string } | null;
-  };
-  'assistant:installContextHook': {
-    args: [{ client: ContextHookClient }];
-    result: { settingsFile: string } | null;
+  /**
+   * Connecte un assistant : configuration MCP, skills et contexte automatique,
+   * dans un dossier de projet choisi par le main ; `null` si annulé.
+   */
+  'assistant:connect': {
+    args: [{ client: McpClient; allowWrites: boolean }];
+    result: { files: string[]; note: string | null } | null;
   };
   /** Motifs ancrés au nœud, fichiers trouvés, obsolescence éventuelle. */
   'anchor:listForNode': { args: [IdInput]; result: NodeAnchors };
@@ -509,8 +506,7 @@ export const IPC_CHANNELS = [
   'code:getRoots',
   'code:addRoot',
   'code:removeRoot',
-  'assistant:installSkills',
-  'assistant:installContextHook',
+  'assistant:connect',
   'terminal:listShells',
   'terminal:create',
   'terminal:write',

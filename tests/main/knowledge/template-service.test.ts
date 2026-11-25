@@ -111,6 +111,7 @@ function implementations(service: WorkspaceService) {
     recent: {} as RecentWorkspacesStore,
     dialogs: {} as FileDialogs,
     trash: vi.fn(),
+    userFolders: { home: '', appData: '' },
     getAppInfo: () => {
       throw new Error('non utilisé');
     },

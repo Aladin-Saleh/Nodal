@@ -4,7 +4,7 @@
  * que toute propriété inconnue (objets stricts).
  */
 import { CONFIDENCES } from './evidence';
-import { CONTEXT_HOOK_CLIENTS } from './context-hook';
+import { MCP_CLIENTS } from './mcp-clients';
 import {
   TERMINAL_MAX_COLS,
   TERMINAL_MAX_INPUT,
@@ -366,9 +366,8 @@ export const ipcArgsSchemas = {
     }),
   ),
   'terminal:close': one(z.strictObject({ id: z.string().min(1).max(20) })),
-  'assistant:installSkills': noArgs,
-  'assistant:installContextHook': one(
-    z.strictObject({ client: z.enum(CONTEXT_HOOK_CLIENTS) }),
+  'assistant:connect': one(
+    z.strictObject({ client: z.enum(MCP_CLIENTS), allowWrites: z.boolean() }),
   ),
   'anchor:listForNode': one(idInput),
   'anchor:set': one(

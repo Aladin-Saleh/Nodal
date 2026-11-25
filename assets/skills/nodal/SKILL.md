@@ -37,4 +37,4 @@ Notez ce qui restera vrai et que le code ne dit pas : pourquoi, ce qui a été �
 
 ## Documenter davantage
 
-Autres skills : `nodal-module` (une partie du code), `nodal-contrats` (JSON et CSV d'entrée/sortie), `nodal-schemas` (Mermaid), `nodal-maj` (après des changements). Base vide : proposez `/nodal-init`, que l'utilisateur lance lui-même.
+Autres skills : `nodal-module` (une partie du code), `nodal-contrats` (JSON et CSV d'entrée/sortie), `nodal-schemas` (Mermaid), `nodal-maj` (après des changements). Base vide, ou « documente mon projet » : `nodal-init`.
