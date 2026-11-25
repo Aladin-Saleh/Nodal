@@ -14,16 +14,9 @@ export function stageNode(platform, arch) {
   fs.rmSync(STAGED_NODE, { recursive: true, force: true });
   fs.mkdirSync(STAGED_NODE, { recursive: true });
   // Licence de Node, exigée avec le binaire ; le dossier n'est jamais vide.
-  const installation = path.dirname(process.execPath);
-  const license = [
-    path.join(installation, 'LICENSE'),
-    path.join(installation, '..', 'LICENSE'),
-  ].find((file) => fs.existsSync(file));
-  fs.writeFileSync(
+  fs.copyFileSync(
+    path.resolve('assets', 'node', 'LICENSE'),
     path.join(STAGED_NODE, 'LICENSE'),
-    license
-      ? fs.readFileSync(license)
-      : 'Node.js : https://github.com/nodejs/node/blob/main/LICENSE\n',
   );
   if (platform !== process.platform || arch !== process.arch) return;
   const name = platform === 'win32' ? 'node.exe' : 'node';

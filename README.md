@@ -114,7 +114,7 @@ pièces jointes en BLOB).
   - [guide d'utilisation](docs/guide-utilisateur.md) et aide intégrée (F1).
 
 - **Serveur MCP — base partagée avec un assistant IA** :
-  `resources/nodal-mcp.cjs`, exécuté par Node.js ≥ 22.13
+  `resources/nodal-mcp.cjs`, exécuté par Node.js ≥ 22.13 (fourni sous Windows)
   (`node nodal-mcp.cjs <fichier.nodal> [--read-only]`, stdio). Pas lancé par
   l'exécutable Electron, qui écrit une ligne vide sur stdout au démarrage
   sous Windows.
@@ -292,10 +292,15 @@ pièces jointes en BLOB).
     avec une sauvegarde, relations incertaines en tirets ;
   - MCP : écriture par `nodal_apply` seul (`--all-tools` pour les outils
     unitaires), mode commande, analyse dans `nodal_health`, nœuds touchés dans
-    `nodal_for_files`, commandes (prompts) et skills Claude Code
-    (dont `/nodal-scan` : base d’un projet à partir de son code) ;
+    `nodal_for_files`, commandes (prompts) et skill Claude Code ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
+- **v1.7.1 — Documenter ses repos** :
+  - « Ajouter un repo… » : connexion de l’assistant, skills, contexte
+    automatique et consignes (`CLAUDE.md`…) en un clic, Node.js fourni ;
+  - `/nodal-scan` documente un repo entier (JSON, Mermaid, CSV, code…), et
+    cinq autres skills ;
+  - plusieurs repos par espace, ancrages propres à chacun (`api:src/**`).
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
