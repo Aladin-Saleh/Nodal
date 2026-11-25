@@ -286,9 +286,7 @@ describe('parcours principaux', () => {
     const project = path.join(work, 'Projet');
     fs.mkdirSync(project);
     await stubDialogs({ open: project });
-    await dialog
-      .getByRole('button', { name: 'Connecter Gemini CLI à un projet…' })
-      .click();
+    await dialog.getByRole('button', { name: 'Ajouter un repo…' }).click();
     await dialog.getByText('Connecté.').waitFor();
     const settings = JSON.parse(
       fs.readFileSync(path.join(project, '.gemini', 'settings.json'), 'utf8'),
@@ -299,7 +297,7 @@ describe('parcours principaux', () => {
     expect(settings.mcpServers.nodal.args[0]).toMatch(/nodal-mcp\.cjs$/);
     expect(
       fs.existsSync(
-        path.join(project, '.agents', 'skills', 'nodal-init', 'SKILL.md'),
+        path.join(project, '.agents', 'skills', 'nodal-scan', 'SKILL.md'),
       ),
     ).toBe(true);
     await dialog.getByRole('button', { name: 'Fermer', exact: true }).click();

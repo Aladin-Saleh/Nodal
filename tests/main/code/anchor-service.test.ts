@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { CODE_ROOTS_MAX } from '../../../src/shared/code-anchors';
 import {
   CodeAnchorService,
   STALE_CACHE_MS,
@@ -111,7 +112,7 @@ describe('ancrage (base de données)', () => {
     expect(() =>
       writeCodeRoots(
         context(),
-        Array.from({ length: 11 }, (_, i) => `/r${i}`),
+        Array.from({ length: CODE_ROOTS_MAX + 1 }, (_, i) => `/r${i}`),
       ),
     ).toThrowError(expect.objectContaining({ code: 'LIMIT_EXCEEDED' }));
   });

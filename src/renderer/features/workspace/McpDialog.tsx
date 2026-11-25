@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import type { CodeRootInfo } from '../../../shared/code-anchors';
 import { Modal } from '../../components/Modal';
 import { useClient, useRunner } from '../../app/context';
 import {
@@ -69,6 +70,17 @@ function ConnectSection({
     files: string[];
     note: string | null;
   } | null>(null);
+  const [repos, setRepos] = useState<CodeRootInfo[]>([]);
+  useEffect(() => {
+    let active = true;
+    void client.call('code:getRoots').then(
+      (roots) => active && setRepos(roots),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [client, done]);
   const connect = async () => {
     setBusy(true);
     const result = await run(() =>
@@ -82,18 +94,22 @@ function ConnectSection({
       <div className="mcp-hook-actions">
         <button type="button" disabled={busy} onClick={() => void connect()}>
           {isProjectClient(assistant)
-            ? `Connecter ${MCP_CLIENT_LABELS[assistant]} à un projet…`
+            ? 'Ajouter un repo…'
             : `Connecter ${MCP_CLIENT_LABELS[assistant]}`}
         </button>
       </div>
       {isProjectClient(assistant) && (
         <p className="muted">
-          Choisissez le dossier du projet : Nodal y ajoute sa connexion, ses
-          skills (/nodal-init pour documenter le code, /nodal-maj pour suivre
-          ses changements…)
-          {isContextHookClient(assistant) &&
-            ' et le contexte automatique : à chaque demande, l’assistant reçoit ce que l’espace en sait'}
-          . Vos autres réglages sont conservés.
+          Choisissez le dossier du repo : {MCP_CLIENT_LABELS[assistant]} y sera
+          relié à cet espace. Ouvrez-le ensuite dans ce dossier et tapez
+          /nodal-scan : le repo est documenté ici et relié au reste. Autant de
+          repos que voulu dans le même espace ; vos autres réglages sont
+          conservés.
+        </p>
+      )}
+      {isProjectClient(assistant) && repos.length > 0 && (
+        <p className="muted">
+          Repos de l’espace : {repos.map((repo) => repo.path).join(' ; ')}
         </p>
       )}
       {done && (

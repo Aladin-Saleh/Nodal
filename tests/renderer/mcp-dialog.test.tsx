@@ -57,11 +57,12 @@ describe('mcpSetup', () => {
 
 describe('McpDialog', () => {
   it('affiche la commande de l’assistant choisi', async () => {
-    const call = vi.fn(async (channel: string) =>
-      channel === 'assistant:connect'
+    const call = vi.fn(async (channel: string) => {
+      if (channel === 'code:getRoots') return [];
+      return channel === 'assistant:connect'
         ? { files: ['C:/projet/.mcp.json'], note: null }
-        : { mcpServerPath: files[0], nodePath: 'node' },
-    );
+        : { mcpServerPath: files[0], nodePath: 'node' };
+    });
     render(
       <ServicesProvider
         client={{ call } as unknown as NodalClient}
@@ -78,12 +79,8 @@ describe('McpDialog', () => {
     );
     expect(await screen.findByText(/^claude mcp add nodal/)).toBeTruthy();
     expect(screen.getByText(/facultatives : CLAUDE\.md/)).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole('button', { name: /Connecter Claude Code/ }),
-    );
-    expect(
-      await screen.findByText(/\/nodal-init pour documenter le projet/),
-    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter un repo…' }));
+    expect(await screen.findByText(/ou \/nodal:scan/)).toBeTruthy();
     expect(call).toHaveBeenCalledWith('assistant:connect', {
       client: 'claude-code',
       allowWrites: true,

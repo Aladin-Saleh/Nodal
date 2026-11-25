@@ -14,9 +14,9 @@ const tempDir = useTempDir();
 it('livre les skills, nommés comme leur dossier', () => {
   expect([...SKILL_FILES.keys()].toSorted()).toEqual([
     'nodal-contrats/SKILL.md',
-    'nodal-init/SKILL.md',
     'nodal-maj/SKILL.md',
     'nodal-module/SKILL.md',
+    'nodal-scan/SKILL.md',
     'nodal-schemas/SKILL.md',
     'nodal/SKILL.md',
     'nodal/conventions.md',

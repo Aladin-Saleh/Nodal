@@ -289,7 +289,8 @@ export function createImplementations(deps: IpcDependencies): Implementations {
         if (requireCurrent().filePath !== filePath) return null;
       }
       const { mcpServerPath, nodePath } = deps.getAppInfo();
-      const result = connectAssistant({
+      if (projectDir) codeAnchors.addRoot(projectDir);
+      return connectAssistant({
         client,
         projectDir,
         ...deps.userFolders,
@@ -298,8 +299,6 @@ export function createImplementations(deps: IpcDependencies): Implementations {
         workspaceFile: filePath,
         allowWrites,
       });
-      if (projectDir) codeAnchors.addRoot(projectDir);
-      return result;
     },
     'anchor:listForNode': ({ id }) => codeAnchors.listForNode(id),
     'anchor:set': ({ nodeId, patterns }) =>

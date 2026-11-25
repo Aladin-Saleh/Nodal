@@ -557,6 +557,7 @@ describe('serveur MCP', () => {
     expect(await list(false)).toEqual([
       'explique',
       'avant-modif',
+      'scan',
       'documenter',
       'a-revoir',
       'lecon',

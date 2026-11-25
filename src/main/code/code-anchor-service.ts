@@ -7,7 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  toRootRelative,
+  qualifiedPath,
+  rootName,
   type CodeRootInfo,
   type NodeAnchors,
   type StaleNode,
@@ -19,6 +20,7 @@ import {
   listAnchoredNodes,
   listAnchors,
   markReviewed,
+  qualifyAnchors,
   readCodeRoots,
   resolveCodeRoots,
   saveSnapshot,
@@ -70,7 +72,22 @@ export class CodeAnchorService {
     const stored = readCodeRoots(ctx);
     const resolved = resolveCodeRoots(stored, this.workspaceFile());
     if (!resolved.some((root) => samePath(root, absolute))) {
-      writeCodeRoots(ctx, [...stored, absolute]);
+      // Les motifs désignent un dossier par son nom.
+      const twin = resolved.find((root) =>
+        samePath(rootName(root), rootName(absolute)),
+      );
+      if (twin) {
+        throw new NodalError(
+          'CONFLICT',
+          `Un dossier de code porte déjà ce nom (${twin}) : renommez l’un des deux.`,
+        );
+      }
+      inTransaction(ctx.db, () => {
+        writeCodeRoots(ctx, [...stored, absolute]);
+        // Jusqu'ici les motifs visaient le seul dossier : ils ne doivent pas
+        // couvrir aussi les fichiers de même chemin du nouveau.
+        if (resolved.length === 1) qualifyAnchors(ctx, rootName(resolved[0]!));
+      });
       this.invalidate();
     }
     return this.getRoots();
@@ -137,14 +154,14 @@ export class CodeAnchorService {
   addFiles(nodeId: string, files: string[]): string[] {
     const roots = this.roots();
     const relative = files.map((file) => {
-      const found = toRootRelative(file, roots, PATHS_CASE_INSENSITIVE);
-      if (!found?.root || !found.path) {
+      const found = qualifiedPath(file, roots, PATHS_CASE_INSENSITIVE);
+      if (!found) {
         throw new NodalError(
           'VALIDATION_ERROR',
           `« ${file} » n'est dans aucun dossier de code de l'espace.`,
         );
       }
-      return found.path;
+      return found;
     });
     const current = listAnchors(this.context(), nodeId);
     return this.setAnchors(nodeId, [...current, ...relative]);

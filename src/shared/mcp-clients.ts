@@ -33,7 +33,7 @@ export const isProjectClient = (client: McpClient): boolean =>
 /** Ce qu'il reste à faire après la connexion automatique. */
 export const AFTER_CONNECT: Record<McpClient, string> = {
   'claude-code':
-    'Relancez Claude Code dans ce dossier, puis tapez /nodal-init pour documenter le projet.',
+    'Relancez Claude Code dans ce dossier, puis tapez /nodal-scan (ou /nodal:scan) : il documente le repo ici et le relie à ce qui y est déjà.',
   'gemini-cli': 'Relancez Gemini CLI dans ce dossier.',
   codex: 'Relancez Codex. Le serveur vaut pour tous vos projets.',
   'claude-desktop': 'Quittez puis relancez Claude Desktop.',

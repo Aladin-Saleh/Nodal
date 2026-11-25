@@ -11,6 +11,7 @@ import path from 'node:path';
 import {
   ANCHORS_MAX_PER_NODE,
   CODE_ROOTS_MAX,
+  ANCHOR_PATTERN_MAX_LENGTH,
   matchesAnchor,
   normalizeAnchorPattern,
   type CodeSnapshot,
@@ -147,6 +148,17 @@ export function setAnchors(
   const now = ctx.now();
   next.forEach((pattern, index) => insert.run(nodeId, pattern, index, now));
   return next;
+}
+
+/** Précise le dossier de code des motifs qui ne le font pas. */
+export function qualifyAnchors(ctx: ServiceContext, root: string): void {
+  ctx.db
+    .prepare(
+      `UPDATE OR IGNORE node_anchor SET pattern = ? || ':' || pattern
+       WHERE instr(pattern, ':') = 0 AND length(pattern) + ? <= ?
+         AND node_id IN (SELECT id FROM node WHERE workspace_id = ?)`,
+    )
+    .run(root, root.length + 1, ANCHOR_PATTERN_MAX_LENGTH, ctx.workspaceId);
 }
 
 /** Nœud ancré, avec la date à partir de laquelle un changement compte. */

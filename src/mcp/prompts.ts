@@ -43,6 +43,25 @@ export function registerPrompts(server: McpServer, readOnly: boolean): void {
   );
   if (readOnly) return;
   server.registerPrompt(
+    'scan',
+    {
+      title: 'Documenter ce repo',
+      description:
+        'Analyse le repo, le documente dans Nodal et le relie à ce qui y est déjà',
+      argsSchema: z.object({
+        portee: z
+          .string()
+          .optional()
+          .describe('rapide, complet, ou un dossier (facultatif)'),
+      }),
+    },
+    ({ portee }) =>
+      message(
+        `Documente ce repo dans Nodal${portee ? ` (${portee})` : ''} : charge le skill nodal-scan (.claude/skills ou .agents/skills) et suis-le. ` +
+          'Skill absent : arrête-toi et dis d’ajouter ce repo depuis Nodal (menu Assistant IA, « Connecter un assistant »).',
+      ),
+  );
+  server.registerPrompt(
     'documenter',
     {
       title: 'Documenter le travail fait',

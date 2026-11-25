@@ -15,6 +15,8 @@
 import path from 'node:path';
 import {
   matchesAnchor,
+  patternIn,
+  splitAnchor,
   type AnchorFiles,
   type ChangedFile,
   type CodeSnapshot,
@@ -89,6 +91,12 @@ const matchesAny = (patterns: readonly string[], file: string) =>
     matchesAnchor(pattern, file, PATHS_CASE_INSENSITIVE),
   );
 
+/** Motifs qui valent pour un dossier de code, sans son nom. */
+const patternsIn = (patterns: readonly string[], root: string) =>
+  patterns.flatMap(
+    (pattern) => patternIn(pattern, root, PATHS_CASE_INSENSITIVE) ?? [],
+  );
+
 /** Empreintes des contenus lus dans git : un objet ne change jamais. */
 const blobFingerprints = new Map<string, string>();
 const BLOB_CACHE_MAX = 5_000;
@@ -124,12 +132,18 @@ class CheckedRoot {
     return `${this.name}/${file}`;
   }
 
+  /** Chemin avec le nom du dossier, pour les motifs qui le précisent. */
+  qualified(file: string): string {
+    return `${this.name}:${file}`;
+  }
+
   absolute(file: string): string {
     return path.join(this.root, ...file.split('/'));
   }
 
   /** Fichiers couverts par les motifs, avec leur date de modification. */
-  async files(patterns: readonly string[]): Promise<Map<string, Date>> {
+  async files(anchors: readonly string[]): Promise<Map<string, Date>> {
+    const patterns = patternsIn(anchors, this.root);
     let names: string[];
     if (this.gitFiles) {
       names = this.gitFiles.filter((file) => matchesAny(patterns, file));
@@ -253,7 +267,7 @@ async function snapshotOf(
   for (const [key, { root, file, mtime }] of current) {
     // Motif ajouté depuis : seuls les fichiers qu'il apporte sont relevés.
     const baseline =
-      valid && matchesAny(known.patterns, file)
+      valid && matchesAny(known.patterns, root.qualified(file))
         ? known.files[key]
         : await baselineOf(root, file, mtime, since, known?.files[key], blobs);
     if (baseline !== undefined) files[key] = baseline;
@@ -262,15 +276,16 @@ async function snapshotOf(
   const missing = new Set(
     valid
       ? Object.keys(known.files).filter((key) =>
-          matchesAny(node.patterns, key.slice(key.indexOf('/') + 1)),
+          matchesAny(node.patterns, key.replace('/', ':')),
         )
       : [],
   );
   for (const root of roots) {
     if (!root.git) continue;
     for (const file of (await root.filesAt(since)).keys()) {
-      if (!matchesAny(node.patterns, file)) continue;
-      if (valid && matchesAny(known.patterns, file)) continue;
+      const name = root.qualified(file);
+      if (!matchesAny(node.patterns, name)) continue;
+      if (valid && matchesAny(known.patterns, name)) continue;
       missing.add(root.key(file));
     }
   }
@@ -466,8 +481,13 @@ export async function snapshotsAfterWrite(
     checks.map(async ({ node, snapshot, current }) => {
       const write = writes.find(({ after }) => after.nodeId === node.nodeId)!;
       const { before, after } = write;
-      const reviewed = (file: string) =>
-        write.reviewed.some((item) => samePath(item, file));
+      const reviewed = (name: string, file: string) =>
+        write.reviewed.some((item) => {
+          const { root, path: relative } = splitAnchor(item);
+          return (
+            (root === null || samePath(root, name)) && samePath(relative, file)
+          );
+        });
       const files: CodeSnapshot['files'] = {};
       for (const [key, { root, file, mtime }] of current) {
         const absolute = root.absolute(file);
@@ -477,14 +497,16 @@ export async function snapshotsAfterWrite(
           before === null ||
           baseline === fingerprint ||
           (baseline === null && mtime <= new Date(before.since)) ||
-          reviewed(file) ||
+          reviewed(root.name, file) ||
           write.isRead({ relative: file, absolute, fingerprint, mtime });
         if (upToDate) files[key] = fingerprint;
         else if (baseline !== undefined) files[key] = baseline ?? '';
       }
       for (const [key, baseline] of Object.entries(snapshot.files)) {
         if (current.has(key) || before === null) continue;
-        if (!reviewed(key.slice(key.indexOf('/') + 1))) files[key] = baseline;
+        const slash = key.indexOf('/');
+        if (!reviewed(key.slice(0, slash), key.slice(slash + 1)))
+          files[key] = baseline;
       }
       return {
         nodeId: node.nodeId,
@@ -504,12 +526,15 @@ export async function describeAnchors(
   return Promise.all(
     patterns.map(async (pattern) => {
       const perRoot: PatternFiles[] = await Promise.all(
-        usable.map((root) =>
-          scanPattern(root, pattern, {
+        usable.map(async (root) => {
+          const local = patternIn(pattern, root, PATHS_CASE_INSENSITIVE);
+          if (local === null)
+            return { pattern, files: [], count: 0, truncated: false };
+          return scanPattern(root, local, {
             caseInsensitive: PATHS_CASE_INSENSITIVE,
             limit: ANCHOR_FILES_LIMIT,
-          }),
-        ),
+          });
+        }),
       );
       const files = perRoot
         .flatMap((result, index) =>

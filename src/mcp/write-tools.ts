@@ -46,7 +46,7 @@ import { LESSON_OUTCOME_LABELS, type LessonOutcome } from '../shared/lessons';
 import { listNodeTags } from '../main/knowledge/tag-service';
 import { TagService } from '../main/knowledge/tag-service';
 import { requireTemplate } from '../main/knowledge/template-service';
-import { matchesAnchor, toRootRelative } from '../shared/code-anchors';
+import { matchesAnchor, qualifiedPath } from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
   listAnchoredNodes,
@@ -474,8 +474,13 @@ export function anchorFiles(
   nodeType(ctx, input.nodeId);
   const roots = ctx.codeRoots ?? [];
   const relative = (raw: string) => {
-    const found = toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE);
-    if (found?.path) return found.path;
+    const found = qualifiedPath(
+      raw,
+      roots,
+      PATHS_CASE_INSENSITIVE,
+      process.cwd(),
+    );
+    if (found) return found;
     throw new NodalError(
       'VALIDATION_ERROR',
       roots.length === 0
@@ -484,9 +489,11 @@ export function anchorFiles(
     );
   };
   const before = listAnchors(ctx, input.nodeId);
-  const removed = new Set(
-    normalizeAnchorList((input.remove ?? []).map(relative)),
-  );
+  // Motif tel qu'il est écrit, ou avec le dossier de l'assistant.
+  const removed = new Set([
+    ...normalizeAnchorList((input.remove ?? []).map(relative)),
+    ...(input.remove ?? []),
+  ]);
   const added = normalizeAnchorList((input.add ?? []).map(relative));
   const after = setAnchors(ctx, input.nodeId, [
     ...before.filter((pattern) => !removed.has(pattern)),
@@ -520,22 +527,23 @@ export function reviewFiles(
   nodeType(ctx, input.nodeId);
   const [node] = withSnapshots(ctx, listAnchoredNodes(ctx, [input.nodeId]));
   const files = input.files.map((raw) => {
-    const found = toRootRelative(
+    const found = qualifiedPath(
       raw,
       ctx.codeRoots ?? [],
       PATHS_CASE_INSENSITIVE,
+      process.cwd(),
     );
     const anchored = node?.patterns.some(
       (pattern) =>
-        found && matchesAnchor(pattern, found.path, PATHS_CASE_INSENSITIVE),
+        found && matchesAnchor(pattern, found, PATHS_CASE_INSENSITIVE),
     );
-    if (!found?.path || !anchored) {
+    if (!found || !anchored) {
       throw new NodalError(
         'VALIDATION_ERROR',
         `« ${raw} » n'est pas ancré à ce nœud.`,
       );
     }
-    return found.path;
+    return found;
   });
   const { code_reviewed_at: before } = ctx.db
     .prepare('SELECT code_reviewed_at FROM node WHERE id = ?')

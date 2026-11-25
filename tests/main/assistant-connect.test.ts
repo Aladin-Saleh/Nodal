@@ -59,7 +59,7 @@ describe('connectAssistant', () => {
       expect(json(settings).hooks.UserPromptSubmit).toHaveLength(1);
       expect(
         fs.existsSync(
-          path.join(project, '.claude', 'skills', 'nodal-init', 'SKILL.md'),
+          path.join(project, '.claude', 'skills', 'nodal-scan', 'SKILL.md'),
         ),
       ).toBe(true);
       // Les réglages existaient : seul le fichier créé est exclu.

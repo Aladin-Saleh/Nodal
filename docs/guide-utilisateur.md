@@ -508,10 +508,13 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   `.agents/skills` hors Claude Code) des modes d’emploi lus par l’assistant
   seulement quand ils servent, remis à jour au démarrage de Nodal. Un fichier
   que Nodal n’a pas écrit n’est pas remplacé. Pour documenter votre code, il
-  suffit de taper `/nodal-init` (ou de le demander en clair) :
+  suffit de taper `/nodal-scan` (ou de le demander en clair). Un même espace
+  réunit autant de ressources que voulu : relancez-le sur un autre dossier,
+  chacune a sa racine et son suivi (50 dossiers de code au plus, de noms
+  différents ; `nom:src/**` ancre à un seul d'entre eux) :
   - `/nodal` : consulter la base, vérifier avant une modification, enregistrer
     après ;
-  - `/nodal-init [rapide | complet] [dossier]` : créer la base d’un projet à
+  - `/nodal-scan [rapide | complet] [dossier]` : créer la base d’un projet à
     partir de son code (modules, contrats JSON, inventaires CSV, schémas
     Mermaid, procédures, décisions). Le plan vous est soumis d’abord ; long sur
     un grand dépôt, il se reprend là où il s’est arrêté (document
@@ -525,8 +528,8 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   s’arrête, pour un script ou un assistant sans MCP :
   `node nodal-mcp.cjs espace.nodal search capture rapide -- files src/a.ts`
   (`--help` : liste ; `--read-only` : sans écriture).
-- **Commandes** : le serveur en propose cinq (« / » puis `nodal` dans Claude
-  Code) : `explique`, `avant-modif`, `documenter`, `a-revoir` (fiches
+- **Commandes** : le serveur en propose six (« / » puis `nodal` dans Claude
+  Code) : `scan` (documenter le repo), `explique`, `avant-modif`, `documenter`, `a-revoir` (fiches
   dépassées) et `lecon`.
 - **Fichiers du code** : avant de modifier des fichiers, l'assistant demande
   à Nodal les nœuds qui les documentent (outil `nodal_for_files`) ; après,

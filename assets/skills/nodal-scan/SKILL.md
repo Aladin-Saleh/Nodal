@@ -1,16 +1,16 @@
 ---
-name: nodal-init
-description: Créer (ou reprendre) la base de connaissances Nodal d'un projet à partir de son code - inventaire, architecture, modules, contrats JSON, schémas Mermaid, CSV, procédures, décisions. À utiliser seulement quand l'utilisateur demande de documenter tout son projet ou son code dans Nodal (long).
-argument-hint: '[rapide | complet] [dossier]'
+name: nodal-scan
+description: Documenter dans Nodal une ressource entière (dépôt, dossier de code, documentation), ou reprendre ce travail ; un même espace peut en réunir plusieurs - inventaire, architecture, modules, contrats JSON, schémas Mermaid, CSV, procédures, décisions. À utiliser seulement quand l'utilisateur demande de documenter tout son projet ou son code dans Nodal (long).
+argument-hint: '[rapide | complet] [dossiers ou fichiers]'
 ---
 
 <!-- Installé par Nodal : remplacé à chaque installation. -->
 
-# Initialiser la base d'un projet
+# Documenter une ressource
 
 Demande : $ARGUMENTS
 
-Lisez d'abord `../nodal/conventions.md` (chemin relatif au dossier de ce skill). `rapide` : étapes 1, 2, 3 et 6. Sinon : tout. Un dossier : limitez-vous à lui.
+Lisez d'abord `../nodal/conventions.md` (chemin relatif au dossier de ce skill). `rapide` : étapes 1, 2, 3 et 6. Sinon : tout. Ressource : le dossier courant, ou ce que la demande nomme (sous-dossier, autre dépôt, documentation, fichiers) ; plusieurs : l'une après l'autre. Une documentation sans code : lisez-la comme source, modules = sujets, contrats et schémas seulement s'il y en a.
 
 ## 1. État des lieux
 
@@ -18,7 +18,11 @@ En parallèle : `nodal_overview`, `nodal_tree` (depth 3), et dans le dépôt : f
 
 Écartez : dépendances, fichiers générés, binaires, sorties de construction, fichiers de verrouillage, secrets.
 
-Un nœud « Documentation du code » existe déjà : c'est une reprise. Lisez son document « Couverture » et continuez aux lignes `à faire`.
+L'espace est vide, ou contient déjà d'autres ressources :
+
+- Le nœud « Couverture : nom de cette ressource » existe : c'est une reprise. Lisez son document « Couverture » et continuez aux lignes `à faire`. Tout est `fait` : dites-le et proposez `nodal-maj`.
+- La ressource est une partie d'une racine existante (sous-dossier) : complétez sous cette racine.
+- Sinon : nouvelle racine. Ne touchez pas aux autres ; reliez-leur seulement ce que le code prouve (un client `consomme` l'API de l'autre…).
 
 ## 2. Plan, puis accord
 
@@ -26,7 +30,7 @@ Découpez en 3 à 15 modules par responsabilité (pas forcément par dossier). M
 
 Arborescence par défaut, branches vides omises :
 
-- **Nom du projet** (`concept`) : Architecture · Modules · Données et contrats · Procédures · Décisions · Documentation du code (`task`)
+- **Nom du projet** (`concept`) : Architecture · Modules · Données et contrats · Procédures · Décisions · Couverture : nom de la ressource (`task`)
 
 ## 3. Socle
 
@@ -36,7 +40,7 @@ En un `nodal_apply` (deux si besoin) :
 - Branches, et un nœud par module : résumé tiré d'une lecture du point d'entrée, ancrages.
 - Architecture : document `mermaid` « Vue des modules » (`flowchart`).
 - Relations entre modules, prouvées par un import ou un appel.
-- « Documentation du code » : document `csv` « Couverture », colonnes `module,chemins,fichiers,fiche,contrats,schémas`, états `fait`, `à faire`, `sans objet`.
+- « Couverture : nom de la ressource » : document `csv` « Couverture », colonnes `module,chemins,fichiers,fiche,contrats,schémas`, états `fait`, `à faire`, `sans objet`.
 
 Dès cette étape la base est utilisable ; la suite peut être interrompue et reprise.
 
@@ -44,7 +48,7 @@ Dès cette étape la base est utilisable ; la suite peut être interrompue et re
 
 Dans l'ordre de dépendance (les plus utilisés d'abord), suivez `../nodal-module/SKILL.md`, avec les contrats (`../nodal-contrats/SKILL.md`) et les schémas (`../nodal-schemas/SKILL.md`) du module ; lisez ces fichiers une fois. Un `nodal_apply` par module (petits modules : deux ou trois ensemble), qui met aussi à jour « Couverture » (`updateDocument`, `mode: "replace"`). Ne lisez pas tout avant d'écrire.
 
-Dépôt de plus de 300 fichiers utiles : après trois ou quatre modules, dites où vous en êtes et proposez de continuer ou de reprendre plus tard (`/nodal-init`). Sous-agents de lecture seulement si l'utilisateur en veut ; vous seul écrivez.
+Dépôt de plus de 300 fichiers utiles : après trois ou quatre modules, dites où vous en êtes et proposez de continuer ou de reprendre plus tard (`/nodal-scan`). Sous-agents de lecture seulement si l'utilisateur en veut ; vous seul écrivez.
 
 ## 5. Transverse
 

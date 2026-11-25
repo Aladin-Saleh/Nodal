@@ -50,7 +50,7 @@ import {
   type PathLink,
   type PathStep,
 } from '../shared/graph-path';
-import { toRootRelative, type StaleNode } from '../shared/code-anchors';
+import { qualifiedPath, type StaleNode } from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
   listAnchoredNodes,
@@ -968,7 +968,8 @@ export function impact(
   const outline = loadOutline(ctx);
   if (input.nodeId && !outline.byId.has(input.nodeId)) throw notFound('Nœud');
   const relative = (input.paths ?? []).flatMap(
-    (raw) => toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE)?.path || [],
+    (raw) =>
+      qualifiedPath(raw, roots, PATHS_CASE_INSENSITIVE, process.cwd()) ?? [],
   );
   const seeds = input.nodeId
     ? [input.nodeId]
@@ -1284,8 +1285,13 @@ export function forFiles(
   const relative: string[] = [];
   const unknown: string[] = [];
   for (const raw of input.paths) {
-    const found = toRootRelative(raw, roots, PATHS_CASE_INSENSITIVE);
-    if (found?.path) relative.push(found.path);
+    const found = qualifiedPath(
+      raw,
+      roots,
+      PATHS_CASE_INSENSITIVE,
+      process.cwd(),
+    );
+    if (found) relative.push(found);
     else unknown.push(raw);
   }
   const matches = nodesForPaths(ctx, relative);

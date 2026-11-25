@@ -6,7 +6,12 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { staticPrefix, toRootRelative } from '../shared/code-anchors';
+import {
+  qualifiedPath,
+  splitAnchor,
+  staticPrefix,
+  toRootRelative,
+} from '../shared/code-anchors';
 import {
   PATHS_CASE_INSENSITIVE,
   nodesForPaths,
@@ -151,8 +156,10 @@ export function fileNodes(
   >();
   for (const file of files) {
     const found = toRootRelative(file, roots, PATHS_CASE_INSENSITIVE);
-    if (!found?.root || !found.path || targets.has(found.path)) continue;
-    targets.set(found.path, {
+    if (!found?.root || !found.path) continue;
+    const name = qualifiedPath(file, roots, PATHS_CASE_INSENSITIVE)!;
+    if (targets.has(name)) continue;
+    targets.set(name, {
       root: path.basename(found.root),
       file,
       content: null,
@@ -199,7 +206,7 @@ export function fileNodes(
     return paths
       .filter((name) => {
         const { root, content } = targets.get(name)!;
-        const known = snapshot.files[`${root}/${name}`];
+        const known = snapshot.files[`${root}/${splitAnchor(name).path}`];
         return content !== null && known !== null && known !== content;
       })
       .join(', ');
