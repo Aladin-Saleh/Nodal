@@ -40,7 +40,8 @@ function normalizeContent(text: string, fileName: string): string {
       .replace(/ (?=\W|$)|(?<=\W|^) /g, '')
       // Dernier séparateur, et `|` initial d'une union de types.
       .replace(/[,;](?=[)\]}])/g, '')
-      .replace(/(?<=[=:(<,]|as)\|(?!\|)/g, '')
+      .replace(/(?<=[=:(<,])\|(?!\|)/g, '')
+      .replace(/\bas\|(?!\|)/g, 'as ')
   );
 }
 

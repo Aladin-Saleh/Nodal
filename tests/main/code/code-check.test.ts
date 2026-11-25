@@ -224,6 +224,8 @@ describe('empreinte de contenu', () => {
       print(before),
     );
     expect(print("const a = f('x', [1, 3]);\n")).not.toBe(print(before));
+    expect(print('x as | A | B')).toBe(print('x as A | B'));
+    expect(print('alias | A')).not.toBe(print('alias A'));
     // Deux mots ne se confondent pas avec un seul.
     expect(print('return x')).not.toBe(print('returnx'));
   });

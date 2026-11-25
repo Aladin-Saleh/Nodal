@@ -105,12 +105,17 @@ describe('base partagée avec un assistant IA', () => {
     );
     const client = mcpClient(mcp);
     await client.initialize();
-    const created = await client.call('nodal_create_node', {
-      title: 'Kafka',
-      type: 'component',
-      summary: 'Bus de messages.',
+    const created = await client.call('nodal_apply', {
+      operations: [
+        {
+          op: 'createNode',
+          title: 'Kafka',
+          type: 'component',
+          summary: 'Bus de messages.',
+        },
+      ],
     });
-    expect(created.path).toBe('Kafka');
+    expect(created.applied).toBe(1);
 
     // Détecté par le main (data_version) puis rechargé par le renderer.
     await page.getByRole('treeitem', { name: 'Kafka' }).waitFor();
