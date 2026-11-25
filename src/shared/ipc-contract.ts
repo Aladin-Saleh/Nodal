@@ -321,8 +321,11 @@ export interface IpcContract {
     result: null;
   };
   'terminal:close': { args: [{ id: string }]; result: null };
-  /** Skill Nodal (Claude Code) dans un projet choisi ; `null` si annulé. */
-  'assistant:installSkill': { args: []; result: { file: string } | null };
+  /** Skills Nodal (Claude Code) dans un projet choisi ; `null` si annulé. */
+  'assistant:installSkills': {
+    args: [];
+    result: { directory: string } | null;
+  };
   'assistant:installContextHook': {
     args: [{ client: ContextHookClient }];
     result: { settingsFile: string } | null;
@@ -506,7 +509,7 @@ export const IPC_CHANNELS = [
   'code:getRoots',
   'code:addRoot',
   'code:removeRoot',
-  'assistant:installSkill',
+  'assistant:installSkills',
   'assistant:installContextHook',
   'terminal:listShells',
   'terminal:create',

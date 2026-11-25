@@ -117,30 +117,32 @@ function ContextHookSection({
   );
 }
 
-/** Skill : mode d'emploi de Nodal, lu par l'assistant seulement quand il sert. */
-function SkillSection() {
+/** Skills : modes d'emploi de Nodal, lus par l'assistant seulement quand ils servent. */
+function SkillsSection() {
   const client = useClient();
   const run = useRunner();
-  const [file, setFile] = useState<string | null>(null);
+  const [directory, setDirectory] = useState<string | null>(null);
   const install = async () => {
-    const result = await run(() => client.call('assistant:installSkill'));
-    if (result) setFile(result.file);
+    const result = await run(() => client.call('assistant:installSkills'));
+    if (result) setDirectory(result.directory);
   };
   return (
     <>
-      <h3>Skill</h3>
+      <h3>Skills</h3>
       <p className="muted">
-        Mode d’emploi de Nodal (.claude/skills/nodal) : quand le consulter, quoi
-        vérifier avant une modification, quoi enregistrer après. Commande /nodal
-        ; l’assistant le charge aussi de lui-même quand il en a besoin.
+        Modes d’emploi pour l’assistant (.claude/skills). /nodal : consulter la
+        base, quoi vérifier et enregistrer. /nodal-init : créer la base d’un
+        projet à partir de son code. /nodal-module, /nodal-contrats (JSON, CSV),
+        /nodal-schemas (Mermaid) : en documenter une partie. /nodal-maj : suivre
+        les changements du code.
       </p>
       <div className="mcp-hook-actions">
         <button type="button" onClick={() => void install()}>
-          Installer le skill dans un projet…
+          Installer les skills dans un projet…
         </button>
-        {file && (
+        {directory && (
           <span className="muted" role="status">
-            Écrit dans {file}.
+            Écrits dans {directory}.
           </span>
         )}
       </div>
@@ -272,7 +274,7 @@ export function McpDialog({
               workspaceFile={workspaceFile}
             />
           )}
-          {assistant === 'claude-code' && <SkillSection />}
+          {assistant === 'claude-code' && <SkillsSection />}
           {setup.instructionsFile && (
             <>
               <h3>Consulter Nodal d’abord</h3>

@@ -501,10 +501,23 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   besoin d'écrire « consulte Nodal » dans la demande. Pour tous vos projets,
   copiez le bloc proposé dans `~/.claude/settings.json` (ou
   `~/.gemini/settings.json`). Le hook ne fait que lire l'espace.
-- **Skill** (Claude Code) : même fenêtre, **Installer le skill dans un
-  projet…** écrit `.claude/skills/nodal/SKILL.md`, le mode d’emploi de Nodal,
-  lu par l’assistant seulement quand il sert (ou par `/nodal`). Un fichier que
-  Nodal n’a pas écrit n’est pas remplacé.
+- **Skills** (Claude Code) : même fenêtre, **Installer les skills dans un
+  projet…** écrit dans `.claude/skills` des modes d’emploi lus par l’assistant
+  seulement quand ils servent. Un fichier que Nodal n’a pas écrit n’est pas
+  remplacé. Le serveur MCP doit être connecté en écriture pour tous sauf
+  `/nodal` :
+  - `/nodal` : consulter la base, vérifier avant une modification, enregistrer
+    après ;
+  - `/nodal-init [rapide | complet] [dossier]` : créer la base d’un projet à
+    partir de son code (modules, contrats JSON, inventaires CSV, schémas
+    Mermaid, procédures, décisions). Le plan vous est soumis d’abord ; long sur
+    un grand dépôt, il se reprend là où il s’est arrêté (document
+    « Couverture ») et ne part que si vous le lancez ;
+  - `/nodal-module <dossier ou nom>` : documenter une partie en profondeur ;
+  - `/nodal-contrats [portée]` : entrées et sorties (API, IPC, événements,
+    configuration, tables) en JSON Schema, exemples JSON et CSV ;
+  - `/nodal-schemas [sujet]` : architecture, séquence, données, états ;
+  - `/nodal-maj [référence git]` : corriger ce que des changements ont périmé.
 - **En ligne de commande** : le serveur exécute aussi une commande et
   s’arrête, pour un script ou un assistant sans MCP :
   `node nodal-mcp.cjs espace.nodal search capture rapide -- files src/a.ts`

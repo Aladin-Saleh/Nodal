@@ -34,3 +34,7 @@ Un seul `nodal_apply` :
 - `lesson` si une piste n'a mené à rien (`dead_end`), si l'utilisateur a corrigé (`corrected`, `note` = ce qui est juste), ou si des nœuds ont vraiment servi (`useful`).
 
 Notez ce qui restera vrai et que le code ne dit pas : pourquoi, ce qui a été écarté et mesuré, pièges, procédures. Pas le récit de la séance.
+
+## Documenter davantage
+
+Autres skills : `nodal-module` (une partie du code), `nodal-contrats` (JSON et CSV d'entrée/sortie), `nodal-schemas` (Mermaid), `nodal-maj` (après des changements). Base vide : proposez `/nodal-init`, que l'utilisateur lance lui-même.

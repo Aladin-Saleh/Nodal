@@ -292,7 +292,8 @@ pièces jointes en BLOB).
     avec une sauvegarde, relations incertaines en tirets ;
   - MCP : écriture par `nodal_apply` seul (`--all-tools` pour les outils
     unitaires), mode commande, analyse dans `nodal_health`, nœuds touchés dans
-    `nodal_for_files`, commandes (prompts) et skill Claude Code ;
+    `nodal_for_files`, commandes (prompts) et skills Claude Code
+    (dont `/nodal-init` : base d’un projet à partir de son code) ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).
 

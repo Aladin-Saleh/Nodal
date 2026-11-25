@@ -366,7 +366,7 @@ export const ipcArgsSchemas = {
     }),
   ),
   'terminal:close': one(z.strictObject({ id: z.string().min(1).max(20) })),
-  'assistant:installSkill': noArgs,
+  'assistant:installSkills': noArgs,
   'assistant:installContextHook': one(
     z.strictObject({ client: z.enum(CONTEXT_HOOK_CLIENTS) }),
   ),

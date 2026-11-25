@@ -24,6 +24,7 @@ import {
   EVIDENCE_SOURCE_MAX_LENGTH,
 } from '../shared/evidence';
 import { NodalError } from '../shared/errors';
+import { DocumentService } from '../main/knowledge/document-service';
 import type { ShortIds } from './short-ids';
 import {
   addDocument,
@@ -205,6 +206,17 @@ export function applyOperations(
   return { applied: results.length, results };
 }
 
+/** Contenu JSON qui ne s'analyse pas : signalé, jamais refusé. */
+function jsonNote(contentType: string, body: string): string | undefined {
+  if (contentType !== 'json' || body.trim() === '') return undefined;
+  try {
+    JSON.parse(body);
+    return undefined;
+  } catch (error) {
+    return `JSON invalide : ${(error as Error).message}`;
+  }
+}
+
 /**
  * Exécute une opération ; renvoie l'identifiant de l'élément touché (et du
  * document créé par un modèle).
@@ -224,11 +236,16 @@ function run(
     }
     case 'addDocument': {
       const { op: _op, ...input } = operation;
-      return { id: addDocument(ctx, input).id };
+      return {
+        id: addDocument(ctx, input).id,
+        note: jsonNote(input.contentType, input.body),
+      };
     }
     case 'updateDocument': {
       const { op: _op, ...input } = operation;
-      return { id: updateDocument(ctx, input).id };
+      const { id } = updateDocument(ctx, input);
+      const after = new DocumentService(() => ctx).get(id);
+      return { id, note: jsonNote(after.contentType, after.body) };
     }
     case 'link': {
       const { op: _op, ...input } = operation;

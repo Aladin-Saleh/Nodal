@@ -499,6 +499,32 @@ describe('serveur MCP', () => {
     await client.close();
   });
 
+  it('signale un document JSON invalide sans le refuser', async () => {
+    workspace();
+    const client = await connect(file, false);
+    const json = (body: string) => ({
+      op: 'addDocument',
+      nodeId: ids.api,
+      title: 'Entrée',
+      contentType: 'json',
+      body,
+    });
+    const { results } = toon(
+      await client.call('nodal_apply', {
+        operations: [
+          json('{"a": 1}'),
+          json('{"a": 1,}'),
+          { op: 'updateDocument', id: '$1', body: '{', mode: 'replace' },
+          { op: 'updateDocument', id: '$2', body: '{}', mode: 'replace' },
+        ],
+      }),
+    ) as { results: { note?: string }[] };
+    expect(
+      results.map(({ note }) => note?.includes('JSON invalide') ?? false),
+    ).toEqual([false, true, true, false]);
+    await client.close();
+  });
+
   it('écrit par nodal_apply seulement, sauf --all-tools', async () => {
     const names = async (allTools: boolean) => {
       const client = await connect(file, false, null, allTools);
