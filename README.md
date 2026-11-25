@@ -268,7 +268,8 @@ pièces jointes en BLOB).
   - menu « Help → À propos de Nodal » (rôle, version, auteur, contact) ;
   - animation de l'installateur (« Aladinvention's Software » en art
     ASCII et golem), générée par `npx electron scripts/generate-installer-gif.mjs`.
-- **Non publié** :
+- **v1.7 — Connaissance sûre** (fichiers au schéma 14, illisibles par les
+  versions précédentes) :
   - terminal : plusieurs onglets, type au choix (PowerShell, invite de
     commandes, Git Bash, distributions WSL), shell par défaut mémorisé ;
   - arborescence, panneau du nœud, éditeur / aperçu et terminal
@@ -290,7 +291,7 @@ pièces jointes en BLOB).
   - vues : schéma Mermaid d’une branche, export vers Obsidian, comparaison
     avec une sauvegarde, relations incertaines en tirets ;
   - MCP : écriture par `nodal_apply` seul (`--all-tools` pour les outils
-    unitaires), analyse dans `nodal_health`, nœuds touchés dans
+    unitaires), mode commande, analyse dans `nodal_health`, nœuds touchés dans
     `nodal_for_files`, commandes (prompts) et skill Claude Code ;
   - réponses MCP coupées : budget nécessaire annoncé (`maxCharsNeeded`,
     `maxRowsNeeded`, `maxNodesNeeded`).

@@ -1,0 +1,1191 @@
+{
+  "meta": {
+    "date": "2026-11-25T08:43:32.265Z",
+    "label": "code mode (commandes) contre MCP",
+    "claudeCode": "2.1.306 (Claude Code)",
+    "commit": "2c58790",
+    "runsPerCase": 2,
+    "model": "sonnet"
+  },
+  "rows": [
+    {
+      "question": "ipc",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 1,
+      "input": 32320,
+      "output": 652.5,
+      "cost": 0.045827999999999994,
+      "warmCost": 0.0092858,
+      "quality": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 2,
+      "input": 58843,
+      "output": 1007,
+      "cost": 0.0603283,
+      "warmCost": 0.0307158,
+      "quality": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 30354,
+      "output": 648,
+      "cost": 0.044586049999999995,
+      "warmCost": 0.009359199999999998,
+      "quality": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 1,
+      "input": 32133,
+      "output": 462,
+      "cost": 0.04353965,
+      "warmCost": 0.0078971,
+      "quality": 0.9444444444444444
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 2,
+      "input": 57493,
+      "output": 760.5,
+      "cost": 0.05235800000000001,
+      "warmCost": 0.022655400000000003,
+      "quality": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 30167,
+      "output": 454.5,
+      "cost": 0.0422677,
+      "warmCost": 0.0072605,
+      "quality": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 7,
+      "input": 120032,
+      "output": 1593.5,
+      "cost": 0.0853829,
+      "warmCost": 0.0585253,
+      "quality": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 2.5,
+      "input": 73521.5,
+      "output": 1238,
+      "cost": 0.058897649999999996,
+      "warmCost": 0.0291852,
+      "quality": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 3.5,
+      "input": 91083.5,
+      "output": 1490,
+      "cost": 0.06427945,
+      "warmCost": 0.0338824,
+      "quality": 0.7222222222222222
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 2.5,
+      "input": 66083,
+      "output": 822.5,
+      "cost": 0.0562472,
+      "warmCost": 0.020246600000000003,
+      "quality": 0.8
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 2,
+      "input": 61859,
+      "output": 860.5,
+      "cost": 0.0675265,
+      "warmCost": 0.0404272,
+      "quality": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 29849,
+      "output": 861.5,
+      "cost": 0.0424371,
+      "warmCost": 0.0111687,
+      "quality": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 1,
+      "input": 32732,
+      "output": 634,
+      "cost": 0.04324475,
+      "warmCost": 0.009597,
+      "quality": 0.8571428571428571
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 4.5,
+      "input": 131313,
+      "output": 1449,
+      "cost": 0.06787080000000001,
+      "warmCost": 0.048547,
+      "quality": 0.7142857142857142
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 1,
+      "input": 30766,
+      "output": 739,
+      "cost": 0.043091950000000004,
+      "warmCost": 0.0109304,
+      "quality": 0.8571428571428571
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "runs": 2,
+      "turns": 2,
+      "input": 65519.5,
+      "output": 406,
+      "cost": 0.053034,
+      "warmCost": 0.022078999999999998,
+      "quality": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli",
+      "runs": 2,
+      "turns": 2,
+      "input": 58056.5,
+      "output": 493.5,
+      "cost": 0.04885125,
+      "warmCost": 0.0226962,
+      "quality": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli-hook",
+      "runs": 2,
+      "turns": 2.5,
+      "input": 76097.5,
+      "output": 516,
+      "cost": 0.052613850000000004,
+      "warmCost": 0.0232503,
+      "quality": 1
+    }
+  ],
+  "results": [
+    {
+      "question": "capture",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0772749,
+      "durationMs": 3911,
+      "inputTokens": 2,
+      "cacheWriteTokens": 17796,
+      "cacheReadTokens": 12369,
+      "outputTokens": 485,
+      "tools": {},
+      "calls": [],
+      "answer": "La capture rapide de Nodal fonctionne ainsi (d'après la base Nodal, non revérifiée dans le code) :\n\n- **Déclenchement** : un raccourci global (Ctrl+Maj+Espace par défaut) ouvre une fenêtre `#capture` au premier plan. Il se règle avec les préférences `quickCapture` et `quickCaptureShortcut`.\n- **Contenu** : vous saisissez un titre et une note. La note devient un document Markdown nommé « Note ».\n- **Rangement** : la capture va dans la racine « Boîte de réception ». Son identifiant est dans `workspace_settings` sous `inbox.nodeId`, et la racine est créée si elle n'existe pas. Elle va dans l'espace ouvert.\n- **Sans espace ouvert** : Nodal prend le dernier espace récent dont le fichier existe. Il l'ouvre le temps de l'écriture.\n- **Aucun espace récent** : la capture échoue avec l'erreur `NO_WORKSPACE_OPEN`.\n- **Canaux IPC autorisés** : la fenêtre de capture ne peut appeler que `capture:getTarget`, `capture:submit` et `preferences:get`. Le filtrage passe par `routeSenderByChannel`.\n\nSi vous voulez, je peux confirmer ces points dans le code, par exemple dans `routeSenderByChannel`.",
+      "run": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0791822,
+      "durationMs": 3756,
+      "inputTokens": 2,
+      "cacheWriteTokens": 18309,
+      "cacheReadTokens": 13822,
+      "outputTokens": 456,
+      "tools": {},
+      "calls": [],
+      "answer": "La capture rapide, d'après Nodal (je n'ai pas relu le code source) :\n\n- **Déclenchement** : un raccourci global, par défaut Ctrl+Maj+Espace. Il est réglé par les préférences `quickCapture` et `quickCaptureShortcut`. Il ouvre une fenêtre `#capture` au premier plan.\n- **Contenu** : un titre et une note. La note devient un document Markdown « Note ».\n- **Rangement** : la capture va dans la racine « Boîte de réception ». Son identifiant est stocké dans `workspace_settings` sous `inbox.nodeId`, et la racine est créée au besoin.\n- **Si un espace est ouvert** : la capture va dans la boîte de réception de cet espace.\n- **Si aucun espace n'est ouvert** : elle va dans l'espace du dernier fichier récent qui existe encore. Cet espace est ouvert le temps de l'écriture.\n- **Si aucun espace récent n'existe** : la capture échoue avec l'erreur `NO_WORKSPACE_OPEN`.\n- **Canaux IPC autorisés pour la fenêtre de capture** : `capture:getTarget`, `capture:submit` et `preferences:get`. Le filtrage se fait par expéditeur, avec `routeSenderByChannel`.",
+      "run": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.08237019999999999,
+      "durationMs": 4773,
+      "inputTokens": 2,
+      "cacheWriteTokens": 18496,
+      "cacheReadTokens": 13822,
+      "outputTokens": 700,
+      "tools": {},
+      "calls": [],
+      "answer": "**Fichiers à modifier (d'après Nodal, non revérifiés dans le code) :**\n1. `src/shared/ipc-contract.ts` : ajouter l'entrée dans `IpcContract` (args/result) **et** dans `IPC_CHANNELS` (liste blanche du preload).\n2. `src/shared/ipc-schemas.ts` : schéma zod strict dans `ipcArgsSchemas` (`noArgs` ou `one(z.strictObject(...))`). Le `satisfies` final refuse un canal oublié.\n3. `src/main/ipc/register.ts` : implémentation dans `createImplementations`. Jamais de chemin venant du renderer (dialogues via `src/main/file-dialogs.ts`, et mettre à jour le mock `FileDialogs` de `tests/main/ipc/handler.test.ts`).\n4. Renderer : `client.call('canal', …)` via `useClient()` / `useRunner()` (`src/renderer/app/context.tsx`).\n5. Émetteurs autorisés : `routeSenderByChannel` (`src/main/ipc/handler.ts`). Pour la fenêtre de capture, ajouter le canal à `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n\n**Vérification de l'émetteur** : `createIpcHandler` vérifie d'abord l'émetteur, puis les arguments (zod), puis appelle l'implémentation. `createSenderValidator` (`src/main/security.ts`) contrôle que la fenêtre existe, que `event.sender.id` est son `webContents.id`, que `senderFrame` est le cadre principal (pas d'iframe) et que l'URL du cadre est celle de l'application. Par défaut, seule la fenêtre principale est acceptée. En cas d'échec, l'erreur est `FORBIDDEN_SENDER` et l'implémentation n'est pas appelée. Le preload refuse aussi tout canal absent de `IPC_CHANNELS`.",
+      "run": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.07981289999999999,
+      "durationMs": 4942,
+      "inputTokens": 2,
+      "cacheWriteTokens": 17983,
+      "cacheReadTokens": 12369,
+      "outputTokens": 664,
+      "tools": {},
+      "calls": [],
+      "answer": "**Fichiers à modifier pour un nouveau canal IPC**\n1. `src/shared/ipc-contract.ts`: ajoutez l'entrée dans `IpcContract` (args/result) et dans `IPC_CHANNELS` (liste blanche du preload).\n2. `src/shared/ipc-schemas.ts`: ajoutez un schéma zod strict dans `ipcArgsSchemas`. Le `satisfies` final refuse un canal oublié.\n3. `src/main/ipc/register.ts`: ajoutez l'implémentation dans `createImplementations`. Les chemins ne doivent jamais venir du renderer, donc les boîtes de dialogue passent par `src/main/file-dialogs.ts`.\n4. Renderer: appelez `client.call('canal', …)` via `useClient()` ou `useRunner()` (`src/renderer/app/context.tsx`).\n5. Émetteurs: `routeSenderByChannel` (`src/main/ipc/handler.ts`). Si le canal appartient à la fenêtre de capture, ajoutez-le à `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n\n**Vérification de l'émetteur**\n- `createIpcHandler` vérifie l'émetteur en premier, puis les arguments (zod), puis appelle l'implémentation.\n- `createSenderValidator` (`src/main/security.ts`) contrôle que la fenêtre existe et que `event.sender.id` correspond à son `webContents.id`. Il contrôle aussi que `senderFrame` est le cadre principal, sans iframe, et que l'URL du cadre est celle de l'application (`src/main/app-url.ts`).\n- Un échec renvoie `FORBIDDEN_SENDER` et l'implémentation n'est pas appelée.\n\nCes informations viennent de la base Nodal. Je n'ai pas relu le code source.",
+      "run": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.08206060000000001,
+      "durationMs": 8051,
+      "inputTokens": 4,
+      "cacheWriteTokens": 17583,
+      "cacheReadTokens": 39906,
+      "outputTokens": 773,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only search capture rapide -- search canaux ipc capture"
+          },
+          "resultChars": 4668
+        }
+      ],
+      "answer": "**Fonctionnement** : un raccourci global (Ctrl+Maj+Espace, réglable via les préférences `quickCapture` / `quickCaptureShortcut`) ouvre la fenêtre `#capture` au premier plan. Elle envoie un titre et une note, qui devient un document Markdown « Note ».\n\n**Rangement sans espace ouvert** :\n- La capture va dans la racine « Boîte de réception » (`workspace_settings` `inbox.nodeId`, créée au besoin).\n- Si aucun espace n'est ouvert, Nodal prend le dernier espace récent dont le fichier existe. Il l'ouvre le temps de l'écriture.\n- S'il n'y a aucun espace récent, il renvoie l'erreur `NO_WORKSPACE_OPEN`.\n\n**Canaux IPC autorisés pour la fenêtre de capture** (`routeSenderByChannel`) :\n- `capture:getTarget` et `capture:submit` : réservés à la fenêtre de capture (`CAPTURE_WINDOW_CHANNELS`).\n- `preferences:get` : partagé avec la fenêtre principale (`CAPTURE_WINDOW_SHARED_CHANNELS`).\n- Tous les autres canaux sont refusés, y compris `capture:open`, `capture:getInbox` et `capture:shortcutStatus`. Ils sont réservés à la fenêtre principale et renvoient `FORBIDDEN_SENDER`.\n\nJe me suis appuyé sur la base Nodal et je n'ai pas relu le code source. Elle signale ces nœuds comme périmés (stale) depuis le 2026-11-01.",
+      "run": 1
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0899408,
+      "durationMs": 9080,
+      "inputTokens": 4,
+      "cacheWriteTokens": 18951,
+      "cacheReadTokens": 39888,
+      "outputTokens": 1014,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only search canal ipc -- search vérification émetteur ipc -- lessons ipc"
+          },
+          "resultChars": 7487
+        }
+      ],
+      "answer": "**Fichiers à modifier pour un nouveau canal IPC**\n1. `src/shared/ipc-contract.ts`: ajoutez l'entrée dans `IpcContract` (args et résultat) **et** dans `IPC_CHANNELS`, la liste blanche du preload.\n2. `src/shared/ipc-schemas.ts`: ajoutez un schéma zod strict dans `ipcArgsSchemas` (`noArgs` ou `one(z.strictObject(...))`). Le `satisfies` final refuse un canal oublié.\n3. `src/main/ipc/register.ts`: écrivez l'implémentation dans `createImplementations`. Les chemins ne viennent jamais du renderer. Les boîtes de dialogue passent par `src/main/file-dialogs.ts`, et il faut penser au mock dans `tests/main/ipc/handler.test.ts`.\n4. Côté renderer: appelez `client.call('canal', …)` via `useClient()` ou `useRunner()`.\n5. Si le canal appartient à la fenêtre de capture, ajoutez-le à `CAPTURE_WINDOW_CHANNELS` dans `src/shared/quick-capture.ts`.\n\n**Vérification de l'émetteur**\n- `createIpcHandler` (`src/main/ipc/handler.ts`) vérifie l'émetteur en premier, puis les arguments (zod), puis appelle l'implémentation.\n- `routeSenderByChannel` choisit la fenêtre autorisée. Les canaux de capture n'acceptent que la fenêtre de capture. `preferences:get` accepte les deux fenêtres. Tous les autres canaux n'acceptent que la fenêtre principale.\n- `createSenderValidator` (`src/main/security.ts`) exige que la fenêtre existe et que `event.sender.id` soit son `webContents.id`. Il exige aussi que `senderFrame` soit le cadre principal (sans iframe) et que l'URL du cadre soit celle de l'application.\n- En cas d'échec, le handler renvoie `FORBIDDEN_SENDER` et n'appelle pas l'implémentation.\n\nCes informations viennent de la base Nodal, qui signale ces deux notes comme potentiellement périmées (modifiées depuis leur rédaction). Je n'ai pas relu le code source.",
+      "run": 1
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0072605,
+      "durationMs": 3463,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 30165,
+      "outputTokens": 424,
+      "tools": {},
+      "calls": [],
+      "answer": "La capture rapide fonctionne ainsi (d'après la base Nodal, je n'ai pas relu le code) :\n\n- **Déclenchement** : raccourci global Ctrl+Maj+Espace (préférences `quickCapture` / `quickCaptureShortcut`). Il ouvre une fenêtre `#capture` au premier plan.\n- **Contenu** : un titre et une note, créée comme document Markdown « Note ».\n- **Rangement** : la capture va dans la racine « Boîte de réception ». Elle est référencée par `workspace_settings` `inbox.nodeId` et créée au besoin.\n  - Si un espace est ouvert, c'est la boîte de réception de cet espace.\n  - Sinon, c'est celle du dernier espace récent dont le fichier existe. Cet espace est ouvert juste le temps de l'écriture.\n  - S'il n'y a aucun espace récent, l'appel échoue avec `NO_WORKSPACE_OPEN`. Rien n'est donc rangé.\n- **Canaux IPC autorisés** pour la fenêtre de capture : `capture:getTarget`, `capture:submit` et `preferences:get`. Ils sont filtrés par `routeSenderByChannel`.",
+      "run": 2
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0078971,
+      "durationMs": 3841,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 32131,
+      "outputTokens": 468,
+      "tools": {},
+      "calls": [],
+      "answer": "La capture rapide de Nodal (étape D1) fonctionne ainsi, d'après la base Nodal. Je n'ai pas relu le code source.\n\n- **Déclenchement :** un raccourci global (Ctrl+Maj+Espace par défaut). Il est réglable via les préférences `quickCapture` et `quickCaptureShortcut`. Il fait apparaître au premier plan une petite fenêtre `#capture`.\n- **Contenu :** vous saisissez un titre et une note. La note devient un document Markdown nommé « Note ».\n- **Rangement :** la capture va dans la racine « Boîte de réception ». Son identifiant est `inbox.nodeId` dans `workspace_settings`, et la racine est créée si elle n'existe pas.\n  - Si un espace est ouvert, c'est celui-là.\n  - Sinon, c'est le dernier espace récent dont le fichier existe encore. Nodal l'ouvre le temps de l'écriture.\n  - Sans espace ouvert ni espace récent, la capture échoue avec l'erreur `NO_WORKSPACE_OPEN`.\n- **Canaux IPC autorisés pour la fenêtre de capture :** seulement `capture:getTarget`, `capture:submit` et `preferences:get`. Le filtrage se fait par expéditeur avec `routeSenderByChannel`.",
+      "run": 2
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0092858,
+      "durationMs": 4095,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 32318,
+      "outputTokens": 605,
+      "tools": {},
+      "calls": [],
+      "answer": "**Fichiers à modifier** (source : Nodal, non revérifié dans le code) :\n1. `src/shared/ipc-contract.ts` : ajouter le canal dans `IpcContract` (args/result) et dans `IPC_CHANNELS` (liste blanche du preload).\n2. `src/shared/ipc-schemas.ts` : schéma zod strict dans `ipcArgsSchemas` (le `satisfies` final refuse un canal oublié).\n3. `src/main/ipc/register.ts` : implémentation dans `createImplementations`. Aucun chemin ne doit venir du renderer : utilisez `src/main/file-dialogs.ts` pour les dialogues.\n4. Renderer : `client.call('canal', …)` via `useClient()` ou `useRunner()` (`src/renderer/app/context.tsx`).\n5. Si le canal concerne la fenêtre de capture : `CAPTURE_WINDOW_CHANNELS` dans `src/shared/quick-capture.ts`. `routeSenderByChannel` est dans `src/main/ipc/handler.ts`.\n\n**Vérification de l'émetteur** : `createIpcHandler` vérifie l'émetteur en premier, avant les arguments (zod) et l'implémentation. `routeSenderByChannel` choisit la fenêtre autorisée : principale par défaut, capture pour ses canaux, les deux pour `preferences:get`. `createSenderValidator` (`src/main/security.ts`) contrôle ensuite trois points : `event.sender.id` doit égal le `webContents.id` de la fenêtre, `senderFrame` doit être le cadre principal, et son URL doit être celle de l'app. Un échec renvoie `FORBIDDEN_SENDER`.",
+      "run": 2
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.009359199999999998,
+      "durationMs": 4436,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 30352,
+      "outputTokens": 632,
+      "tools": {},
+      "calls": [],
+      "answer": "**Fichiers à modifier pour un nouveau canal IPC :**\n1. `src/shared/ipc-contract.ts` : ajouter l'entrée dans `IpcContract` (args/result) **et** dans `IPC_CHANNELS` (liste blanche du preload).\n2. `src/shared/ipc-schemas.ts` : schéma zod strict dans `ipcArgsSchemas` (le `satisfies` final refuse un canal oublié).\n3. `src/main/ipc/register.ts` : implémentation dans `createImplementations`. Pas de chemin venant du renderer (dialogues via `src/main/file-dialogs.ts`, et mock `FileDialogs` dans `tests/main/ipc/handler.test.ts`).\n4. Renderer : appel via `client.call('canal', …)` (`useClient()`/`useRunner()`, `src/renderer/app/context.tsx`).\n5. Émetteurs : `routeSenderByChannel` (`src/main/ipc/handler.ts`). Pour la fenêtre de capture, ajouter le canal à `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n\n**Vérification de l'émetteur** (`createIpcHandler`, d'abord, avant zod et l'implémentation) : `createSenderValidator` (`src/main/security.ts`) contrôle que la fenêtre existe, que `event.sender.id` correspond à son `webContents.id`, que `senderFrame` est le cadre principal (pas d'iframe) et que son URL est celle de l'application (`createAppUrlMatcher`). Un échec renvoie `FORBIDDEN_SENDER`. Par défaut seule la fenêtre principale est acceptée. Le preload rejette aussi tout canal absent de `IPC_CHANNELS`.",
+      "run": 2
+    },
+    {
+      "question": "capture",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.022655400000000003,
+      "durationMs": 7640,
+      "inputTokens": 4,
+      "cacheWriteTokens": 2415,
+      "cacheReadTokens": 55074,
+      "outputTokens": 748,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only search capture rapide -- search canaux ipc capture"
+          },
+          "resultChars": 4668
+        }
+      ],
+      "answer": "**Rangement.** Le raccourci global (Ctrl+Maj+Espace) ouvre la fenêtre `#capture`. Elle enregistre un titre et une note, qui est un document Markdown « Note ». La note va dans la racine « Boîte de réception » de l'espace ouvert (`workspace_settings` `inbox.nodeId`, créée si besoin).\n\n- **Aucun espace ouvert :** la capture va dans la Boîte de réception du dernier espace récent dont le fichier existe. Cet espace est ouvert le temps de l'écriture.\n- **Aucun espace récent :** l'appel renvoie `NO_WORKSPACE_OPEN`.\n\n**Canaux IPC autorisés pour la fenêtre de capture.**\n- `capture:getTarget` et `capture:submit` (liste `CAPTURE_WINDOW_CHANNELS`) sont réservés à la fenêtre de capture.\n- `preferences:get` (liste `CAPTURE_WINDOW_SHARED_CHANNELS`) est partagé avec la fenêtre principale.\n- Les autres canaux lui sont interdits, y compris `capture:open`, `capture:getInbox` et `capture:shortcutStatus`. L'émetteur est vérifié par `routeSenderByChannel` (`src/main/ipc/handler.ts`), et un échec renvoie `FORBIDDEN_SENDER`.\n\nCes réponses viennent des descriptions de Nodal. Je n'ai pas relu le code source, et Nodal signale ces nœuds comme « stale » (plus récents que la description).",
+      "run": 2
+    },
+    {
+      "question": "ipc",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0307158,
+      "durationMs": 8589,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3801,
+      "cacheReadTokens": 55038,
+      "outputTokens": 1000,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only search canal ipc -- search vérification émetteur ipc -- lessons ipc"
+          },
+          "resultChars": 7487
+        }
+      ],
+      "answer": "**Fichiers à modifier pour un nouveau canal IPC**\n1. `src/shared/ipc-contract.ts` : ajoutez l'entrée dans `IpcContract` (args/result) et dans `IPC_CHANNELS`, la liste blanche du preload.\n2. `src/shared/ipc-schemas.ts` : ajoutez un schéma zod strict dans `ipcArgsSchemas`. Le `satisfies` final refuse un canal oublié.\n3. `src/main/ipc/register.ts` : ajoutez l'implémentation dans `createImplementations`. Les chemins ne doivent jamais venir du renderer. Passez par `src/main/file-dialogs.ts` et mettez à jour le mock `FileDialogs` de `tests/main/ipc/handler.test.ts`.\n4. Renderer : appelez `client.call('canal', …)` via `useClient()` ou `useRunner()` (`src/renderer/app/context.tsx`).\n5. Pour un canal de la fenêtre de capture, ajoutez-le aussi à `CAPTURE_WINDOW_CHANNELS` (`src/shared/quick-capture.ts`).\n\n**Vérification de l'émetteur**\n- `createIpcHandler` (`src/main/ipc/handler.ts`) vérifie d'abord l'émetteur, puis les arguments (zod), puis appelle l'implémentation.\n- `routeSenderByChannel` choisit la fenêtre autorisée. Les canaux de capture n'acceptent que la fenêtre de capture, `preferences:get` accepte les deux, et tous les autres n'acceptent que la fenêtre principale.\n- `createSenderValidator` (`src/main/security.ts`) contrôle :\n  - que la fenêtre existe ;\n  - que `event.sender.id` est égal à son `webContents.id` ;\n  - que `senderFrame` est le cadre principal ;\n  - que l'URL du cadre est celle de l'application (`src/main/app-url.ts`).\n- En cas d'échec, le handler renvoie `FORBIDDEN_SENDER` et n'appelle pas l'implémentation.\n\nCes informations viennent de Nodal, dont les nœuds sont marqués périmés (stale). Je n'ai pas relu le code pour les confirmer.",
+      "run": 2
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.09224779999999999,
+      "durationMs": 7767,
+      "inputTokens": 4,
+      "cacheWriteTokens": 19780,
+      "cacheReadTokens": 47298,
+      "outputTokens": 839,
+      "tools": {
+        "mcp__nodal__nodal_read_document": 1,
+        "mcp__nodal__nodal_search": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "52f65ff3"
+          },
+          "resultChars": 2577
+        },
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "contexte automatique silence seuil hook",
+            "limit": 5,
+            "maxChars": 6000
+          },
+          "resultChars": 4244
+        }
+      ],
+      "answer": "- **IDF écartée (mesuré sur une copie de la base : 31 nœuds, 21 relations, 18 questions).**\n  - Le hook actuel place le bon nœud en 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n  - L'IDF seul tombe à 7 en 1er et 13 dans les 3 premiers, donc c'est pire.\n  - L'IDF avec des poids titre 3, résumé 2 et corps 1 donne 13 et 16, soit équivalent. L'IDF n'est donc pas prioritaire sur une petite base.\n  - Un score absolu IDF ne sépare pas non plus le hors-sujet des demandes pertinentes. Les positifs commencent à 4,4 et le hors-sujet monte jusqu'à 13,3.\n- **Pas de règle de silence stricte.**\n  - Sur 18 questions dont 11 hors sujet, une règle de silence stricte faisait tomber le bon nœud à 13/18. Elle a été écartée.\n  - Le lot « Contexte IA » a été fait autrement. Avec le contenu remplacé par le résumé et la non-répétition, le bon nœud reste à 17/18, avant comme après. Le contexte passe de 6 294 à 2 924 caractères par question. Pour le hors-sujet, il passe de 4 290 à 1 280.\n- **Contexte de départ :** sur 7 demandes hors sujet, 5 recevaient du contexte, 4 181 caractères en moyenne. Le seuil « 2 mots » était trop faible.\n- Ces propositions sont notées « non validées ni codées » dans Nodal. Je n'ai pas relu le code source.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 6,
+      "costUsd": 0.11224049999999999,
+      "durationMs": 11903,
+      "inputTokens": 6,
+      "cacheWriteTokens": 22218,
+      "cacheReadTokens": 79565,
+      "outputTokens": 1540,
+      "tools": {
+        "mcp__nodal__nodal_search": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "Grep": 2,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_search",
+          "input": {
+            "query": "outil MCP recette tests apply",
+            "limit": 3,
+            "maxChars": 6000
+          },
+          "resultChars": 1522
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"],
+            "maxChars": 3000
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|applyOperations|operationSchema",
+            "output_mode": "files_with_matches"
+          },
+          "resultChars": 53
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal\\src\\mcp\\apply-tool.ts"
+          },
+          "resultChars": 9195
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "nodal_apply|createNode|addDocument",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal",
+            "glob": "{tests/**,docs/**,src/mcp/server.ts,README.md}",
+            "output_mode": "count"
+          },
+          "resultChars": 374
+        }
+      ],
+      "answer": "**À savoir avant** (le code fait foi : Nodal est périmé sur ce point, il décrit 6 opérations alors qu'il y en a 9)\n- `operationSchema` est une union discriminée sur `op`. Elle compte aujourd'hui 9 opérations : createNode, updateNode, addDocument, updateDocument, link, tag, anchor, review et lesson.\n- Une opération n'a que deux ajouts à faire : un `z.object` dans l'union, et un `case` dans `run()` (`apply-tool.ts:216`). Ce `switch` n'a pas de `default`. Le compilateur signale donc l'oubli.\n- La logique doit rester dans `write-tools.ts`. Cela garantit la même validation et le même journal `assistant_change`, annulable.\n- Si l'opération désigne un nœud ou un document, utilisez un des noms de champ de `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`). Sinon, les préfixes courts et les références `$n` ne seront pas résolus. Un champ tableau d'identifiants doit être résolu à la main, comme pour `lesson`.\n- `run` doit renvoyer un `id` : c'est lui qui alimente `$n`. Le traitement est tout ou rien, avec 100 opérations au maximum.\n\n**À mettre à jour et à tester ensuite**\n- Tests dans `tests/mcp/server.test.ts` (27 occurrences liées à apply). Il faut couvrir un cas nominal, une référence `$n` et un échec qui annule tout.\n- Le schéma de `nodal_apply` est déclaré dans `src/mcp/server.ts`, sans `alwaysLoad`. Ce n'est probablement pas à toucher, mais vérifiez la description de l'outil.\n- Mesure des tokens : `tests/perf/mcp-tokens.perf.ts` puis `docs/benchmark-tokens-mcp.md`. Le schéma grossit, donc le coût d'un appel aussi.\n- Documentation : `README.md`, `docs/guide-utilisateur.md` et le nœud Nodal « Serveur MCP » (document « Outils et fonctionnement »).\n- Rebuild du serveur : `npx vite build -c vite.mcp.config.mts`, puis copie vers `~/.nodal/mcp-dev/nodal-mcp.cjs`.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0886101,
+      "durationMs": 12032,
+      "inputTokens": 6,
+      "cacheWriteTokens": 17260,
+      "cacheReadTokens": 71881,
+      "outputTokens": 1237,
+      "tools": {
+        "Bash": 1,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N impact src/mcp/apply-tool.ts -- search apply-tool opération -- lessons apply tool\""
+          },
+          "resultChars": 5346
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "ID_FIELDS|case '|operationSchema|max\\(",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 1566
+        }
+      ],
+      "answer": "Source: la base Nodal, avec un contrôle rapide de `apply-tool.ts`. Nodal marque ses notes comme périmées. Le code compte déjà `review` et `lesson` en plus des opérations qu'elles listent, donc c'est le code qui fait foi.\n\n**À savoir avant**\n- Une opération comprend un membre de `operationSchema` (union discriminée sur `op`, ligne 59) et un `case` dans `run()` (lignes 217 à 255). Ce `case` appelle une fonction de `write-tools.ts`, qui fait la validation et appelle `recordAssistantChange`.\n- `run()` renvoie `{ id, documentId? }`. `id` est la cible des références `$n` suivantes.\n- Un nouveau champ qui désigne un nœud doit être ajouté à `ID_FIELDS` (ligne 133). Sinon `$n` et les préfixes courts ne seront pas résolus, car `resolveIds` du serveur ne descend pas dans `operations`.\n- Ne rien attraper dans le `case`: lève des `NodalError`. `applyOperations` préfixe le message et annule la transaction (tout ou rien, 100 opérations au maximum).\n- Une nouvelle action de journal demande une migration SQLite, à cause du CHECK sur `assistant_change`.\n\n**À mettre à jour ensuite**\n- La description de `nodal_apply` dans `src/mcp/server.ts`, qui liste les opérations à la main. Si besoin, les consignes de `McpDialog.tsx`.\n- La documentation de `nodal_apply` dans Nodal (note Serveur MCP).\n\n**À tester**\n- Dans `describe('nodal_apply…')` de `tests/mcp/server.test.ts`: réussite, `$n`, annulation complète, journal annulable.\n- Mesure de tokens avec `tests/perf/mcp-tokens.perf.ts`, puis `docs/benchmark-tokens-mcp.md`.\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copie du bundle vers `~/.nodal/mcp-dev/`.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.09467650000000001,
+      "durationMs": 14890,
+      "inputTokens": 6,
+      "cacheWriteTokens": 17880,
+      "cacheReadTokens": 73245,
+      "outputTokens": 1582,
+      "tools": {
+        "Bash": 2,
+        "Grep": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli-hook.nodal\" --read-only doc eb8021c3 -- impact src/mcp/apply-tool.ts"
+          },
+          "resultChars": 661
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|operationSchema|nodal_apply",
+            "output_mode": "files_with_matches",
+            "glob": "!node_modules"
+          },
+          "resultChars": 367
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli-hook.nodal\" --read-only node eb8021c3 2>/dev/null | head -40; cd src/mcp; grep -n \"op:\\|case '\\|z.literal\" apply-tool.ts | head -40; grep -n \"apply\" ../../tests/mcp/server.test.ts | head; grep -n \"apply\\|operations\" prompts.ts cli.ts | head"
+          },
+          "resultChars": 3432
+        }
+      ],
+      "answer": "Voici ce qu'il faut savoir. Le code fait foi, car la fiche Nodal est en retard : elle liste 6 opérations et le fichier en a 9 (`createNode`, `updateNode`, `addDocument`, `updateDocument`, `link`, `tag`, `anchor`, `review`, `lesson`).\n\n**Avant de coder**\n- Ajoutez un objet à `operationSchema` (`src/mcp/apply-tool.ts:61-122`, union discriminée sur `op`) et un `case` dans le switch (vers `:217-256`). Chaque `case` retire `op` puis délègue à une fonction de `write-tools.ts`. Réutilisez cette fonction pour garder la même validation et le même journal `assistant_change`, annulable, avec une entrée par opération.\n- Le traitement est tout ou rien (une transaction par appel, 100 opérations au maximum). Les références `$n` et les préfixes courts passent par `ShortIds`. Le `resolveIds` du serveur ne descend pas dans `operations`, donc résolvez vos identifiants dans l'opération elle-même.\n- Le schéma de `nodal_apply` n'est pas chargé d'emblée (pas d'`alwaysLoad`). Chaque opération en plus l'alourdit, ce qui compte pour le budget de tokens.\n\n**À mettre à jour ensuite**\n- Les textes qui citent les opérations :\n  - `src/mcp/prompts.ts`, dont les lignes 54, 70 et 86 mentionnent `nodal_apply`.\n  - `assets/skills/nodal/SKILL.md`, `README.md`, `docs/guide-utilisateur.md`.\n  - `src/mcp/cli.ts`, seulement si la commande `apply` change.\n  - La fiche Nodal « Serveur MCP > nodal_apply » (id 0542d725), qui est déjà périmée.\n\n**À tester**\n- Ajoutez des cas dans `tests/mcp/server.test.ts`, section « nodal_apply : écriture groupée » (vers la ligne 1355). Couvrez le cas nominal, une référence `$n`, l'annulation et le retour arrière en cas d'erreur.\n- Relancez `tests/perf/mcp-tokens.perf.ts`, car le schéma grossit. Vérifiez aussi `tests/e2e/assistant.e2e.ts` et `tests/renderer/assistant-ui.test.tsx` si l'interface affiche l'opération.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.09462580000000001,
+      "durationMs": 9611,
+      "inputTokens": 4,
+      "cacheWriteTokens": 20300,
+      "cacheReadTokens": 41578,
+      "outputTokens": 926,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "NODAL='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$NODAL search IDF rareté mots -- search contexte automatique silence -- lessons IDF silence\"",
+            "description": "Query Nodal knowledge base"
+          },
+          "resultChars": 14107
+        }
+      ],
+      "answer": "Les deux choix viennent de mesures faites le 24/11/2026 sur une copie de la base Nodal (31 nœuds, 21 relations, 18 questions). Les propositions ne sont pas validées ni codées.\n\n**Pas d'IDF**\n- Le hook actuel place le bon nœud en 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n- L'IDF seul donne 7 sur 18 en 1er et 13 sur 18 dans les 3 premiers, donc pire.\n- L'IDF avec pondération titre 3, résumé 2, corps 1 donne 13 et 16, soit équivalent.\n- Sur une petite base, l'IDF n'est donc pas prioritaire.\n- Un score IDF absolu ne sépare pas non plus mieux les demandes hors sujet : les positifs commencent à 4,4 et les hors sujet montent jusqu'à 13,3.\n\n**Pas de règle de silence stricte**\n- Une telle règle faisait tomber le bon nœud à 13 sur 18, alors qu'il était à 17 sur 18 avant et après les changements retenus. Elle a donc été écartée.\n- À la place, le contexte automatique est plus sobre : documents seulement si le nœud a assez de mots-clés dans son titre et son résumé, sinon le résumé seul. Il n'y a pas de répétition d'un nœud dans une même session.\n- Sur 18 questions dont 11 hors sujet, cela fait passer le contexte de 6 294 à 2 924 caractères par question, et à 1 280 contre 4 290 pour les hors sujet.\n- Le seuil «2 mots» reste jugé trop faible : 5 demandes hors sujet sur 7 reçoivent encore du contexte, 4 181 caractères en moyenne.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0737055,
+      "durationMs": 10219,
+      "inputTokens": 2,
+      "cacheWriteTokens": 15812,
+      "cacheReadTokens": 14035,
+      "outputTokens": 905,
+      "tools": {},
+      "calls": [],
+      "answer": "**IDF :** Nodal n'en a pas parce que la mesure ne le justifie pas. Elle a été faite sur une copie de la base (31 nœuds, 21 relations, 18 questions).\n\n| Variante | Bon nœud 1er | Dans les 3 premiers |\n|---|---|---|\n| Hook actuel | 12/18 | 17/18 |\n| IDF seul | 7/18 | 13/18 |\n| IDF + poids (titre 3, résumé 2, corps 1) | 13/18 | 16/18 |\n\nL'IDF seul est donc nettement pire, et avec les poids il est équivalent. La note conclut qu'il n'est pas prioritaire sur une petite base. Cette conclusion peut changer sur une base plus grande.\n\n**Silence :** il n'y a pas de règle stricte parce qu'aucun seuil mesuré ne sépare les cas. Le seuil actuel est de « 2 mots », ce qui est trop faible. Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne. Un score absolu IDF ne sépare pas mieux : les demandes pertinentes commencent à 4,4, et les hors sujet montent jusqu'à 13,3.\n\nC'est une faiblesse connue du hook actuel, pas un choix délibéré. Ces idées sont des propositions de la note « Idées tirées de graphify », non validées ni codées. Mes chiffres viennent des extraits fournis par le hook, et je n'ai pas relu les documents complets.",
+      "run": 1
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.020246600000000003,
+      "durationMs": 7211,
+      "inputTokens": 4,
+      "cacheWriteTokens": 1454,
+      "cacheReadTokens": 63626,
+      "outputTokens": 806,
+      "tools": {
+        "mcp__nodal__nodal_read_document": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "52f65ff3"
+          },
+          "resultChars": 2577
+        }
+      ],
+      "answer": "**Pas d'IDF.** Les mesures ont porté sur 31 nœuds et 18 questions écrites pour l'occasion.\n- Le hook actuel place le bon nœud en 1er 12 fois sur 18, et dans les 3 premiers 17 fois sur 18.\n- Avec l'IDF seul, on tombe à 7 sur 18 et 13 sur 18, donc c'est pire.\n- Avec l'IDF et des poids titre 3, résumé 2, corps 1, on obtient 13 et 16, ce qui est équivalent.\n- L'IDF n'apporte donc rien sur une petite base. Il n'est pas prioritaire.\n\n**Pas de règle de silence stricte.** Le problème est mesuré, mais on n'a pas trouvé de seuil fiable pour le résoudre.\n- Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne. Le seuil actuel de « 2 mots » est trop faible.\n- Un score absolu IDF ne sépare pas mieux. Les demandes pertinentes commencent à 4,4 et les hors sujet montent jusqu'à 13,3, donc les plages se chevauchent.\n- La piste retenue (idée A) est « dire quand se taire », avec un plafond par session et pas de répétition. Elle reste une proposition non validée et non codée.\n\nSource : le document « Analyse approfondie et mesures » du nœud « Idées tirées de graphify ». Je n'ai pas relu le code.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0291852,
+      "durationMs": 9985,
+      "inputTokens": 4,
+      "cacheWriteTokens": 2820,
+      "cacheReadTokens": 55072,
+      "outputTokens": 1239,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only impact src/mcp/apply-tool.ts -- lessons apply-tool opération -- search apply tool mcp",
+            "description": "Query Nodal for impact and lessons"
+          },
+          "resultChars": 5339
+        }
+      ],
+      "answer": "Les notes Nodal sont marquées périmées (modifiées le 2026-11-24), donc vérifiez-les dans le code. Je n'ai pas relu `apply-tool.ts`.\n\n**Avant de coder**\n- `operationSchema` est une union discriminée sur `op`. Il contient createNode, updateNode, addDocument, updateDocument, link, tag et anchor. Ajoutez un membre à l'union et un `case` dans `run()`.\n- Le `case` appelle une fonction de `write-tools.ts`, qui valide et appelle `recordAssistantChange`. Ne réimplémentez pas cette logique dans le `case`.\n- `run()` renvoie `{ id, documentId? }`. Cet `id` est la cible des références `$n` suivantes.\n- Seuls les champs de `ID_FIELDS` (`id`, `parentId`, `nodeId`, `sourceId`, `targetId`) résolvent `$n` et les préfixes courts. Ajoutez-y tout nouveau champ qui désigne un nœud.\n- Ne capturez pas les erreurs dans le `case`. Levez des `NodalError`: `applyOperations` les préfixe de « Opération n (op) : … » et annule la transaction (tout ou rien, 100 opérations au maximum).\n- Une nouvelle action de journal impose une migration, car la contrainte CHECK de `assistant_change` la limite. Il faudra alors rebuilder le bundle et laisser l'application migrer la base.\n\n**À mettre à jour ensuite**\n- Mettez à jour la description de `nodal_apply` dans `src/mcp/server.ts`. Elle liste les opérations à la main.\n- Ajustez les consignes de `McpDialog.tsx` si l'opération le justifie.\n- Mettez à jour la doc Nodal (Serveur MCP > nodal_apply) et `docs/benchmark-tokens-mcp.md`.\n\n**À tester**\n- Ajoutez des tests dans `describe('nodal_apply…')` de `tests/mcp/server.test.ts`. Couvrez la réussite, les références `$n`, l'annulation sur erreur et l'annulation via le journal.\n- Mesurez les tokens avec `npx vitest run --config vitest.perf.config.mts -t …` (`tests/perf/mcp-tokens.perf.ts`).\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copiez le bundle vers `~/.nodal/mcp-dev/nodal-mcp.cjs`.\n\nLes modules Modèle documentaire, Relecture des ajouts de l'IA et Santé de la base dépendent du serveur MCP. Vérifiez qu'ils ne cassent pas.",
+      "run": 2
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 8,
+      "costUsd": 0.0585253,
+      "durationMs": 13515,
+      "inputTokens": 8,
+      "cacheWriteTokens": 7234,
+      "cacheReadTokens": 131033,
+      "outputTokens": 1647,
+      "tools": {
+        "mcp__nodal__nodal_get_node": 1,
+        "mcp__nodal__nodal_for_files": 1,
+        "Grep": 2,
+        "mcp__nodal__nodal_read_document": 1,
+        "Glob": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "mcp__nodal__nodal_get_node",
+          "input": {
+            "id": "eb8021c3"
+          },
+          "resultChars": 1103
+        },
+        {
+          "name": "mcp__nodal__nodal_for_files",
+          "input": {
+            "paths": ["src/mcp/apply-tool.ts"]
+          },
+          "resultChars": 1308
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "apply-tool|applyOperations|operationSchema",
+            "output_mode": "files_with_matches"
+          },
+          "resultChars": 53
+        },
+        {
+          "name": "mcp__nodal__nodal_read_document",
+          "input": {
+            "id": "5fdaf433"
+          },
+          "resultChars": 5260
+        },
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "op:|case \"|z\\.literal|function |export ",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal\\src\\mcp\\apply-tool.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 1148
+        },
+        {
+          "name": "Glob",
+          "input": {
+            "pattern": "tests/**/*apply*"
+          },
+          "resultChars": 14
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal\\src\\mcp\\apply-tool.ts",
+            "offset": 130,
+            "limit": 135
+          },
+          "resultChars": 4682
+        }
+      ],
+      "answer": "**À savoir avant** (Nodal, relu dans `apply-tool.ts`) :\n- Une opération est une variante de `operationSchema` (union discriminée sur `op`, ligne 59) et un `case` dans `run()` (ligne 216). Le `switch` est exhaustif, donc `tsc` signale un oubli.\n- Il y a déjà 9 opérations : createNode, updateNode, addDocument, updateDocument, link, tag, anchor, review, lesson. Le nœud Nodal « Serveur MCP » n'en liste que 6, il est périmé.\n- Écris la logique métier dans `write-tools.ts` (validation et journal `recordAssistantChange`, une entrée annulable par opération) et appelle-la depuis `run`. Ne la mets pas dans `apply-tool.ts`.\n- `run` doit renvoyer un `id`, qui alimente les références `$n`. Si ton opération désigne un nœud avec un nouveau champ d'identifiant, ajoute-le à `ID_FIELDS` (ligne 133). Les opérations qui prennent une liste d'ids, comme `lesson.nodeIds`, ont un traitement à part (ligne 186).\n- L'appel est tout ou rien, avec 100 opérations au plus (`APPLY_MAX_OPERATIONS`). Le serveur ne résout pas les préfixes courts dans `operations`, c'est `ShortIds` qui s'en charge ici.\n\n**À mettre à jour ou tester ensuite :**\n- Tests dans `tests/mcp/server.test.ts`, avec `connect`, `toon` et `changes`. Il n'existe pas de fichier de test dédié à apply. Couvre le succès, une référence `$n` invalide, le rollback et le journal.\n- Description de `nodal_apply` dans `src/mcp/server.ts`, puis la mesure tokens (`tests/perf/mcp-tokens.perf.ts`) et `docs/benchmark-tokens-mcp.md`. Le schéma grossit, et il n'est pas chargé d'emblée.\n- Rebuild avec `npx vite build -c vite.mcp.config.mts`, puis copie vers `~/.nodal/mcp-dev/`.\n- Fin d'étape : `npx tsc --noEmit`, `npx oxfmt --write src tests`, `npm run lint`, `npx vitest run`. Mets aussi à jour `docs/guide-utilisateur.md` et le nœud Nodal « Serveur MCP ».",
+      "run": 2
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0404272,
+      "durationMs": 8522,
+      "inputTokens": 4,
+      "cacheWriteTokens": 6740,
+      "cacheReadTokens": 55092,
+      "outputTokens": 795,
+      "tools": {
+        "Bash": 1
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N search IDF rareté mots -- search contexte automatique silence -- lessons IDF silence\""
+          },
+          "resultChars": 14107
+        }
+      ],
+      "answer": "**IDF : mesuré, sans gain.** Sur une copie de la base (31 nœuds, 18 questions), le hook actuel place le bon nœud en 1er dans 12 cas sur 18, et dans les 3 premiers dans 17 cas sur 18.\n- L'IDF seul tombe à 7 en 1er et 13 dans les 3 premiers, donc plus mauvais.\n- L'IDF avec pondération titre 3, résumé 2 et corps 1 donne 13 et 16, soit équivalent au hook actuel.\n- Le nœud « Idées tirées de graphify » conclut que l'IDF n'est pas prioritaire sur une petite base. Un score absolu IDF ne sépare pas non plus les demandes hors sujet des pertinentes: les positifs commencent à 4,4 et les hors sujet montent jusqu'à 13,3.\n\n**Règle de silence stricte : écartée.** Sur le même type de test (18 questions, dont 11 hors sujet), elle faisait tomber le bon nœud à 13/18, contre 17/18 sans elle. À la place, le contexte a été rendu plus sobre:\n- Le contenu est remplacé par le résumé quand le nœud est moins sûr.\n- Un nœud n'est pas répété dans une même session.\n- Les secrets sont masqués.\n- Résultat: 6 294 → 2 924 caractères par question, et 4 290 → 1 280 sur les hors sujet.\n\nCes mesures viennent d'une petite base de 31 nœuds. Le document les présente comme des propositions non validées ni codées.",
+      "run": 2
+    },
+    {
+      "question": "pourquoi",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0111687,
+      "durationMs": 6113,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 29847,
+      "outputTokens": 818,
+      "tools": {},
+      "calls": [],
+      "answer": "**IDF :** ce n'est pas un oubli, c'est une mesure. Elle a été faite sur une copie de la base Nodal (31 nœuds, 21 relations, 18 questions).\n\n| Variante | Bon nœud en 1er | Dans les 3 premiers |\n|---|---|---|\n| Hook actuel | 12/18 | 17/18 |\n| IDF seul | 7/18 | 13/18 (pire) |\n| IDF + poids titre 3 / résumé 2 / corps 1 | 13/18 | 16/18 (équivalent) |\n\nL'IDF n'est donc pas prioritaire sur une petite base. Le doc précise que ces idées sont des propositions non validées et non codées.\n\n**Silence strict :** le seuil actuel est de 2 mots communs, ce qui est trop faible. Sur 7 demandes hors sujet, 5 reçoivent quand même du contexte, soit 4 181 caractères en moyenne. Un score absolu ne règle pas le problème. Les demandes pertinentes commencent dès 4,4 et les hors sujet montent jusqu'à 13,3, donc aucun seuil ne les sépare proprement. Le doc ne dit pas explicitement pourquoi aucune règle n'a été ajoutée. Je déduis que c'est faute de critère fiable, et pas par choix.\n\nCes extraits viennent du hook. Je n'ai pas relu le code de recherche lui-même.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0768925,
+      "durationMs": 4822,
+      "inputTokens": 2,
+      "cacheWriteTokens": 17245,
+      "cacheReadTokens": 15485,
+      "outputTokens": 636,
+      "tools": {},
+      "calls": [],
+      "answer": "Un changement de schéma touche ces parties de Nodal (d'après la base de connaissances, sans lecture du code) :\n\n1. **Migrations** (`src/main/database/migrations`) : il faut une nouvelle migration versionnée par `PRAGMA user_version`. Pour modifier un CHECK, il faut reconstruire la table, ainsi que ses index et ses triggers.\n2. **Persistance SQLite** (`src/main/database`) : requêtes et accès aux tables, avec des BLOB pour les pièces jointes.\n3. **Services métier** (nœuds, documents, relations, tags), qui lisent et écrivent ces tables.\n4. **Recherche plein texte** : elle dépend des index et des triggers de `node` et `document` (migration 003).\n5. **Modèle documentaire** et **état de la vue** (`view-state`, par exemple les positions 3D du graphe), si leurs champs sont stockés en base.\n6. **Serveur MCP** (`src/mcp`) : outils de lecture et d'écriture, journal `assistant_change` et relecture des ajouts de l'IA. Un serveur de schéma N+1 refuse une base N. Il faut donc ouvrir la base une fois dans l'application, puis recopier le bundle MCP de dev.\n7. **IPC, interface et tests** : canaux IPC, renderer (graphe 3D) et tests (`tests/mcp/server.test.ts`). Selon les recettes, la documentation est aussi concernée.",
+      "run": 1
+    },
+    {
+      "question": "avant-modif",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0338824,
+      "durationMs": 14802,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2766,
+      "cacheReadTokens": 88264,
+      "outputTokens": 1398,
+      "tools": {
+        "Bash": 2
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli-hook.nodal\" --read-only'; eval $N doc eb8021c3; echo ----; eval $N impact src/mcp/apply-tool.ts; echo ----; grep -rln \"apply-tool\\|operationSchema\\|nodal_apply\" src tests docs 2>/dev/null"
+          },
+          "resultChars": 1134
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli-hook.nodal\" --read-only'; eval $N node eb8021c3 2>&1 | grep -v Warn | head -40; grep -n \"apply\\|operation\" src/mcp/prompts.ts src/mcp/server.ts | head -20; grep -n \"case '\\|op:\" src/mcp/apply-tool.ts | head -30"
+          },
+          "resultChars": 3448
+        }
+      ],
+      "answer": "**Avant de commencer**\n- `src/mcp/apply-tool.ts` contient `operationSchema`, une union discriminée sur `op`. Elle compte 9 opérations: createNode, updateNode, addDocument, updateDocument, link, tag, anchor, review et lesson. La fonction `applyOperations` les traite dans un `switch` (≈ lignes 217-256).\n- Réutilisez les fonctions de `write-tools.ts`. Vous aurez ainsi la même validation et le même journal `assistant_change`, avec une entrée annulable par opération.\n- Tout est exécuté dans une seule transaction (tout ou rien), avec un maximum de 100 opérations. Les références `$n` sont 1-based, et les préfixes courts passent par `ShortIds`. `resolveIds` ne descend pas dans `operations`.\n- La description du schéma est chargée en différé, donc gardez-la courte (décision documentée: pas d'`alwaysLoad`).\n\n**À mettre à jour**\n- `src/mcp/server.ts` (≈ l.799-823): description de l'outil, et l'en-tête d'instructions (≈ l.116) si elle liste les opérations.\n- `src/mcp/prompts.ts`: les prompts qui citent des opérations (anchor, review, lesson).\n- `docs/guide-utilisateur.md` et `McpDialog.tsx` s'ils mentionnent `nodal_apply`.\n- La fiche Nodal « Serveur MCP » (section nodal_apply, qui ne liste encore que 6 opérations) et la recette de développement. Leurs ancres sont signalées périmées.\n\n**À tester**\n- `tests/mcp/server.test.ts`: cas nominal, validation, références `$n`, rollback complet, annulation du journal et mode `--read-only`.\n- `tests/perf/mcp-tokens.perf.ts`: mesurez le coût en tokens du schéma.\n- `tests/e2e/assistant.e2e.ts` et `tests/renderer/assistant-ui.test.tsx`, si la relecture des ajouts de l'IA affiche cette opération.\n- Terminez par les tests, le lint et le format (oxlint, oxfmt), puis le commit.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0752535,
+      "durationMs": 5414,
+      "inputTokens": 2,
+      "cacheWriteTokens": 16729,
+      "cacheReadTokens": 14035,
+      "outputTokens": 693,
+      "tools": {},
+      "calls": [],
+      "answer": "Si vous changez le schéma SQLite de Nodal, ces parties sont touchées. Je m'appuie sur la base Nodal et je n'ai pas relu le code.\n\n**Directement**\n1. **Migrations** (`src/main/database/migrations/`). Il faut une nouvelle migration versionnée par `PRAGMA user_version`. Modifier un CHECK oblige à reconstruire la table, avec ses index et ses triggers (cf. la migration 011).\n2. **Couche base** (`src/main/database`). C'est là que sont les requêtes et les triggers existants (même espace, suggestions de liens).\n3. **Recherche plein texte**. Les index de recherche (migration 003) dépendent des tables `node` et `document`.\n\n**Indirectement**\n4. **Services métier et modèle documentaire** (nœuds, documents typés, relations, tags). Ils lisent et écrivent ces tables.\n5. **Serveur MCP** (`src/mcp/tools.ts`, `write-tools.ts`, `apply-tool.ts`). Un serveur de schéma N+1 refuse une base N. Il faut rebuilder le bundle `nodal-mcp.cjs` après la migration par l'application.\n6. **Journal `assistant_change`** (relecture et annulation des ajouts de l'IA) et **état de la vue** (positions 3D du graphe, view-state).\n7. **Canaux IPC, preload et renderer**, si les types exposés changent. S'y ajoutent les **tests** (`tests/mcp/server.test.ts`, etc.) et les **docs**.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.083989,
+      "durationMs": 4568,
+      "inputTokens": 4,
+      "cacheWriteTokens": 18779,
+      "cacheReadTokens": 46750,
+      "outputTokens": 419,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Nodal ne couvre pas ce fichier, donc j'ai lu `sameWord` (`src/shared/duplicates.ts:69-84`). Deux mots de longueurs différentes sont le même mot seulement si les quatre conditions suivantes sont réunies :\n- Le plus court a au moins 6 lettres. Sous 5 lettres, la fonction renvoie faux d'emblée, et à 5 lettres exactement, la condition `shorter.length < 6` renvoie faux aussi.\n- Le plus long a exactement une lettre de plus.\n- Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant est écartée, car c'est un mot dérivé (synchrone/asynchrone).\n- Supprimer une lettre du plus long, à n'importe quelle position, donne exactement le plus court.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0750063,
+      "durationMs": 4316,
+      "inputTokens": 4,
+      "cacheWriteTokens": 16506,
+      "cacheReadTokens": 41543,
+      "outputTokens": 482,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si toutes ces conditions sont réunies :\n1. Le plus court fait au moins 6 caractères. En dessous de 5, la fonction retourne `false` tout de suite. À 5 caractères, elle retourne `false` à la ligne 77.\n2. Le plus long ne se termine pas par le plus court. Cela écarte un préfixe ajouté devant, comme « synchrone » et « asynchrone ».\n3. Le plus long a exactement une lettre de plus. Il suffit de retirer un caractère, à n'importe quelle position, pour obtenir exactement le plus court.\n4. Les deux mots doivent aussi être à la même position dans des titres qui ont le même nombre de mots. Les mots de liaison sont déjà retirés, et les nombres doivent être identiques (`sameTitle`).",
+      "run": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.009597,
+      "durationMs": 5362,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 32730,
+      "outputTokens": 632,
+      "tools": {},
+      "calls": [],
+      "answer": "Voici ce que Nodal indique (nœuds « Persistance SQLite », « Serveur MCP », « Recettes », et l'impact calculé). Je n'ai lu aucun fichier source.\n\n1. **Migrations** (`src/main/database/migrations/`): il faut ajouter une migration versionnée par `PRAGMA user_version`. Pour modifier un CHECK, il faut reconstruire la table, ses index et ses triggers.\n2. **Services métier** du processus principal: ils contiennent les requêtes SQL, directement liées aux colonnes.\n3. **Recherche plein texte**: ses index et triggers (migration 003) dépendent des tables `node` et `document`.\n4. **Modèle documentaire**: les documents et les pièces jointes en BLOB.\n5. **État de la vue (view-state)**: il enregistre les positions 3D du graphe.\n6. **Relecture des ajouts de l'IA**: elle s'appuie sur la table `assistant_change`, qui alimente le journal annulable.\n7. **Serveur MCP** (`src/mcp`): ses outils lisent et écrivent dans la même base. Un serveur de schéma N+1 refuse une base N, donc il faut rebuilder le bundle `nodal-mcp.cjs` après la migration.\n8. **IPC, interface et tests/docs**: ces parties dépendent des types des services. Je les déduis des recettes de dev, que je n'ai pas détaillées.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0819774,
+      "durationMs": 4481,
+      "inputTokens": 4,
+      "cacheWriteTokens": 18269,
+      "cacheReadTokens": 43334,
+      "outputTokens": 456,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli-hook\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot seulement si les quatre conditions suivantes sont réunies :\n1. Le plus court fait au moins 6 caractères. En dessous de 5, la fonction renvoie `false` d'emblée, et le test `shorter.length < 6` écarte aussi les mots de 5 caractères.\n2. Le plus long a exactement 1 caractère de plus.\n3. Le plus long ne se termine pas par le plus court (`endsWith`). Cela écarte une lettre ajoutée devant, comme synchrone/asynchrone.\n4. Supprimer un seul caractère du plus long, à une position quelconque, redonne exactement le plus court.\n\nLes longueurs égales suivent une autre règle (`oneTypo`). Elle accepte une lettre remplacée ou deux lettres voisines interverties.",
+      "run": 1
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 4,
+      "costUsd": 0.08719460000000001,
+      "durationMs": 13865,
+      "inputTokens": 8,
+      "cacheWriteTokens": 16334,
+      "cacheReadTokens": 99326,
+      "outputTokens": 1191,
+      "tools": {
+        "Bash": 3
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "NODAL='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$NODAL search schéma sqlite migration -- search base de données tables -- lessons sqlite schéma\""
+          },
+          "resultChars": 2195
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "NODAL='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$NODAL doc eb8021c3\" 2>&1 | grep -v Warning | head -60"
+          },
+          "resultChars": 93
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "NODAL='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$NODAL node eb8021c3 -- impact 4ddad961\" 2>&1 | head -80"
+          },
+          "resultChars": 2331
+        }
+      ],
+      "answer": "Changer le schéma SQLite touche les parties suivantes (analyse d'impact Nodal). Je n'ai pas relu le code lui-même.\n\n**Directement** (dépendent de la persistance SQLite, `src/main/database`) :\n1. **Migrations** : une nouvelle migration versionnée par `PRAGMA user_version`, dans `migrations.ts`.\n2. **Services métier** : lisent et écrivent les tables.\n3. **Recherche plein texte** : l'index doit suivre le schéma.\n4. **Modèle documentaire** : nœuds, 15 types, documents, pièces jointes en BLOB, relations.\n5. **État de la vue (view-state)** du renderer : il dépend des données persistées.\n6. **Relecture des ajouts de l'IA** : revue et journal annulable.\n\n**Indirectement** (via les services métier) :\n7. **Serveur MCP** (`src/mcp`) : ses outils, et la lecture seule d'une base plus récente que lui.\n8. **Contrat IPC** : canaux et schémas dans `src/shared/ipc-*` et `src/main/ipc`.\n9. **Graphe 3D**, **arborescence** et **palette de commandes** : alimentés par le view-state.\n\nIl faut aussi mettre à jour les tests et la documentation, selon la recette « Recettes de développement ». Les fichiers `.nodal` existants doivent migrer sans perte.",
+      "run": 1
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-skill",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.022078999999999998,
+      "durationMs": 4373,
+      "inputTokens": 4,
+      "cacheWriteTokens": 2972,
+      "cacheReadTokens": 62530,
+      "outputTokens": 393,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-skill\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n1. Le plus court a au moins 6 lettres. En dessous de 5, la fonction renvoie faux d'emblée, et à 5 lettres elle renvoie faux à la ligne 77.\n2. Le plus long a exactement une lettre de plus que le plus court.\n3. Le plus long ne se termine pas par le plus court. Une lettre ajoutée au début donne donc faux (synchrone/asynchrone).\n4. Supprimer une lettre du plus long, à n'importe quelle position, donne exactement le plus court.\n\nJ'ai vérifié dans le code. Je n'ai pas consulté Nodal, car la question portait sur un fichier précis.",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 2,
+      "costUsd": 0.0226962,
+      "durationMs": 4479,
+      "inputTokens": 4,
+      "cacheWriteTokens": 3034,
+      "cacheReadTokens": 55022,
+      "outputTokens": 505,
+      "tools": {
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli\\Nodal\\src\\shared\\duplicates.ts"
+          },
+          "resultChars": 6307
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si les quatre conditions suivantes sont réunies :\n1. Le plus court fait au moins 6 caractères. En dessous de 5, la fonction renvoie `false` tout de suite, et à 5 le test `shorter.length < 6` renvoie aussi `false`.\n2. Le plus long a exactement un caractère de plus.\n3. Le plus long ne se termine pas par le plus court. Une lettre ajoutée devant, comme dans « synchrone » et « asynchrone », compte donc pour deux mots différents.\n4. En retirant un caractère, à n'importe quelle position, du plus long, on obtient exactement le plus court.\n\nCes mots sont des clés déjà normalisées par `titleKey`. Elles n'ont plus d'accents ni de casse, et un `s` ou `x` final est retiré des mots de plus de 3 lettres.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 1,
+      "costUsd": 0.0109304,
+      "durationMs": 6558,
+      "inputTokens": 2,
+      "cacheWriteTokens": 0,
+      "cacheReadTokens": 30764,
+      "outputTokens": 785,
+      "tools": {},
+      "calls": [],
+      "answer": "Si le schéma SQLite change, ces parties de Nodal sont touchées. Je me suis appuyé sur les extraits Nodal de la base de connaissances et je n'ai pas relu le code.\n\n**Directement**\n1. **Migrations** (`src/main/database/migrations/`): il faut une nouvelle migration versionnée par `PRAGMA user_version`. Modifier un CHECK oblige à reconstruire la table, avec ses index et ses triggers.\n2. **Couche base** (`src/main/database`): `node:sqlite`, requêtes et dépôts.\n3. **Services métier**, côté processus principal: nœuds, documents, relations, étiquettes.\n4. **Recherche plein texte**: ses index et triggers (migration 003) dépendent des tables `node` et `document`.\n\n**Indirectement**\n5. **Modèle documentaire**: types de documents et de nœuds, qui reposent sur des CHECK.\n6. **Serveur MCP** (`src/mcp`): les outils de lecture et d'écriture lisent le même schéma. Un serveur de schéma N+1 refuse une base N, donc il faut recompiler `nodal-mcp.cjs` après la migration.\n7. **Relecture des ajouts de l'IA**: le journal `assistant_change` et l'annulation.\n8. **État de la vue** (view-state): positions 3D du graphe et réglages d'espace.\n9. **Canaux IPC, interface et graphe 3D**: les types partagés et les données affichées changent avec les colonnes.\n10. **Tests et docs**: `tests/mcp/server.test.ts`, les tests de migration, et la mesure de tokens (`docs/benchmark-tokens-mcp.md`).",
+      "run": 2
+    },
+    {
+      "question": "code-seul",
+      "variant": "nodal-cli-hook",
+      "ok": true,
+      "turns": 3,
+      "costUsd": 0.0232503,
+      "durationMs": 5749,
+      "inputTokens": 6,
+      "cacheWriteTokens": 2159,
+      "cacheReadTokens": 88423,
+      "outputTokens": 576,
+      "tools": {
+        "Grep": 1,
+        "Read": 1
+      },
+      "calls": [
+        {
+          "name": "Grep",
+          "input": {
+            "pattern": "length|distance|levenshtein|prefix|startsWith",
+            "path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli-hook\\Nodal\\src\\shared\\duplicates.ts",
+            "output_mode": "content"
+          },
+          "resultChars": 796
+        },
+        {
+          "name": "Read",
+          "input": {
+            "file_path": "C:\\Users\\aladi\\AppData\\Local\\Temp\\nodal-bench-iVghMR\\nodal-cli-hook\\Nodal\\src\\shared\\duplicates.ts",
+            "offset": 8,
+            "limit": 85
+          },
+          "resultChars": 3194
+        }
+      ],
+      "answer": "Dans `sameWord` (`src/shared/duplicates.ts:69-84`), deux mots de longueurs différentes sont le même mot si ces conditions sont toutes réunies :\n- Le plus court a au moins 6 lettres. En dessous de 5, la fonction renvoie `false` d'emblée, et à 5 la règle `shorter.length < 6` l'écarte.\n- La différence de longueur est exactement 1.\n- Le plus long ne se termine pas par le plus court. Cela exclut une lettre ajoutée devant, comme synchrone/asynchrone.\n- Le plus court s'obtient en retirant une seule lettre, à n'importe quelle position, du plus long. C'est une lettre en trop ou manquante.",
+      "run": 2
+    },
+    {
+      "question": "impact",
+      "variant": "nodal-cli",
+      "ok": true,
+      "turns": 5,
+      "costUsd": 0.048547,
+      "durationMs": 17270,
+      "inputTokens": 10,
+      "cacheWriteTokens": 4298,
+      "cacheReadTokens": 142650,
+      "outputTokens": 1707,
+      "tools": {
+        "Bash": 4
+      },
+      "calls": [
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N search schéma sqlite migration -- search base de données tables -- lessons sqlite schéma\""
+          },
+          "resultChars": 2195
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N doc eb8021c3\" 2>&1 | grep -v Warning | head -60"
+          },
+          "resultChars": 93
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N node eb8021c3\" 2>&1 | grep -i -B2 -A8 \"migration\" | head -60; eval \"$N impact src/main/database\" 2>&1 | head -50"
+          },
+          "resultChars": 1273
+        },
+        {
+          "name": "Bash",
+          "input": {
+            "command": "N='node \"C:/Users/aladi/AppData/Local/Temp/claude/C--Users-aladi-dev-Nodal/42bfa0c5-6fdd-4686-af7b-4800529e42eb/scratchpad/lot10.cjs\" \"C:/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli.nodal\" --read-only'; eval \"$N doc 5fdaf433\" 2>&1 | grep -i -A12 \"migration\"|head -40; ls /c/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli/Nodal/src/main/database /c/Users/aladi/AppData/Local/Temp/nodal-bench-iVghMR/nodal-cli/Nodal/src/main"
+          },
+          "resultChars": 3272
+        }
+      ],
+      "answer": "Changer le schéma SQLite touche ces parties de Nodal (d'après la base Nodal et la recette « Migration SQLite »). Je n'ai pas relu le code de chaque fichier.\n\n**Directement**\n1. **Migrations** : `src/main/database/migrations/0NN-nom.ts` et la liste `MIGRATIONS` dans `migrations.ts`. Le versionnage passe par `PRAGMA user_version`. Modifier un CHECK oblige à reconstruire la table.\n2. **Tests de migration** : `tests/main/database/migrations.test.ts`. Ils partent d'une base à la version N-1, y mettent des données, puis appliquent la migration.\n3. **Domaine partagé** : `src/shared/domain.ts` (`NODE_TYPES`, `CONTENT_TYPES`, qui reflètent les CHECK) et les schémas zod de `ipc-schemas.ts`.\n\n**Indirectement**\n4. **Export et import natifs** : `export-service.ts` et `import-service.ts`, ainsi que l'import Markdown (`markdown-import/vault.ts`, `TYPE_ALIASES`).\n5. **Serveur MCP** : `src/mcp/server.ts`, avec les descriptions des outils. Le bundle `nodal-mcp.cjs` doit être reconstruit. Il lit en lecture seule une base plus récente que lui.\n6. **Canaux IPC** : `src/shared/ipc-contract.ts` et `src/main/ipc/**`.\n7. **Interface** : le graphe (`node-visuals.ts`), le CSS (`theme.css`, `workspace.css`), les éditeurs et aperçus de documents, et les modèles (`templates.ts`). Les `switch` exhaustifs font échouer `tsc` en cas d'oubli.\n8. **Documentation** : `docs/guide-utilisateur.md`, l'aide F1 et le `README`.",
+      "run": 2
+    }
+  ]
+}

@@ -85,6 +85,21 @@ dernier banc (les consignes ont été affinées en route).
 - Charger `nodal_impact` d'emblée n'a rien changé (annulé) ; citer dans la
   recherche les nœuds touchés par le premier résultat : 71-86 → 100 %.
 
+### « Code mode » : les outils en commandes plutôt que par MCP
+
+Même banc, `nodal-cli` (aucun serveur MCP, `node nodal-mcp.cjs base search …`
+par Bash), coût moyen 1er run compris, qualité, tours :
+
+| Variante                          | Coût  | Qualité | Tours | Durée |
+| --------------------------------- | ----- | ------- | ----- | ----- |
+| MCP + contexte automatique, skill | 0,055 | 93 %    | 2,4   | 6 s   |
+| Commandes seules                  | 0,059 | 95 %    | 2,5   | 9 s   |
+| Commandes + contexte automatique  | 0,048 | 93 %    | 1,7   | 7 s   |
+
+Pas mieux que MCP à lui seul : une question demande 1 à 3 appels, il y a peu
+d'intermédiaire à épargner, et les définitions sont déjà en cache. L'économie
+vient du contexte automatique. Les commandes restent utiles sans MCP.
+
 ### Ce que les bancs précédents ont montré
 
 - Le coût suit le nombre de tours (chaque tour renvoie environ 25 000 tokens

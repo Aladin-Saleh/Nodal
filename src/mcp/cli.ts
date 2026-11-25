@@ -143,10 +143,16 @@ export async function runCalls(
   let failed = false;
   try {
     for (const { tool, args } of calls) {
+      // Outil refusé (lecture seule, nom inconnu) : un échec comme un autre.
       const result = (await request('tools/call', {
         name: tool,
         arguments: args,
-      })) as { content?: { text?: string }[]; isError?: boolean };
+      }).catch((error: unknown) => ({
+        isError: true,
+        content: [
+          { text: error instanceof Error ? error.message : String(error) },
+        ],
+      }))) as { content?: { text?: string }[]; isError?: boolean };
       if (result.isError) failed = true;
       parts.push(
         (result.content ?? []).map((item) => item.text ?? '').join('\n\n'),

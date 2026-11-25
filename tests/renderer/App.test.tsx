@@ -421,13 +421,16 @@ describe('App', () => {
     });
     render(<App client={client} />);
     await screen.findByRole('button', { name: '+ Racine' });
-    fireEvent.keyDown(document.body, {
-      key: 'P',
-      ctrlKey: true,
-      shiftKey: true,
-    });
-    const palette = screen.getByRole('combobox', {
-      name: 'Aller à un nœud ou lancer une action',
+    // L'écran n'écoute le clavier qu'après son premier effet.
+    const palette = await waitFor(() => {
+      fireEvent.keyDown(document.body, {
+        key: 'P',
+        ctrlKey: true,
+        shiftKey: true,
+      });
+      return screen.getByRole('combobox', {
+        name: 'Aller à un nœud ou lancer une action',
+      });
     });
     fireEvent.change(palette, { target: { value: '>sujets' } });
     fireEvent.keyDown(palette, { key: 'Enter' });

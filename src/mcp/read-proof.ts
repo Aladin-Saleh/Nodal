@@ -14,6 +14,8 @@ import path from 'node:path';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** Une modification annoncée a lieu dans ce délai (accord de l'utilisateur). */
 const EDIT_DELAY_MS = 10 * 60 * 1000;
+/** Les dates de fichiers avancent par à-coups (jusqu'à 2 s sur FAT). */
+const CLOCK_TOLERANCE_MS = 2_000;
 const MAX_LOG_BYTES = 1024 * 1024;
 
 interface ReadEntry {
@@ -104,7 +106,7 @@ export function provenReads(
     fingerprint !== null &&
     (entries.get(fileKey(absolute)) ?? []).some((entry) =>
       entry.content === null
-        ? mtime.getTime() >= entry.at &&
+        ? mtime.getTime() >= entry.at - CLOCK_TOLERANCE_MS &&
           mtime.getTime() <= entry.at + EDIT_DELAY_MS
         : entry.content === fingerprint,
     );
