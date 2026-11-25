@@ -101,7 +101,9 @@ documents trouvés, souvent suffisants. Question à plusieurs volets : plusieurs
 recherches en parallèle. Pour approfondir : nodal_get_node, nodal_read_document,
 nodal_tree, nodal_neighborhood ; nodal_overview si la question est vague.
 Question sur des fichiers précis (avant de les modifier) : nodal_for_files,
-en parallèle de nodal_search. Nodal décrit, le code fait foi : un détail
+en parallèle de nodal_search. Ce que touche un changement : nodal_impact.
+Ce que fait exactement un fichier nommé, et rien d'autre : lisez-le
+directement, sans Nodal. Nodal décrit, le code fait foi : un détail
 d'implémentation dont dépend la réponse (condition, liste de champs,
 signature) se vérifie dans le fichier cité, par une lecture ciblée.`;
 
@@ -644,6 +646,9 @@ export function createNodalMcpServer(
         relations: z.array(z.string().min(1).max(100)).max(50).optional(),
       }),
       annotations: READ_ONLY,
+      // Chargé d'emblée : sinon l'assistant s'en passe et répond moins bien
+      // (banc du 2026-11-25).
+      _meta: { 'anthropic/alwaysLoad': true },
     },
     run((ctx, args: Parameters<typeof impact>[1]) =>
       impact(ctx, args, codeRootsOf(ctx)),

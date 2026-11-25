@@ -11,10 +11,11 @@ Serveur MCP `nodal`. Un appel suffit le plus souvent : n'en faites pas plus que 
 
 ## Répondre à une question
 
-1. Les extraits `<nodal-context>` déjà présents suffisent ? Répondez, sans rappeler Nodal.
+1. Les extraits `<nodal-context>` déjà présents couvrent toute la question ? Répondez, sans rappeler Nodal. Un volet manque (chiffre, raison, élément de liste) : lisez la suite du document cité.
 2. Sinon `nodal_search` avec 2 à 4 mots précis ; question à plusieurs volets : plusieurs recherches en parallèle.
 3. Détail d'implémentation dont dépend la réponse (condition, valeur, signature) : une lecture ciblée du fichier cité. Nodal décrit, le code fait foi.
-4. Rien dans Nodal : lisez le code et dites-le. Question sur un fichier précis et sur rien d'autre : lisez directement le fichier.
+4. Ce que touche un changement : `nodal_impact`.
+5. Rien dans Nodal : lisez le code et dites-le. Question sur un fichier précis et sur rien d'autre : lisez directement le fichier.
 
 `stale` ou `changed` : la fiche est peut-être dépassée, vérifiez dans le code. `lessons` : ne refaites pas une impasse, tenez compte des corrections.
 

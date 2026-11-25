@@ -273,7 +273,7 @@ export function promptContext(
   return contextBlock(
     ctx,
     `Base Nodal « ${ctx.workspace.name} » : extraits trouvés automatiquement pour cette demande (mots : ${keywords.join(', ')}). ` +
-      'Partez-en ; approfondissez avec nodal_get_node / nodal_read_document, ou nodal_search si ce n’est pas le bon sujet.' +
+      'Partiels : vérifiez qu’ils couvrent toute la question, sinon complétez (nodal_read_document, nodal_search, nodal_for_files pour des fichiers, nodal_impact pour ce que touche un changement) avant de répondre.' +
       (lessons.length > 0
         ? ' lessons : pistes déjà essayées sans succès, ou réponses corrigées par l’utilisateur.'
         : ''),
