@@ -10,44 +10,14 @@ import {
 } from '../../../shared/context-hook';
 import {
   AFTER_CONNECT,
+  assistantInstructions,
+  INSTRUCTIONS_FILE,
   isProjectClient,
   MCP_CLIENTS,
   MCP_CLIENT_LABELS,
-  SERVER_NAME,
   mcpSetup,
   type McpClient,
 } from '../../../shared/mcp-clients';
-
-/**
- * Consignes à placer dans CLAUDE.md / AGENTS.md pour que l'assistant consulte
- * Nodal avant de lire des fichiers ou de répondre de mémoire (et, si
- * l'écriture est autorisée, y consigne ce qu'il apprend).
- */
-export function assistantInstructions(
-  workspaceName: string,
-  allowWrites: boolean,
-): string {
-  // Déclencheur seulement : le mode d'emploi des outils est dans les
-  // consignes du serveur MCP, envoyées à chaque tour (pas de doublon).
-  const lines = [
-    `## Base de connaissances Nodal « ${workspaceName} »`,
-    '',
-    `Avant de répondre sur ce sujet, de parcourir des fichiers ou de répondre de mémoire, consultez Nodal (serveur MCP \`${SERVER_NAME}\`, en commençant par \`nodal_search\`). Ne lisez les fichiers sources que si Nodal ne suffit pas, et dites-le.`,
-    '',
-    'Exception : la question porte seulement sur ce que fait un fichier précis. Lisez-le directement ; les nœuds qui lui sont liés arrivent d’eux-mêmes avec le contexte automatique, ou par `nodal_for_files` s’il faut le pourquoi.',
-    '',
-    'Avant de modifier des fichiers du code, appelez `nodal_for_files` avec leurs chemins : il donne les nœuds qui les documentent.',
-  ];
-  if (allowWrites) {
-    lines.push(
-      '',
-      'Enregistrez-y ce que vous apprenez de durable (décision, explication, procédure, lien entre notions), en complétant les nœuds existants ; plusieurs écritures : `nodal_apply`.',
-      '',
-      'Après avoir modifié des fichiers, mettez à jour les nœuds concernés et ancrez-y les nouveaux fichiers (`nodal_apply`, opération `anchor`).',
-    );
-  }
-  return lines.join('\n');
-}
 
 /** Réglages globaux de l'assistant, pour une installation à la main. */
 const USER_SETTINGS_FILE: Record<ContextHookClient, string> = {
@@ -101,10 +71,11 @@ function ConnectSection({
       {isProjectClient(assistant) && (
         <p className="muted">
           Choisissez le dossier du repo : {MCP_CLIENT_LABELS[assistant]} y sera
-          relié à cet espace. Ouvrez-le ensuite dans ce dossier et tapez
-          /nodal-scan : le repo est documenté ici et relié au reste. Autant de
-          repos que voulu dans le même espace ; vos autres réglages sont
-          conservés.
+          relié à cet espace. Ses consignes sont ajoutées à{' '}
+          {INSTRUCTIONS_FILE[assistant]}. Ouvrez-le ensuite dans ce dossier et
+          tapez /nodal-scan : le repo est documenté ici et relié au reste.
+          Autant de repos que voulu dans le même espace ; vos autres réglages
+          sont conservés.
         </p>
       )}
       {isProjectClient(assistant) && repos.length > 0 && (
@@ -271,7 +242,7 @@ export function McpDialog({
           )}
           {setup.instructionsFile && (
             <CopyBlock
-              label={`Consignes facultatives : ${setup.instructionsFile}`}
+              label={`Consignes : ${setup.instructionsFile}`}
               text={assistantInstructions(workspaceName, allowWrites)}
             />
           )}

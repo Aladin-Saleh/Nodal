@@ -12,12 +12,15 @@ import {
 } from '../shared/context-hook';
 import { NodalError } from '../shared/errors';
 import {
+  assistantInstructions,
+  INSTRUCTIONS_FILE,
   isProjectClient,
   mcpServerEntry,
   SERVER_NAME,
   type McpClient,
 } from '../shared/mcp-clients';
 import { installContextHook } from './context-hook-install';
+import { installInstructions } from './instructions-file';
 import { installSkills, skillsDirectory } from './skill-install';
 
 type Json = Record<string, unknown>;
@@ -154,6 +157,7 @@ export interface ConnectOptions {
   nodePath: string;
   serverPath: string;
   workspaceFile: string;
+  workspaceName: string;
   allowWrites: boolean;
 }
 
@@ -238,11 +242,26 @@ export function connectAssistant(options: ConnectOptions): {
   }
   if (projectDir && isProjectClient(client))
     excludeFromGit(projectDir, created);
+  const notes: string[] = [];
+  const instructionsFile = INSTRUCTIONS_FILE[client];
+  if (projectDir && instructionsFile) {
+    const file = path.join(projectDir, instructionsFile);
+    const text = assistantInstructions(
+      options.workspaceName,
+      options.allowWrites,
+    );
+    if (installInstructions(file, text)) files.push(file);
+    else
+      notes.push(
+        `${instructionsFile} contient déjà des consignes Nodal : il n’a pas été modifié.`,
+      );
+  }
+  if (client === 'claude-code' && hasLocalClaudeServer(home, projectDir!))
+    notes.push(
+      `Un serveur « ${SERVER_NAME} » ajouté à la main prime sur celui-ci : retirez-le avec « claude mcp remove ${SERVER_NAME} -s local ».`,
+    );
   return {
     files: [...personal, ...files],
-    note:
-      client === 'claude-code' && hasLocalClaudeServer(home, projectDir!)
-        ? `Un serveur « ${SERVER_NAME} » ajouté à la main prime sur celui-ci : retirez-le avec « claude mcp remove ${SERVER_NAME} -s local ».`
-        : null,
+    note: notes.join(' ') || null,
   };
 }

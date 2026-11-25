@@ -481,10 +481,13 @@ Menu **Espace ▾** (import / export) et **Paramètres de l’espace…** :
   « à revérifier » et ne compte plus dans ce bilan. 1 000 leçons sont gardées
   au plus ; elles ne sont ni exportées ni cherchées, et les secrets
   reconnaissables y sont masqués.
-- **Consulter Nodal d'abord** : la fenêtre « Connecter un assistant IA »
-  fournit un bloc de consignes à coller dans le fichier d'instructions de
-  votre projet (`CLAUDE.md` pour Claude Code, `AGENTS.md` pour Codex ou
-  Cursor). L'assistant interroge alors Nodal avant de parcourir les fichiers
+- **Consulter Nodal d'abord** : « Ajouter un repo… » ajoute un bloc de consignes
+  à la fin du fichier d'instructions du repo, créé au besoin (`CLAUDE.md` pour
+  Claude Code, `GEMINI.md`, `AGENTS.md` pour Cursor,
+  `.github/copilot-instructions.md`). Reconnecter le repo remplace ce bloc,
+  entre ses deux marques, sans toucher au reste ; des consignes Nodal collées à
+  la main sont laissées telles quelles. Pour Codex, le bloc est à copier
+  (configuration manuelle). L'assistant interroge alors Nodal avant de parcourir les fichiers
   ou de répondre de mémoire.
 - **Contexte automatique** (Claude Code, Gemini CLI) : dans la même
   fenêtre, la connexion ajoute un hook aux réglages du

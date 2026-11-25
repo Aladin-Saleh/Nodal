@@ -30,6 +30,47 @@ export const MCP_CLIENT_LABELS: Record<McpClient, string> = {
 export const isProjectClient = (client: McpClient): boolean =>
   client !== 'codex' && client !== 'claude-desktop';
 
+/** Fichier d'instructions du projet, ou `null` si l'assistant n'en lit pas. */
+export const INSTRUCTIONS_FILE: Record<McpClient, string | null> = {
+  'claude-code': 'CLAUDE.md',
+  'gemini-cli': 'GEMINI.md',
+  codex: 'AGENTS.md',
+  'claude-desktop': null,
+  cursor: 'AGENTS.md',
+  vscode: '.github/copilot-instructions.md',
+};
+
+/**
+ * Consignes à placer dans CLAUDE.md / AGENTS.md pour que l'assistant consulte
+ * Nodal avant de lire des fichiers ou de répondre de mémoire (et, si
+ * l'écriture est autorisée, y consigne ce qu'il apprend).
+ */
+export function assistantInstructions(
+  workspaceName: string,
+  allowWrites: boolean,
+): string {
+  // Déclencheur seulement : le mode d'emploi des outils est dans les
+  // consignes du serveur MCP, envoyées à chaque tour (pas de doublon).
+  const lines = [
+    `## Base de connaissances Nodal « ${workspaceName} »`,
+    '',
+    `Avant de répondre sur ce sujet, de parcourir des fichiers ou de répondre de mémoire, consultez Nodal (serveur MCP \`${SERVER_NAME}\`, en commençant par \`nodal_search\`). Ne lisez les fichiers sources que si Nodal ne suffit pas, et dites-le.`,
+    '',
+    'Exception : la question porte seulement sur ce que fait un fichier précis. Lisez-le directement ; les nœuds qui lui sont liés arrivent d’eux-mêmes avec le contexte automatique, ou par `nodal_for_files` s’il faut le pourquoi.',
+    '',
+    'Avant de modifier des fichiers du code, appelez `nodal_for_files` avec leurs chemins : il donne les nœuds qui les documentent.',
+  ];
+  if (allowWrites) {
+    lines.push(
+      '',
+      'Enregistrez-y ce que vous apprenez de durable (décision, explication, procédure, lien entre notions), en complétant les nœuds existants ; plusieurs écritures : `nodal_apply`.',
+      '',
+      'Après avoir modifié des fichiers, mettez à jour les nœuds concernés et ancrez-y les nouveaux fichiers (`nodal_apply`, opération `anchor`).',
+    );
+  }
+  return lines.join('\n');
+}
+
 /** Ce qu'il reste à faire après la connexion automatique. */
 export const AFTER_CONNECT: Record<McpClient, string> = {
   'claude-code':
@@ -85,6 +126,7 @@ export function mcpSetup(
   const mcpServers = json({
     mcpServers: { [SERVER_NAME]: entry },
   });
+  const instructionsFile = INSTRUCTIONS_FILE[client];
   switch (client) {
     case 'claude-code':
       return {
@@ -92,7 +134,7 @@ export function mcpSetup(
         label: 'Commande (terminal, dans le dossier du projet)',
         text: `claude mcp add ${SERVER_NAME} -- ${node} ${paths}${readOnly ? ' --read-only' : ''}`,
         hint: 'Le serveur est ajouté pour ce projet ; ajoutez « -s user » après « add » pour tous vos projets. Puis /mcp pour vérifier la connexion.',
-        instructionsFile: 'CLAUDE.md',
+        instructionsFile,
       };
     case 'gemini-cli':
       return {
@@ -101,7 +143,7 @@ export function mcpSetup(
         // Les options destinées au serveur passent après « -- ».
         text: `gemini mcp add ${SERVER_NAME} ${node} ${paths}${readOnly ? ' -- --read-only' : ''}`,
         hint: 'Le serveur est ajouté au projet (.gemini/settings.json) ; ajoutez « -s user » après « add » pour tous vos projets. Puis /mcp dans Gemini CLI pour vérifier.',
-        instructionsFile: 'GEMINI.md',
+        instructionsFile,
       };
     case 'codex':
       return {
@@ -109,7 +151,7 @@ export function mcpSetup(
         label: 'Commande (terminal)',
         text: `codex mcp add ${SERVER_NAME} -- ${node} ${paths}${readOnly ? ' --read-only' : ''}`,
         hint: 'Le serveur est ajouté à ~/.codex/config.toml, pour tous vos projets.',
-        instructionsFile: 'AGENTS.md',
+        instructionsFile,
       };
     case 'claude-desktop':
       return {
@@ -117,7 +159,7 @@ export function mcpSetup(
         label: 'claude_desktop_config.json',
         text: mcpServers,
         hint: 'Claude Desktop → Paramètres → Développeur → Modifier la configuration. Fusionnez avec les serveurs déjà présents, puis redémarrez Claude Desktop.',
-        instructionsFile: null,
+        instructionsFile,
       };
     case 'cursor':
       return {
@@ -125,7 +167,7 @@ export function mcpSetup(
         label: '.cursor/mcp.json',
         text: mcpServers,
         hint: 'Dans le dossier du projet (ou ~/.cursor/mcp.json pour tous les projets). Fusionnez avec les serveurs déjà présents.',
-        instructionsFile: 'AGENTS.md',
+        instructionsFile,
       };
     case 'vscode':
       return {
@@ -135,7 +177,7 @@ export function mcpSetup(
           servers: { [SERVER_NAME]: { type: 'stdio', ...entry } },
         }),
         hint: 'Dans le dossier du projet, puis « Start » au-dessus du serveur dans ce fichier. Le mode Agent de Copilot Chat utilise alors les outils de Nodal.',
-        instructionsFile: '.github/copilot-instructions.md',
+        instructionsFile,
       };
   }
 }

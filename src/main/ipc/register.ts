@@ -279,7 +279,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return null;
     },
     'assistant:connect': async ({ client, allowWrites }) => {
-      const { filePath } = requireCurrent();
+      const { filePath, name } = requireCurrent();
       let projectDir: string | null = null;
       if (isProjectClient(client)) {
         const [root] = codeAnchors.getRoots().filter((item) => item.exists);
@@ -297,6 +297,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
         nodePath,
         serverPath: mcpServerPath,
         workspaceFile: filePath,
+        workspaceName: name,
         allowWrites,
       });
     },

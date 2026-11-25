@@ -28,6 +28,7 @@ function setup(client: ConnectOptions['client'], allowWrites = true) {
     nodePath: NODE,
     serverPath: SERVER,
     workspaceFile: BASE,
+    workspaceName: 'KB',
     allowWrites,
   };
   const write = (file: string, text: string) => {
@@ -128,6 +129,43 @@ describe('connectAssistant', () => {
     expect(fs.readdirSync(path.join(project, '.claude'))).toEqual([
       'settings.local.json',
     ]);
+  });
+});
+
+describe('consignes du projet', () => {
+  it('crée CLAUDE.md, ou ajoute le bloc à la fin, une seule fois', () => {
+    const { project, options } = setup('claude-code');
+    const file = path.join(project, 'CLAUDE.md');
+    expect(connectAssistant(options).files).toContain(file);
+    expect(fs.readFileSync(file, 'utf8')).toMatch(
+      /^<!-- nodal:début[^]*« KB »[^]*nodal:fin -->\n$/,
+    );
+    fs.writeFileSync(file, '# Le mien\r\ntexte');
+    connectAssistant(options);
+    connectAssistant({ ...options, workspaceName: 'Autre' });
+    const text = fs.readFileSync(file, 'utf8');
+    expect(text.startsWith('# Le mien\r\ntexte\r\n\r\n<!-- nodal')).toBe(true);
+    expect(text.match(/nodal:début/g)).toHaveLength(1);
+    expect(text).toContain('« Autre »');
+    expect(text).not.toContain('« KB »');
+    expect(text).not.toMatch(/[^\r]\n/);
+    // Ce qui suit le bloc reste aussi.
+    fs.appendFileSync(file, 'après');
+    connectAssistant(options);
+    expect(fs.readFileSync(file, 'utf8')).toMatch(/nodal:fin -->\r\naprès$/);
+  });
+
+  it('ne touche pas à des consignes collées à la main ou abîmées', () => {
+    const { project, options } = setup('cursor');
+    const file = path.join(project, 'AGENTS.md');
+    for (const text of [
+      '## Base de connaissances Nodal « KB »\n\nà moi',
+      '<!-- nodal:début (bloc géré par Nodal) -->\nsans fin',
+    ]) {
+      fs.writeFileSync(file, text);
+      expect(connectAssistant(options).note).toContain('déjà des consignes');
+      expect(fs.readFileSync(file, 'utf8')).toBe(text);
+    }
   });
 });
 

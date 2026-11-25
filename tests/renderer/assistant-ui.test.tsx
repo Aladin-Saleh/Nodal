@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AssistantBadge } from '../../src/renderer/features/workspace/AssistantBadge';
-import { assistantInstructions } from '../../src/renderer/features/workspace/McpDialog';
+import { assistantInstructions } from '../../src/shared/mcp-clients';
 
 afterEach(cleanup);
 

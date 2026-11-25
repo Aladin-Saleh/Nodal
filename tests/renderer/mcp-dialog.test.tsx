@@ -78,7 +78,7 @@ describe('McpDialog', () => {
       </ServicesProvider>,
     );
     expect(await screen.findByText(/^claude mcp add nodal/)).toBeTruthy();
-    expect(screen.getByText(/facultatives : CLAUDE\.md/)).toBeTruthy();
+    expect(screen.getByText(/Consignes : CLAUDE\.md/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter un repo…' }));
     expect(await screen.findByText(/ou \/nodal:scan/)).toBeTruthy();
     expect(call).toHaveBeenCalledWith('assistant:connect', {
@@ -90,7 +90,7 @@ describe('McpDialog', () => {
       target: { value: 'gemini-cli' },
     });
     expect(screen.getByText(/^gemini mcp add nodal node/)).toBeTruthy();
-    expect(screen.getByText(/facultatives : GEMINI\.md/)).toBeTruthy();
+    expect(screen.getByText(/Consignes : GEMINI\.md/)).toBeTruthy();
     expect(screen.queryByText(/^claude mcp add/)).toBeNull();
   });
 });
