@@ -62,6 +62,7 @@ import {
   type AnchoredNode,
 } from '../main/knowledge/anchor-service';
 import type { ReadContext } from './workspace-reader';
+import { listViews } from './views';
 
 export const DEFAULT_MAX_ROWS = 300;
 /** Nœuds listés dans les rubriques « hubs » et « recent » de la vue d'ensemble. */
@@ -169,6 +170,7 @@ function count(ctx: ReadContext, sql: string): number {
 export function overview(ctx: ReadContext) {
   const outline = loadOutline(ctx);
   const descendants = descendantCounts(outline);
+  const views = listViews(ctx);
   return {
     workspace: {
       name: ctx.workspace.name,
@@ -204,6 +206,7 @@ export function overview(ctx: ReadContext) {
     tags: new TagService(() => ctx)
       .list()
       .map((tag) => ({ name: tag.name, usageCount: tag.usageCount })),
+    ...(views.length > 0 && { views }),
     roots: (outline.children.get(null) ?? []).map((row) => ({
       id: row.id,
       title: row.title,

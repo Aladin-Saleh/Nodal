@@ -20,6 +20,7 @@ import { AssistantChangeService } from '../../src/main/knowledge/assistant-chang
 import { DocumentService } from '../../src/main/knowledge/document-service';
 import { EdgeService } from '../../src/main/knowledge/edge-service';
 import { GraphService } from '../../src/main/knowledge/graph-service';
+import { GraphViewService } from '../../src/main/knowledge/graph-view-service';
 import { NodeService } from '../../src/main/knowledge/node-service';
 import { RelationTypeService } from '../../src/main/knowledge/relation-type-service';
 import { TagService } from '../../src/main/knowledge/tag-service';
@@ -1563,6 +1564,124 @@ describe('nodal_apply : écriture groupée', () => {
         operations: [{ op: 'createNode', title: 'X', type: 'concept' }],
       }),
     ).rejects.toThrow(/not found/);
+    await client.close();
+  });
+});
+
+const views = () => new GraphViewService(workspace().context).list();
+
+describe('nodal_apply : vues du graphe', () => {
+  it('crée une vue avec les réglages d’un utilisateur, puis la complète', async () => {
+    const client = await connect(file, false);
+    const created = toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'view',
+            name: 'Composants critiques',
+            types: ['component'],
+            tags: ['Critique'],
+            hide: [short(ids.cache)],
+            hideRelations: ['utilise'],
+          },
+        ],
+      }),
+    );
+    expect(created.results[0].note).toBe(
+      'types : component ; tags : critique ; masqués : Cache ; relations masquées : utilise',
+    );
+    const [view] = views();
+    expect(view).toMatchObject({
+      name: 'Composants critiques',
+      camera: null,
+      isDefault: false,
+    });
+    expect(view!.settings).toMatchObject({
+      nodeTypes: ['component'],
+      hidden: [ids.cache],
+      solo: null,
+      showHierarchy: true,
+    });
+
+    // Même nom, autre casse : la vue existante est complétée.
+    toon(
+      await client.call('nodal_apply', {
+        operations: [
+          {
+            op: 'view',
+            name: 'composants CRITIQUES',
+            show: [ids.cache],
+            hide: [ids.other],
+            solo: ids.api,
+            hierarchy: false,
+          },
+        ],
+      }),
+    );
+    const [updated] = views();
+    expect(updated!.name).toBe('Composants critiques');
+    expect(updated!.settings).toMatchObject({
+      nodeTypes: ['component'],
+      hidden: [ids.other],
+      solo: ids.api,
+      showHierarchy: false,
+    });
+    expect(changes().map((change) => change.action)).toEqual([
+      'update_view',
+      'create_view',
+    ]);
+
+    const overview = toon(await client.call('nodal_overview', {}));
+    expect(overview.views).toEqual([
+      {
+        name: 'Composants critiques',
+        shows:
+          'types : component ; tags : critique ; branche seule : API ; masqués : Isolé ; relations masquées : utilise ; sans hiérarchie',
+      },
+    ]);
+    await client.close();
+  });
+
+  it('annule la création et la modification depuis l’activité IA', async () => {
+    const client = await connect(file, false);
+    const apply = (operation: Record<string, unknown>) =>
+      client.call('nodal_apply', {
+        operations: [{ op: 'view', ...operation }],
+      });
+    toon(await apply({ name: 'Cache', solo: ids.cache }));
+    toon(await apply({ name: 'Cache', collapse: [ids.redis] }));
+    const service = new AssistantChangeService(workspace().context);
+    const [update, create] = changes();
+    service.undo(update!.id);
+    expect(views()[0]!.settings).toMatchObject({
+      solo: ids.cache,
+      collapsed: [],
+    });
+    service.undo(create!.id);
+    expect(views()).toEqual([]);
+    await client.close();
+  });
+
+  it('refuse un tag ou un nœud inconnu sans rien enregistrer', async () => {
+    const client = await connect(file, false);
+    const unknownTag = await client.call('nodal_apply', {
+      operations: [{ op: 'view', name: 'X', tags: ['absent'] }],
+    });
+    expect(unknownTag.isError).toBe(true);
+    expect(unknownTag.content[0]!.text).toMatch(
+      /Tag « absent » inconnu\. Existants : critique/,
+    );
+    const unknownNode = await client.call('nodal_apply', {
+      operations: [
+        {
+          op: 'view',
+          name: 'X',
+          hide: ['00000000-0000-4000-8000-000000000000'],
+        },
+      ],
+    });
+    expect(unknownNode.isError).toBe(true);
+    expect(views()).toEqual([]);
     await client.close();
   });
 });

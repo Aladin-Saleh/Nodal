@@ -29,6 +29,7 @@ Passez chaque ligne en revue. Elle est produite, ou notée `sans objet` avec sa 
 | Signature, requête ou exemple d'appel de chaque interface publique importante (repris des tests)                                          | `code`                  |
 | Procédures, décisions, règles, risques, dettes, rôles, services externes                                                                  | nœuds typés, `template` |
 | Relations prouvées, ancrages, tags                                                                                                        | `link`, `anchor`, `tag` |
+| Vues du graphe : 3 à 6 lectures utiles (architecture, module central, décisions et règles, risques et dettes)                             | `view`                  |
 
 ## 1. État des lieux
 
@@ -75,6 +76,7 @@ Continuez jusqu'au dernier module sans vous arrêter pour demander. Si vous deve
 - Règles (validation, droits, invariants : `rule`), risques et dettes (`risk`, `issue`, `task` ; `TODO`, `FIXME` significatifs, pas tous), rôles (`actor`), services externes (`resource`).
 - Inventaires CSV du projet entier, sur la branche qui les porte.
 - Un `sequenceDiagram` pour chacun des 1 à 3 parcours principaux, sous Architecture.
+- Vues du graphe (`view`, voir « Vues du graphe » dans les conventions) : 3 à 6, nommées par ce qu'elles montrent, sans doubler une vue existante (`nodal_overview`). Par exemple « Architecture » (`types` component, data), « Décisions et règles » (`types` decision, rule, requirement), « Risques et dettes » (`types` risk, issue, task), une vue `solo` par module central. Ne les ouvrez pas : citez-les dans le bilan, l'utilisateur les choisit dans « Vues ▾ ».
 
 ## 6. Contrôle
 
@@ -85,4 +87,4 @@ Continuez jusqu'au dernier module sans vous arrêter pour demander. Si vous deve
 5. `nodal_health` avec `graph: true`, puis `nodal_impact` sur un module central : un module sans relation ou un impact vide révèle des liens oubliés.
 6. Reprenez au hasard cinq affirmations écrites et vérifiez-les dans le code.
 
-Terminez en 15 lignes au plus : nœuds, documents par type et relations écrits, productions `sans objet` et pourquoi, fichiers couverts et non couverts, doutes à confirmer, suite conseillée. Rappelez que les ajouts se relisent et s'annulent dans Nodal, et que `/nodal-maj` tient la base à jour.
+Terminez en 15 lignes au plus : nœuds, documents par type et relations écrits, vues créées, productions `sans objet` et pourquoi, fichiers couverts et non couverts, doutes à confirmer, suite conseillée. Rappelez que les ajouts se relisent et s'annulent dans Nodal, et que `/nodal-maj` tient la base à jour.

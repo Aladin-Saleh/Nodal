@@ -82,7 +82,10 @@ export interface WriteContext extends ReadContext {
 }
 
 /** Valide une valeur avec les règles de l'application (mêmes messages). */
-function check<S extends z.ZodType>(schema: S, value: unknown): z.output<S> {
+export function check<S extends z.ZodType>(
+  schema: S,
+  value: unknown,
+): z.output<S> {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw new NodalError(

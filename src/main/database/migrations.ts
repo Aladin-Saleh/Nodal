@@ -14,6 +14,7 @@ import { migration011 } from './migrations/011-more-types';
 import { migration012 } from './migrations/012-code-state';
 import { migration013 } from './migrations/013-lessons';
 import { migration014 } from './migrations/014-quality';
+import { migration015 } from './migrations/015-assistant-views';
 import { inTransaction } from './transaction';
 
 export interface Migration {
@@ -45,6 +46,7 @@ export const MIGRATIONS: readonly Migration[] = [
   migration012,
   migration013,
   migration014,
+  migration015,
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.length;

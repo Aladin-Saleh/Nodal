@@ -304,7 +304,7 @@ export function createNodalMcpServer(
     {
       title: 'Vue d’ensemble',
       description:
-        "Nom de l'espace, statistiques, types de relations, tags, nœuds racines, nœuds les plus reliés et activité récente. " +
+        "Nom de l'espace, statistiques, types de relations, tags, vues du graphe, nœuds racines, nœuds les plus reliés et activité récente. " +
         'Pour s’orienter quand la question est vague ; sinon, commencer par nodal_search.',
       annotations: READ_ONLY,
     },
@@ -810,7 +810,10 @@ export function createNodalMcpServer(
         'certain = écrit dans la source, probable = déduit, uncertain = à vérifier ; evidence : source et quote, ' +
         'citation vérifiée dans le fichier ; sans preuve, certain devient probable ; relation déjà là : la preuve s’y ' +
         'ajoute), tag, anchor (fichiers du code, chemins ou motifs comme src/mcp/**), review (fichiers ancrés relus, ' +
-        'que la documentation reflète), lesson (ce qu’a donné une recherche ; corrected exige note). Un identifiant peut ' +
+        'que la documentation reflète), lesson (ce qu’a donné une recherche ; corrected exige note), view (vue du graphe, ' +
+        'créée ou complétée par son nom, jamais ouverte : types, tags (un nœud s’affiche s’il en porte un) et hideRelations ' +
+        'remplacent la liste ; hide / show masquent ou réaffichent des nœuds et leurs descendants, solo : une branche seule, ' +
+        'collapse / expand : replis, hierarchy : liens parent-enfant). Un identifiant peut ' +
         'être $n, l’élément de la n-ième opération. stale dans la réponse : fichiers modifiés que rien ne dit relus.',
       inputSchema: z.object({
         operations: z

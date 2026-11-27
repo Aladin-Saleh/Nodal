@@ -130,7 +130,7 @@ function WorkspaceView({
   const dispatch = useViewDispatch();
   const data = useWorkspaceData(selectedId);
   const { nodes, detail } = data;
-  const graphViews = useGraphViewPersistence(data.graph);
+  const graphViews = useGraphViewPersistence(data.graph, data.externalRevision);
 
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [overlays, setOverlays] = useState<Overlays>(NO_OVERLAYS);

@@ -58,6 +58,8 @@ export interface GraphViewsApi {
  */
 export function useGraphViewPersistence(
   graph: GraphData | null,
+  /** Change à chaque écriture d'un assistant, qui a pu créer des vues. */
+  externalRevision = 0,
 ): GraphViewsApi {
   const client = useClient();
   const run = useRunner();
@@ -75,6 +77,13 @@ export function useGraphViewPersistence(
     client.call('view:getGraph').then(setStored, () => setStored(null));
     client.call('graphView:list').then(setViews, () => setViews([]));
   }, [client]);
+
+  // Vues créées ou modifiées par un assistant : la liste suit, rien ne
+  // s'applique (l'utilisateur choisit la vue à ouvrir).
+  useEffect(() => {
+    if (externalRevision === 0) return;
+    client.call('graphView:list').then(setViews, () => undefined);
+  }, [client, externalRevision]);
 
   useEffect(() => {
     if (restored.current || stored === undefined || !views || !graph) return;

@@ -38,6 +38,7 @@ import {
   updateNode,
   type WriteContext,
 } from './write-tools';
+import { saveView } from './views';
 
 /** Au-delà, l'appel est refusé : mieux vaut le découper. */
 export const APPLY_MAX_OPERATIONS = 100;
@@ -45,6 +46,8 @@ export const APPLY_MAX_OPERATIONS = 100;
 /** Identifiant (préfixe affiché ou UUID) ou référence « $n ». */
 const target = z.string().min(1).max(100);
 const tagNames = z.array(z.string().min(1).max(100)).max(50);
+/** Nœuds d'une vue (masqués, repliés…). */
+const targets = z.array(target).max(500);
 /** Chemins (absolus ou relatifs) ou motifs glob de fichiers du code. */
 const anchorPaths = z
   .array(z.string().min(1).max(1000))
@@ -126,12 +129,40 @@ export const operationSchema = z.discriminatedUnion('op', [
     nodeIds: z.array(target).max(LESSON_NODES_MAX).optional(),
     note: z.string().max(LESSON_NOTE_MAX_LENGTH).optional(),
   }),
+  z.object({
+    op: z.literal('view'),
+    name: z.string().min(1).max(100),
+    types: z.array(z.enum(NODE_TYPES)).max(NODE_TYPES.length).optional(),
+    tags: tagNames.optional(),
+    hide: targets.optional(),
+    show: targets.optional(),
+    solo: target.nullable().optional(),
+    collapse: targets.optional(),
+    expand: targets.optional(),
+    hideRelations: z.array(z.string().min(1).max(100)).max(50).optional(),
+    hierarchy: z.boolean().optional(),
+  }),
 ]);
 
 export type Operation = z.infer<typeof operationSchema>;
 
 /** Champs d'une opération qui désignent un nœud ou un document. */
-const ID_FIELDS = ['id', 'parentId', 'nodeId', 'sourceId', 'targetId'] as const;
+const ID_FIELDS = [
+  'id',
+  'parentId',
+  'nodeId',
+  'sourceId',
+  'targetId',
+  'solo',
+] as const;
+/** Champs d'une opération qui listent des nœuds. */
+const ID_LIST_FIELDS = [
+  'nodeIds',
+  'hide',
+  'show',
+  'collapse',
+  'expand',
+] as const;
 
 const REFERENCE = /^\$(\d+)$/;
 
@@ -184,8 +215,10 @@ export function applyOperations(
         const value = resolved[field];
         if (typeof value === 'string') resolved[field] = resolve(value);
       }
-      if (operation.op === 'lesson')
-        resolved.nodeIds = operation.nodeIds?.map(resolve);
+      for (const field of ID_LIST_FIELDS) {
+        const value = resolved[field];
+        if (Array.isArray(value)) resolved[field] = value.map(resolve);
+      }
       const { id, documentId, note } = run(ctx, resolved as Operation);
       produced.push(id);
       results.push({
@@ -272,6 +305,11 @@ function run(
     case 'lesson': {
       const { op: _op, ...input } = operation;
       return { id: addLesson(ctx, input).id };
+    }
+    case 'view': {
+      const { op: _op, ...input } = operation;
+      const { id, shows } = saveView(ctx, input);
+      return { id, note: shows };
     }
   }
 }

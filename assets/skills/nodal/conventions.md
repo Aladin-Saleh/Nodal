@@ -63,3 +63,7 @@ Chaque nœud issu du code a ses `anchor` (motifs étroits : `src/mcp/**`, fichie
 - Nœud créé avec `template` : le document du modèle est à remplir ensuite (`documentId` du résultat, `updateDocument`, `mode: "replace"`).
 - `note` dans un résultat (citation introuvable, JSON invalide) : corrigez.
 - Vérifié ou tu : rien d'inventé. Ce que vous n'avez pas pu établir va sous `## À confirmer`.
+
+## Vues du graphe
+
+Une vue (`view`) est un graphe filtré et nommé, que l'utilisateur choisit dans le menu « Vues ▾ » : vous la créez, vous ne l'ouvrez jamais. Mêmes réglages qu'à la main : `types` et `tags` affichés (un nœud s'affiche s'il porte l'un des tags), `hide` (un nœud et ses descendants), `solo` (une branche seule), `collapse` (replier), `hideRelations`, `hierarchy`. Le même nom complète la vue existante (`show`, `expand` retirent un masquage, un repli). Les vues existantes sont dans `nodal_overview` (`views`). Une vue utile répond à une lecture précise (« Décisions et règles », « Module X ») ; un tag posé exprès est souvent le filtre le plus sûr.

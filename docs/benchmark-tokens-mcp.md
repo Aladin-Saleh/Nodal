@@ -372,6 +372,24 @@ sans le champ.
   `nodal_update_document` (`mode: "replace"`) ; dans `nodal_apply`, il est
   rendu dans la ligne de résultat de l'opération.
 
+## Vues du graphe : opération `view` (v1.7)
+
+`nodal_apply` accepte `view` : un assistant crée ou complète une vue du
+graphe par son nom (types, tags, masqués, branche seule, replis, relations
+masquées, hiérarchie), sans l'ouvrir. `nodal_overview` liste les vues
+(`views`, nom et ce qu'elles montrent en une ligne), absent s'il n'y en a pas.
+Mesure : `tests/perf/mcp-tokens.perf.ts`, définition de `nodal_apply` avant
+et après.
+
+| Mesure                      |      Tokens |
+| --------------------------- | ----------: |
+| Définition de `nodal_apply` | 1440 → 1818 |
+
+- Payé seulement quand le client charge `nodal_apply` (pas d'`alwaysLoad`) :
+  les tours de lecture ne changent pas.
+- La liste des vues de `nodal_overview` coûte une ligne par vue ; les nœuds
+  masqués ou repliés y sont cités par titre, cinq au plus.
+
 ## Suivi de bout en bout
 
 Les bancs de bout en bout (questions de développement posées à Claude Code

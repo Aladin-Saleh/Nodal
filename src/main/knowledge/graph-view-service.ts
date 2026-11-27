@@ -44,8 +44,9 @@ function parseJson<S extends { safeParse(value: unknown): unknown }>(
 
 /**
  * Vues graphe nommées d'un espace (table graph_view, migration 006).
- * Affichage seulement : ni dans la recherche, ni dans l'export, ni dans le
- * serveur MCP. Une vue illisible est ignorée plutôt que de bloquer la liste.
+ * Affichage seulement : ni dans la recherche, ni dans l'export ; un assistant
+ * en crée et en modifie par nodal_apply (op `view`), sans jamais les ouvrir.
+ * Une vue illisible est ignorée plutôt que de bloquer la liste.
  */
 export class GraphViewService {
   constructor(private readonly context: ContextProvider) {}
@@ -160,12 +161,28 @@ export class GraphViewService {
     });
   }
 
-  private get(id: string): GraphViewInfo {
+  /** Vue de ce nom (sans casse) ; `null` si aucune, ou illisible. */
+  findByName(name: string): GraphViewInfo | null {
+    const ctx = this.context();
+    const row = ctx.db
+      .prepare(
+        `${SELECT_VIEW} WHERE workspace_id = ? AND name = ? COLLATE NOCASE`,
+      )
+      .get(ctx.workspaceId, name) as GraphViewRow | undefined;
+    return row ? toInfo(row) : null;
+  }
+
+  /** Vue d'identifiant donné ; `null` si elle n'existe plus, ou illisible. */
+  find(id: string): GraphViewInfo | null {
     const ctx = this.context();
     const row = ctx.db
       .prepare(`${SELECT_VIEW} WHERE id = ? AND workspace_id = ?`)
       .get(id, ctx.workspaceId) as GraphViewRow | undefined;
-    const view = row ? toInfo(row) : null;
+    return row ? toInfo(row) : null;
+  }
+
+  private get(id: string): GraphViewInfo {
+    const view = this.find(id);
     if (!view) throw notFound('La vue');
     return view;
   }

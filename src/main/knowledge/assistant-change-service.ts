@@ -9,11 +9,12 @@ import type { AssistantAction, NodeType } from '../../shared/domain';
 import type { Confidence } from '../../shared/evidence';
 import type { CodeSnapshot } from '../../shared/code-anchors';
 import { NodalError } from '../../shared/errors';
-import type { AssistantChange } from '../../shared/model';
+import type { AssistantChange, GraphViewSettings } from '../../shared/model';
 import { inTransaction } from '../database/transaction';
 import { notFound, type ContextProvider, type ServiceContext } from './context';
 import { DocumentService } from './document-service';
 import { EdgeService, setConfidence } from './edge-service';
+import { GraphViewService } from './graph-view-service';
 import { NodeService } from './node-service';
 import { listAnchors, setAnchors, undoReview } from './anchor-service';
 import { deleteLesson } from './lesson-service';
@@ -31,6 +32,12 @@ export interface NodeState {
 export interface DocumentState {
   title: string;
   body: string;
+}
+
+/** Vue graphe, dans la forme du journal (la caméra n'y entre pas). */
+export interface ViewState {
+  name: string;
+  settings: GraphViewSettings;
 }
 
 /** États avant / après enregistrés pour chaque type de modification. */
@@ -51,6 +58,8 @@ export interface ChangeStates {
     before: { confidence: Confidence | null };
     after: { confidence: Confidence | null; evidenceId: string | null };
   };
+  create_view: { before: null; after: ViewState };
+  update_view: { before: ViewState; after: ViewState };
 }
 
 export type ChangeEntry = {
@@ -351,6 +360,20 @@ export class AssistantChangeService {
             row.entity_id,
             before as ChangeStates['review']['before'],
           );
+          break;
+        }
+        case 'create_view':
+        case 'update_view': {
+          const views = new GraphViewService(provider);
+          const current = views.find(row.entity_id);
+          if (!current) throw notFound('La vue');
+          const state: ViewState = {
+            name: current.name,
+            settings: current.settings,
+          };
+          if (!sameJson(state, after)) throw modifiedSince('La vue');
+          if (row.action === 'create_view') views.delete(row.entity_id);
+          else views.update({ id: row.entity_id, ...(before as ViewState) });
           break;
         }
       }
