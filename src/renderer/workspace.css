@@ -1384,6 +1384,12 @@ kbd.palette-detail {
   display: none;
 }
 
+.terminal-folder {
+  max-width: 220px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
 .terminal-cwd {
   /* Cède sa place avant les onglets. */
   flex-shrink: 1000;

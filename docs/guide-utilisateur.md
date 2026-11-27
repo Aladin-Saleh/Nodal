@@ -42,11 +42,13 @@ sauvegarder comme n'importe quel fichier (application fermée).
 - **Fermer** : menu **Espace ▾** › **Fermer l'espace**. Les modifications en
   cours sont enregistrées automatiquement.
 
-La barre supérieure regroupe les actions en deux menus : **Espace ▾** (tags,
-types de relations, modèles, paramètres, capture rapide, boîte de réception,
-santé de la base, import / export, préférences, fermer) et **Assistant IA ▾**
-(connecter un assistant, activité IA, sujets à documenter). **?** ouvre
-l’aide. Toutes ces actions sont aussi dans la palette (Ctrl + Maj + P).
+La barre supérieure regroupe les actions en trois menus : **Repos ▾** (les
+dossiers de code de l'espace, avec leur nombre ; un clic ouvre un terminal
+dans le repo, un repo introuvable est grisé ; ajouter un repo, gérer les
+dossiers de code), **Espace ▾** (tags, types de relations, modèles,
+paramètres, capture rapide, boîte de réception, santé de la base, import /
+export, préférences, fermer) et **Assistant IA ▾** (connecter un assistant,
+activité IA, sujets à documenter). **?** ouvre l’aide. Toutes ces actions sont aussi dans la palette (Ctrl + Maj + P).
 
 L'état d'enregistrement s'affiche au centre de la barre d'état (en bas) :
 _Enregistré_, _Modifications en attente…_, _Enregistrement…_ ou un message
@@ -598,6 +600,16 @@ palette « Ouvrir le terminal » : un terminal s'ouvre en bas de la fenêtre.
   PowerShell 7 s'il est installé, sinon Windows PowerShell.
 - Chaque shell démarre dans le premier **dossier de code** de l'espace
   (Paramètres de l'espace), sinon dans le dossier du fichier `.nodal`.
+- **Changer de dépôt** : avec plusieurs dossiers de code, la liste
+  déroulante à côté de **Redémarrer** les propose tous. En choisir un tape
+  la commande `cd` adaptée au shell de l'onglet (ce qui était en cours de
+  saisie est effacé) ; **+** et **Redémarrer** ouvrent ensuite le shell dans
+  ce dossier. Elle montre le dernier dossier choisi : un `cd` tapé à la main
+  ne la change pas. Évitez de changer de dossier pendant qu'un programme
+  (assistant, éditeur) tourne dans le terminal : la commande lui serait
+  envoyée comme une saisie.
+- Le menu **Repos ▾** de la barre supérieure ouvre directement un nouveau
+  terminal dans le repo choisi (8 déjà ouverts : celui affiché s'y déplace).
 - La variable `NODAL_WORKSPACE` contient le chemin de l'espace ouvert
   (chemin traduit sous WSL) : un assistant lancé ici (`claude`, `gemini`…) ou
   un script peut s'en servir.

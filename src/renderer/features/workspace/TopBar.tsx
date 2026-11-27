@@ -8,6 +8,7 @@ import {
   type AppAction,
 } from '../commands/actions';
 import { SearchBox } from '../search/SearchBox';
+import { ReposMenu } from './ReposMenu';
 import { ASSISTANT_MENU, WORKSPACE_MENU } from './workspace-actions';
 
 export type ViewMode = 'documents' | 'graph';
@@ -26,6 +27,8 @@ export interface TopBarProps {
   terminalOpen: boolean;
   /** Registre des actions : boutons et menus Espace / Assistant IA. */
   actions: readonly AppAction[];
+  /** Ouvre un terminal dans un repo (dossier de code) de l'espace. */
+  onOpenTerminalIn(folder: string): void;
 }
 
 /** En-tête de l'espace : nom, recherche, choix de la vue et actions. */
@@ -40,6 +43,7 @@ export function TopBar({
   exporting,
   terminalOpen,
   actions,
+  onOpenTerminalIn,
 }: TopBarProps) {
   /** Bouton d'une action du registre (libellé court possible). */
   const button = (id: string, label?: string, extra: object = {}) => {
@@ -91,6 +95,7 @@ export function TopBar({
         </button>
       </div>
       <div className="top-actions">
+        <ReposMenu actions={actions} onOpenTerminalIn={onOpenTerminalIn} />
         <MenuButton
           label="Espace"
           alignRight

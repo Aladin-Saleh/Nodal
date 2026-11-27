@@ -133,6 +133,7 @@ function implementations(service: WorkspaceService) {
         shellId: 'pwsh',
         cwd: 'C:/',
       })),
+      changeDirectory: vi.fn(() => 'C:/'),
       write: vi.fn(),
       resize: vi.fn(),
       close: vi.fn(),

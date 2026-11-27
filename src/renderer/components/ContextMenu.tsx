@@ -16,6 +16,8 @@ export interface ContextMenuItem {
   shortcut?: string;
   /** Trait de séparation avant l'élément (début d'un groupe). */
   separator?: boolean;
+  /** Infobulle (ex. chemin complet). */
+  title?: string;
 }
 
 export interface ContextMenuProps {
@@ -134,6 +136,7 @@ export function ContextMenu({
             role="menuitem"
             tabIndex={-1}
             className={item.danger ? 'danger-text' : undefined}
+            title={item.title}
             disabled={item.disabled}
             onClick={() => {
               onClose();

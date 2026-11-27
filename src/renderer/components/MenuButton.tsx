@@ -15,6 +15,8 @@ export interface MenuButtonProps {
   title?: string;
   /** Flèche « ▾ » après le texte (pas pour un bouton icône « ⋯ »). */
   caret?: boolean;
+  /** Appelé à l'ouverture (ex. relire une liste). */
+  onOpen?(): void;
 }
 
 /**
@@ -31,6 +33,7 @@ export function MenuButton({
   disabled = false,
   title,
   caret = true,
+  onOpen,
 }: MenuButtonProps) {
   const button = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
@@ -40,6 +43,7 @@ export function MenuButton({
   const open = () => {
     const rect = button.current?.getBoundingClientRect();
     if (!rect) return;
+    onOpen?.();
     setPosition({ x: alignRight ? rect.right : rect.left, y: rect.bottom + 4 });
   };
   const close = () => {

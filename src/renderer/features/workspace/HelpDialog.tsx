@@ -104,17 +104,19 @@ export function HelpDialog({
         changent après la dernière mise à jour du nœud ; un clic sur un fichier
         l’affiche en lecture seule. Terminal : Ctrl + J (ou le bouton « &gt;_
         »), dans le dossier de code de l’espace ; « + » ouvre un autre terminal,
-        « ▾ » choisit son type. Les bords des panneaux se font glisser pour les
-        redimensionner (double-clic : taille par défaut). Capture rapide : Ctrl
-        + Maj + Espace (réglable dans les préférences), même quand Nodal n’est
-        pas au premier plan, range un titre et une note dans la « Boîte de
-        réception » ; glissez ensuite chaque capture à sa place. Modèles de
-        documents : choisissez un modèle (Procédure, Composant, Donnée,
-        Décision) en créant un nœud ou un document ; modifiez-les depuis la
-        palette (« Modèles de documents… »). Import Markdown / Obsidian : menu «
-        Espace », aperçu puis import sous une nouvelle racine, après une
-        sauvegarde. Le guide complet est fourni avec l’application
-        (docs/guide-utilisateur.md).
+        « ▾ » choisit son type, la liste à côté de « Redémarrer » passe d’un
+        dossier de code à l’autre ; le menu « Repos » liste les repos de
+        l’espace et ouvre un terminal dans celui choisi. Les bords des panneaux
+        se font glisser pour les redimensionner (double-clic : taille par
+        défaut). Capture rapide : Ctrl + Maj + Espace (réglable dans les
+        préférences), même quand Nodal n’est pas au premier plan, range un titre
+        et une note dans la « Boîte de réception » ; glissez ensuite chaque
+        capture à sa place. Modèles de documents : choisissez un modèle
+        (Procédure, Composant, Donnée, Décision) en créant un nœud ou un
+        document ; modifiez-les depuis la palette (« Modèles de documents… »).
+        Import Markdown / Obsidian : menu « Espace », aperçu puis import sous
+        une nouvelle racine, après une sauvegarde. Le guide complet est fourni
+        avec l’application (docs/guide-utilisateur.md).
       </p>
     </Modal>
   );

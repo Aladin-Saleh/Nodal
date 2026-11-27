@@ -50,7 +50,7 @@ import { HealthDialog } from './HealthDialog';
 import { TopBar, type ViewMode } from './TopBar';
 import { WorkspacePanes } from './WorkspacePanes';
 import { TreePane } from './TreePane';
-import { TerminalPanel } from '../terminal/TerminalPanel';
+import { TerminalPanel, type TerminalRequest } from '../terminal/TerminalPanel';
 import { useGraphViewPersistence } from './useGraphViewPersistence';
 import { canStep } from './nav-history';
 import { useStaleNodes } from './useStaleNodes';
@@ -171,9 +171,22 @@ function WorkspaceView({
   // session du shell continue).
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalMounted, setTerminalMounted] = useState(false);
+  /** Terminal demandé dans un repo (menu « Repos ») ; `id` : nouvelle demande. */
+  const [terminalRequest, setTerminalRequest] =
+    useState<TerminalRequest | null>(null);
   const closeTerminal = useCallback(() => {
     setTerminalOpen(false);
     setTerminalMounted(false);
+    // Rouvert plus tard : dossier par défaut, pas celui de la dernière demande.
+    setTerminalRequest(null);
+  }, []);
+  const openTerminalIn = useCallback((folder: string) => {
+    setTerminalRequest((previous) => ({
+      folder,
+      id: (previous?.id ?? 0) + 1,
+    }));
+    setTerminalMounted(true);
+    setTerminalOpen(true);
   }, []);
   /** Nœud à renommer : son titre reçoit le focus dès que sa fiche est affichée. */
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -785,6 +798,7 @@ function WorkspaceView({
           exporting={exporting}
           terminalOpen={terminalOpen}
           actions={actions}
+          onOpenTerminalIn={openTerminalIn}
         />
 
         <WorkspacePanes
@@ -911,6 +925,7 @@ function WorkspaceView({
               visible={terminalOpen}
               onHide={() => setTerminalOpen(false)}
               onEmpty={closeTerminal}
+              request={terminalRequest}
               shortcut="Ctrl + J"
             />
           </ErrorBoundary>

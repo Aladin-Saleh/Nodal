@@ -21,7 +21,12 @@ import {
   type TerminalSession,
   type TerminalShell,
 } from '../../shared/terminal';
-import { detectShells, parseWslDistros, type DetectedShell } from './shells';
+import {
+  changeDirectoryInput,
+  detectShells,
+  parseWslDistros,
+  type DetectedShell,
+} from './shells';
 
 type NodePty = typeof import('node-pty');
 
@@ -54,14 +59,24 @@ export interface TerminalServiceOptions {
   emit(event: TerminalEvent): void;
   /** Dossier de départ (dossier de code, sinon dossier de l'espace). */
   cwd(): string;
+  /** Dossiers où l'on peut ouvrir un terminal ou s'y déplacer (dossiers de code). */
+  folders(): string[];
   /** Fichier de l'espace ouvert, transmis au shell. */
   workspaceFile(): string | null;
   /** Shells disponibles (tests) ; par défaut, ceux du poste. */
   shells?(): DetectedShell[];
 }
 
+/** Même dossier (casse ignorée sous Windows). */
+const sameFolder = (a: string, b: string) =>
+  process.platform === 'win32'
+    ? path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase()
+    : path.resolve(a) === path.resolve(b);
+
 export class TerminalService {
   private readonly sessions = new Map<string, IPty>();
+  /** Shell de chaque terminal ouvert, pour la commande `cd`. */
+  private readonly shellIds = new Map<string, string>();
   private nextId = 1;
 
   constructor(private readonly options: TerminalServiceOptions) {}
@@ -76,6 +91,8 @@ export class TerminalService {
     cols: number;
     rows: number;
     shell?: string;
+    /** Dossier de code où démarrer ; inconnu → dossier par défaut. */
+    folder?: string;
   }): Promise<TerminalSession> {
     const shells = await this.shells();
     const shell = shells.find(({ id }) => id === input.shell) ?? shells[0]!;
@@ -85,7 +102,9 @@ export class TerminalService {
         `${TERMINAL_MAX_SESSIONS} terminaux au plus : fermez-en un.`,
       );
     }
-    let cwd = this.options.cwd();
+    let cwd =
+      (input.folder !== undefined && this.folder(input.folder)) ||
+      this.options.cwd();
     if (!fs.existsSync(cwd)) cwd = os.homedir();
     const workspaceFile = this.options.workspaceFile();
     const env: Record<string, string> = {};
@@ -112,9 +131,11 @@ export class TerminalService {
     const pty = this.options.pty().spawn(shell.file, shell.args, forkOptions);
     const id = String(this.nextId++);
     this.sessions.set(id, pty);
+    this.shellIds.set(id, shell.id);
     pty.onData((data) => this.options.emit({ kind: 'data', id, data }));
     pty.onExit(({ exitCode }) => {
       this.sessions.delete(id);
+      this.shellIds.delete(id);
       this.options.emit({ kind: 'exit', id, exitCode });
     });
     return { id, shell: shell.name, shellId: shell.id, cwd };
@@ -122,6 +143,24 @@ export class TerminalService {
 
   write(id: string, data: string): void {
     this.session(id).write(data);
+  }
+
+  /**
+   * Place le shell dans un dossier de code de l'espace, en lui tapant la
+   * commande `cd`. Le dossier doit être l'un de `folders()` ; renvoie le
+   * dossier tel qu'il y figure.
+   */
+  changeDirectory(id: string, folder: string): string {
+    const pty = this.session(id);
+    const known = this.folder(folder);
+    if (!known) {
+      throw new NodalError(
+        'NOT_FOUND',
+        "Ce dossier n'est pas un dossier de code de l'espace.",
+      );
+    }
+    pty.write(changeDirectoryInput(this.shellIds.get(id) ?? '', known));
+    return known;
   }
 
   resize(id: string, cols: number, rows: number): void {
@@ -139,6 +178,7 @@ export class TerminalService {
     const pty = this.sessions.get(id);
     if (!pty) return;
     this.sessions.delete(id);
+    this.shellIds.delete(id);
     if (process.platform === 'win32') {
       execFile('taskkill', ['/PID', String(pty.pid), '/T', '/F'], () => {
         // Déjà terminé : rien à faire.
@@ -152,6 +192,7 @@ export class TerminalService {
   closeAll(): void {
     for (const [id, pty] of this.sessions) {
       this.sessions.delete(id);
+      this.shellIds.delete(id);
       if (process.platform === 'win32') {
         try {
           execFileSync('taskkill', ['/PID', String(pty.pid), '/T', '/F'], {
@@ -170,6 +211,16 @@ export class TerminalService {
     return (
       this.options.shells?.() ??
       detectShells(process.platform, process.env, await wslDistros())
+    );
+  }
+
+  /** Dossier de code existant correspondant à `folder`, sinon `null`. */
+  private folder(folder: string): string | null {
+    return (
+      this.options
+        .folders()
+        .find((known) => sameFolder(known, folder) && fs.existsSync(known)) ??
+      null
     );
   }
 

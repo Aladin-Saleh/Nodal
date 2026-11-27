@@ -350,6 +350,14 @@ export const ipcArgsSchemas = {
       rows: z.number().int().min(1).max(TERMINAL_MAX_ROWS),
       // Identifiant d'un shell détecté par le main, jamais un programme.
       shell: z.string().min(1).max(100).optional(),
+      // Dossier de code de l'espace (vérifié par le main), sinon ignoré.
+      folder: z.string().min(1).max(4096).optional(),
+    }),
+  ),
+  'terminal:changeDirectory': one(
+    z.strictObject({
+      id: z.string().min(1).max(20),
+      folder: z.string().min(1).max(4096),
     }),
   ),
   'terminal:write': one(

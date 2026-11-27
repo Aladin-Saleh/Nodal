@@ -82,8 +82,9 @@ describe('le code stocké n’est jamais exécuté (§2, §10.2)', () => {
   /**
    * Seconde exception, voulue par l'utilisateur : le terminal intégré lance
    * un shell détecté sur le poste. Rien de stocké ni venant du renderer n'en
-   * choisit la commande, les arguments ou le dossier : le renderer n'envoie
-   * que des frappes, une taille et l'identifiant d'un shell de la liste.
+   * choisit la commande ou les arguments : le renderer n'envoie que des
+   * frappes, une taille, l'identifiant d'un shell de la liste et un dossier,
+   * retenu seulement s'il est l'un des dossiers de code de l'espace.
    */
   const TERMINAL = path.join('src', 'main', 'terminal', 'terminal-service.ts');
 

@@ -18,6 +18,11 @@ export interface TerminalViewProps {
   tabKey: number;
   /** Shell demandé ; `null` : celui par défaut. */
   shell: string | null;
+  /**
+   * Dossier de code où lancer le shell ; `null` : celui par défaut. Lu au
+   * lancement seulement : en changer ne relance pas le shell.
+   */
+  folder: string | null;
   /** Onglet actif (affiché si le panneau l'est) ; sinon la session continue. */
   active: boolean;
   /** Onglet actif d'un panneau affiché. */
@@ -38,6 +43,7 @@ export interface TerminalViewProps {
 export function TerminalView({
   tabKey,
   shell,
+  folder,
   active,
   visible,
   restarts,
@@ -48,6 +54,10 @@ export function TerminalView({
   const host = useRef<HTMLDivElement>(null);
   const terminal = useRef<{ term: Terminal; fit: FitAddon } | null>(null);
   const sessionId = useRef<string | null>(null);
+  const folderRef = useRef(folder);
+  useEffect(() => {
+    folderRef.current = folder;
+  });
 
   /** Ajuste la taille en caractères au panneau et la transmet au shell. */
   const fit = useCallback(() => {
@@ -142,6 +152,7 @@ export function TerminalView({
         cols: term.cols,
         rows: term.rows,
         ...(shell === null ? {} : { shell }),
+        ...(folderRef.current === null ? {} : { folder: folderRef.current }),
       })
       .then(
         (created) => {

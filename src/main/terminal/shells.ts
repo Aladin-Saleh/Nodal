@@ -118,3 +118,33 @@ export function detectShells(
   }
   return [...byName.values()];
 }
+
+/** Chemin Windows en chemin Git Bash : `C:\a\b` → `/c/a/b`. */
+const msysPath = (folder: string) =>
+  folder
+    .replace(
+      /^([a-z]):[\\/]*/iu,
+      (_match, drive: string) => `/${drive.toLowerCase()}/`,
+    )
+    .replace(/\\/gu, '/');
+
+/** Texte entre apostrophes pour sh : `'` devient `'\''`. */
+const shQuote = (text: string) => `'${text.replace(/'/gu, String.raw`'\''`)}'`;
+
+/**
+ * Saisie qui place le shell dans `folder` : la ligne en cours d'édition est
+ * d'abord effacée (Échap pour PowerShell et cmd, Ctrl+U pour les autres),
+ * puis la commande `cd` propre au shell est envoyée.
+ */
+export function changeDirectoryInput(shellId: string, folder: string): string {
+  if (shellId === 'pwsh' || shellId === 'powershell') {
+    return `\x1bSet-Location -LiteralPath '${folder.replace(/'/gu, "''")}'\r`;
+  }
+  // Un chemin Windows ne contient pas de guillemet.
+  if (shellId === 'cmd') return `\x1bcd /d "${folder}"\r`;
+  if (shellId === 'git-bash') return `\x15cd ${shQuote(msysPath(folder))}\r`;
+  if (shellId.startsWith('wsl:')) {
+    return `\x15cd "$(wslpath ${shQuote(folder)})"\r`;
+  }
+  return `\x15cd ${shQuote(folder)}\r`;
+}

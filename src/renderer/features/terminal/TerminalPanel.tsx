@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   TERMINAL_MAX_SESSIONS,
   type TerminalSession,
   type TerminalShell,
 } from '../../../shared/terminal';
-import { useClient } from '../../app/context';
+import type { CodeRootInfo } from '../../../shared/code-anchors';
+import { useClient, useRunner } from '../../app/context';
 import { MenuButton } from '../../components/MenuButton';
 import { Resizer, usePaneSize } from '../../components/Resizer';
+import { repoName } from '../workspace/ReposMenu';
 import { TerminalView } from './TerminalView';
 
 const DEFAULT_HEIGHT = 280;
@@ -27,6 +29,8 @@ interface TerminalTab {
   key: number;
   /** Shell demandé ; `null` : celui par défaut. */
   shell: string | null;
+  /** Dossier de code choisi ; `null` : celui par défaut (le premier). */
+  folder: string | null;
   session: TerminalSession | null;
   /** Shell terminé de lui-même ou sur une erreur, ou qui n'a pas pu être lancé. */
   ended: boolean;
@@ -34,9 +38,13 @@ interface TerminalTab {
 }
 
 let nextKey = 1;
-const newTab = (shell: string | null): TerminalTab => ({
+const newTab = (
+  shell: string | null,
+  folder: string | null = null,
+): TerminalTab => ({
   key: nextKey++,
   shell,
+  folder,
   session: null,
   ended: false,
   restarts: 0,
@@ -60,12 +68,23 @@ const scrollToTab = (element: HTMLElement | null) =>
     inline: 'nearest',
   });
 
+/** Terminal demandé dans un dossier de code ; `id` change à chaque demande. */
+export interface TerminalRequest {
+  folder: string;
+  id: number;
+}
+
 export interface TerminalPanelProps {
   /** Masqué : les sessions continuent (le panneau reste monté). */
   visible: boolean;
   onHide(): void;
   /** Dernier onglet fermé : le panneau peut être démonté. */
   onEmpty(): void;
+  /**
+   * Nouveau terminal dans ce dossier (menu « Repos ») ; 8 terminaux déjà
+   * ouverts : celui affiché s'y déplace.
+   */
+  request?: TerminalRequest | null;
   /** Raccourci d'ouverture / fermeture, affiché dans l'infobulle. */
   shortcut?: string;
 }
@@ -75,13 +94,21 @@ export function TerminalPanel({
   visible,
   onHide,
   onEmpty,
+  request = null,
   shortcut,
 }: TerminalPanelProps) {
   const client = useClient();
+  const run = useRunner();
   const { size, setSize, save } = usePaneSize('nodal.terminal.height');
   const [shells, setShells] = useState<TerminalShell[]>([]);
+  /** Dossiers de code de l'espace où l'on peut se placer. */
+  const [folders, setFolders] = useState<string[]>([]);
   const [preferred, setPreferred] = useState(savedShell);
-  const [tabs, setTabs] = useState(() => [newTab(preferred)]);
+  // Monté par une demande : le premier terminal s'ouvre dans son dossier.
+  const [tabs, setTabs] = useState(() => [
+    newTab(preferred, request?.folder ?? null),
+  ]);
+  const handled = useRef(request?.id ?? 0);
   const [activeKey, setActiveKey] = useState<number | null>(null);
   const active = tabs.find((tab) => tab.key === activeKey) ?? tabs.at(-1);
   const names = tabNames(tabs);
@@ -99,6 +126,21 @@ export function TerminalPanel({
       cancelled = true;
     };
   }, [client]);
+
+  const loadFolders = useCallback(
+    () =>
+      client.call('code:getRoots').then(
+        (roots: CodeRootInfo[]) =>
+          setFolders(
+            roots.filter((root) => root.exists).map((root) => root.path),
+          ),
+        () => undefined,
+      ),
+    [client],
+  );
+  useEffect(() => {
+    void loadFolders();
+  }, [loadFolders]);
 
   const empty = tabs.length === 0;
   useEffect(() => {
@@ -127,9 +169,10 @@ export function TerminalPanel({
     [close, update],
   );
 
-  const open = (shell: string | null) => {
+  const open = (shell: string | null, folder = active?.folder ?? null) => {
     if (full) return;
-    const tab = newTab(shell);
+    // Par défaut, même dossier que le terminal affiché.
+    const tab = newTab(shell, folder);
     setTabs((list) => [...list, tab]);
     setActiveKey(tab.key);
   };
@@ -142,8 +185,40 @@ export function TerminalPanel({
     }
   };
 
+  /** Déplace le terminal affiché (ou le prochain shell s'il est terminé). */
+  const moveTo = async (folder: string) => {
+    if (!active) return;
+    const { key, session, ended } = active;
+    if (session && !ended) {
+      const moved = await run(() =>
+        client.call('terminal:changeDirectory', { id: session.id, folder }),
+      );
+      if (moved === undefined) return;
+    }
+    update(key, { folder });
+    document
+      .querySelector<HTMLElement>(`#terminal-${key} .xterm-helper-textarea`)
+      ?.focus();
+  };
+
+  // Demande du menu « Repos » : traitée une fois.
+  const openRef = useRef(open);
+  const moveRef = useRef(moveTo);
+  useEffect(() => {
+    openRef.current = open;
+    moveRef.current = moveTo;
+  });
+  useEffect(() => {
+    if (!request || request.id === handled.current) return;
+    handled.current = request.id;
+    if (full) void moveRef.current(request.folder);
+    else openRef.current(preferred, request.folder);
+  }, [request, full, preferred]);
+
   const defaultShell = shells.find(({ id }) => id === preferred) ?? shells[0];
   const current = active?.session ?? null;
+  /** Dernier dossier choisi, sinon dossier de départ du shell. */
+  const where = active?.folder ?? current?.cwd ?? '';
   const menu = [
     ...shells.map((shell) => ({
       label: shell.name,
@@ -257,10 +332,33 @@ export function TerminalPanel({
           ▾
         </MenuButton>
         <span className="toolbar-spacer" />
-        {current && (
-          <span className="muted terminal-cwd" title={current.cwd}>
-            {current.cwd}
-          </span>
+        {active && folders.length > 1 ? (
+          <select
+            className="terminal-folder"
+            aria-label="Dossier du terminal"
+            title={`${where || 'Dossier du terminal'} (se placer dans un autre dossier de code)`}
+            value={where}
+            onFocus={() => void loadFolders()}
+            onChange={(event) => void moveTo(event.target.value)}
+          >
+            {/* Dossier de départ hors des dossiers de code (dossier du .nodal). */}
+            {!folders.includes(where) && (
+              <option value={where} disabled>
+                {where ? repoName(where) : 'Dossier…'}
+              </option>
+            )}
+            {folders.map((folder) => (
+              <option key={folder} value={folder} title={folder}>
+                {repoName(folder)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          current && (
+            <span className="muted terminal-cwd" title={current.cwd}>
+              {current.cwd}
+            </span>
+          )
         )}
         {active && (
           <button
@@ -296,6 +394,7 @@ export function TerminalPanel({
           key={tab.key}
           tabKey={tab.key}
           shell={tab.shell}
+          folder={tab.folder}
           active={tab === active}
           visible={visible && tab === active}
           restarts={tab.restarts}

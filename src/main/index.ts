@@ -138,6 +138,10 @@ function bootstrap(): void {
       );
       return root ?? path.dirname(file);
     },
+    folders: () => {
+      const file = workspaces.getCurrent()?.filePath;
+      return file ? workspaceCodeRoots([file]) : [];
+    },
     workspaceFile: () => workspaces.getCurrent()?.filePath ?? null,
   });
 

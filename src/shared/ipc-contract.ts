@@ -315,8 +315,13 @@ export interface IpcContract {
   'terminal:listShells': { args: []; result: TerminalShell[] };
   /** Terminal intégré : nouveau shell (dossier de code de l'espace). */
   'terminal:create': {
-    args: [{ cols: number; rows: number; shell?: string }];
+    args: [{ cols: number; rows: number; shell?: string; folder?: string }];
     result: TerminalSession;
+  };
+  /** Tape `cd` vers un dossier de code de l'espace ; renvoie ce dossier. */
+  'terminal:changeDirectory': {
+    args: [{ id: string; folder: string }];
+    result: string;
   };
   'terminal:write': { args: [{ id: string; data: string }]; result: null };
   'terminal:resize': {
@@ -519,6 +524,7 @@ export const IPC_CHANNELS = [
   'assistant:connect',
   'terminal:listShells',
   'terminal:create',
+  'terminal:changeDirectory',
   'terminal:write',
   'terminal:resize',
   'terminal:close',

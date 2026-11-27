@@ -190,6 +190,7 @@ function setup(pickedPath: string | null, confirmed = true) {
         shellId: 'pwsh',
         cwd: 'C:/',
       })),
+      changeDirectory: vi.fn(() => 'C:/'),
       write: vi.fn(),
       resize: vi.fn(),
       close: vi.fn(),
