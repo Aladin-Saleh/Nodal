@@ -306,6 +306,13 @@ pièces jointes en BLOB).
   - menu « Repos » et liste des dossiers de code dans le terminal ;
   - liens `nodal://` vers un nœud (« Copier le lien », terminal, Markdown,
     réponses des assistants).
+- **v1.7.3 — Vues du graphe créées par les assistants** :
+  - un assistant (Claude, Gemini…) crée ou complète des vues du graphe par
+    nodal_apply, avec les réglages d'un utilisateur : types, tags, nœuds
+    masqués, branche seule, replis, relations, hiérarchie ;
+  - les vues ne s'ouvrent jamais seules : elles apparaissent dans « Vues ▾ »,
+    se relisent et s'annulent dans l'activité IA ;
+  - `/nodal-scan` crée 3 à 6 vues utiles en fin de scan.
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
