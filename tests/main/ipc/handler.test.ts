@@ -195,6 +195,8 @@ function setup(pickedPath: string | null, confirmed = true) {
       resize: vi.fn(),
       close: vi.fn(),
     },
+    takeNodeLink: vi.fn(() => null),
+    receiveNodeLink: vi.fn(),
   });
   return { impl, workspaces, dialogs, recent, trash };
 }

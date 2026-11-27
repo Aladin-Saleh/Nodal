@@ -7,6 +7,7 @@ import {
   type MouseEvent,
 } from 'react';
 import { parseCsv } from '../../../shared/csv';
+import { parseNodeLink } from '../../../shared/node-links';
 import {
   createMarkdownRenderer,
   isExternalLink,
@@ -38,9 +39,10 @@ export function MarkdownPreview({ source }: { source: string }) {
     const href = anchor.getAttribute('href') ?? '';
     const id = nodeLinkId(href);
     if (id) open(id);
-    // Le main ouvre les liens web dans le navigateur du système.
-    // Un lien cassé n'ouvre rien (signalé par son style et son infobulle).
-    else if (isExternalLink(href)) window.open(href);
+    // Le main ouvre les liens web dans le navigateur du système, et un lien
+    // nodal:// dans Nodal. Un lien cassé n'ouvre rien (signalé par son style
+    // et son infobulle).
+    else if (isExternalLink(href) || parseNodeLink(href)) window.open(href);
   };
 
   return (

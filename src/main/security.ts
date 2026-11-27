@@ -9,6 +9,7 @@ import {
   type Session,
   type WebContents,
 } from 'electron';
+import { NODE_LINK_SCHEME } from '../shared/node-links';
 import { isExternalWebUrl, type AppUrlMatcher } from './app-url';
 
 /**
@@ -34,10 +35,16 @@ export function applySessionSecurity(session: Session): void {
 export function hardenWebContents(
   contents: WebContents,
   isAppUrl: AppUrlMatcher,
+  /** Lien `nodal://` cliqué dans l'application : ouvert sans passer par Windows. */
+  onNodeLink: (url: string) => void = () => undefined,
 ): void {
+  const isNodeLink = (url: string) =>
+    url.toLowerCase().startsWith(`${NODE_LINK_SCHEME}://`);
+
   // Aucune nouvelle fenêtre : les liens web s'ouvrent dans le navigateur.
   contents.setWindowOpenHandler(({ url }) => {
-    if (isExternalWebUrl(url)) {
+    if (isNodeLink(url)) onNodeLink(url);
+    else if (isExternalWebUrl(url)) {
       void shell.openExternal(url);
     }
     return { action: 'deny' };
@@ -49,6 +56,7 @@ export function hardenWebContents(
   ) => {
     if (!isAppUrl(url)) {
       event.preventDefault();
+      if (isNodeLink(url)) onNodeLink(url);
     }
   };
   contents.on('will-navigate', blockForeignNavigation);

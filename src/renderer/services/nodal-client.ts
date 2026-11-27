@@ -19,6 +19,7 @@ export interface NodalClient {
   ): Promise<IpcResultData<C>>;
   onFlushRequest(listener: () => void): () => void;
   onExternalChange(listener: () => void): () => void;
+  onNodeLink(listener: () => void): () => void;
   onPreferencesChanged(
     listener: (preferences: AppPreferences) => void,
   ): () => void;
@@ -36,6 +37,7 @@ export function createNodalClient(api: NodalApi): NodalClient {
     },
     onFlushRequest: (listener) => api.onFlushRequest(listener),
     onExternalChange: (listener) => api.onExternalChange(listener),
+    onNodeLink: (listener) => api.onNodeLink(listener),
     onPreferencesChanged: (listener) => api.onPreferencesChanged(listener),
     onTerminalEvent: (listener) => api.onTerminalEvent(listener),
   };

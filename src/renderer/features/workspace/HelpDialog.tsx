@@ -97,7 +97,9 @@ export function HelpDialog({
         d’un nœud (ou de son chemin) pour l’ouvrir, ou le nom d’une action.
         Documents : tapez [[ dans un document Markdown pour choisir un nœud et
         créer un lien interne (il suit les renommages et crée une relation « est
-        lié à »). « Mentionné dans » liste les documents qui citent le nœud.
+        lié à »). « Mentionné dans » liste les documents qui citent le nœud. «
+        Copier le lien » (menu d’un nœud) donne une adresse nodal:// qui ouvre
+        ce nœud dans Nodal depuis un navigateur, un ticket ou le terminal.
         Fichiers du code : déclarez un dossier de code dans les paramètres de
         l’espace, puis ancrez un nœud à des fichiers (src/mcp/** par exemple)
         depuis son panneau ; Nodal signale « possiblement obsolète » quand ils

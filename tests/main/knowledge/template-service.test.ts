@@ -138,6 +138,8 @@ function implementations(service: WorkspaceService) {
       resize: vi.fn(),
       close: vi.fn(),
     },
+    takeNodeLink: vi.fn(() => null),
+    receiveNodeLink: vi.fn(),
   });
 }
 

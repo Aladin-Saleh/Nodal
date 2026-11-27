@@ -45,6 +45,7 @@ type Handlers = {
 /** Faux backend : un nœud créé apparaît dans `node:list` et `node:get`. */
 function fakeClient(overrides: Handlers = {}) {
   const externalListeners = new Set<() => void>();
+  const linkListeners = new Set<() => void>();
   const preferenceListeners = new Set<(preferences: AppPreferences) => void>();
   const nodes: NodeSummary[] = [];
   const defaults: Handlers = {
@@ -63,6 +64,7 @@ function fakeClient(overrides: Handlers = {}) {
     'preferences:update': (changes) => ({ ...DEFAULT_PREFERENCES, ...changes }),
     'workspace:getCurrent': () => null,
     'workspace:listRecent': () => [],
+    'link:takePending': () => null,
     'workspace:create': () => workspace,
     'workspace:close': () => null,
     'node:list': () => [...nodes],
@@ -134,6 +136,10 @@ function fakeClient(overrides: Handlers = {}) {
       return () => preferenceListeners.delete(listener);
     },
     onTerminalEvent: () => () => undefined,
+    onNodeLink: (listener) => {
+      linkListeners.add(listener);
+      return () => linkListeners.delete(listener);
+    },
     onExternalChange: (listener) => {
       externalListeners.add(listener);
       return () => externalListeners.delete(listener);
@@ -147,10 +153,63 @@ function fakeClient(overrides: Handlers = {}) {
   const emitPreferences = (preferences: AppPreferences) => {
     for (const listener of preferenceListeners) listener(preferences);
   };
-  return { client, call, emitExternalChange, emitPreferences };
+  /** Simule un lien nodal:// reçu par le main. */
+  const emitNodeLink = () => {
+    for (const listener of linkListeners) listener();
+  };
+  return { client, call, emitExternalChange, emitPreferences, emitNodeLink };
 }
 
 describe('App', () => {
+  it('lancé par un lien nodal://, ouvre l’espace du nœud et le sélectionne', async () => {
+    const node: NodeSummary = {
+      id: 'n1',
+      parentId: null,
+      title: 'Kafka',
+      nodeType: 'component',
+      color: null,
+      sortOrder: 0,
+    };
+    let pending: IpcResultData<'link:takePending'> = {
+      kind: 'node',
+      nodeId: 'n1',
+      workspaceId: 'w1',
+      recentId: 'r1',
+    };
+    const { client, call, emitNodeLink } = fakeClient({
+      'link:takePending': () => {
+        const target = pending;
+        pending = null;
+        return target;
+      },
+      'workspace:openRecent': () => workspace,
+      'node:list': () => [node],
+      'graph:get': () => ({
+        nodes: [{ ...node, x: null, y: null, z: null, tagIds: [] }],
+        edges: [],
+        relationTypes: [],
+      }),
+    });
+    render(<App client={client} />);
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('workspace:openRecent', { id: 'r1' }),
+    );
+    const item = await screen.findByRole('treeitem', { name: /Kafka/ });
+    await waitFor(() =>
+      expect(item.getAttribute('aria-selected')).toBe('true'),
+    );
+
+    // Lien reçu plus tard, vers un nœud introuvable : message d'erreur.
+    pending = {
+      kind: 'missing',
+      message: 'Ce nœud n’est dans aucun espace récent.',
+    };
+    emitNodeLink();
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'aucun espace récent',
+    );
+  });
+
   it('affiche l’écran d’accueil et la version dans la barre d’état', async () => {
     const { client } = fakeClient();
     render(<App client={client} />);

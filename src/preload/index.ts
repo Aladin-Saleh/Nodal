@@ -48,6 +48,14 @@ const api: NodalApi = {
     };
   },
 
+  onNodeLink(listener) {
+    const handler = () => listener();
+    ipcRenderer.on(IPC_EVENTS.nodeLink, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_EVENTS.nodeLink, handler);
+    };
+  },
+
   onExternalChange(listener) {
     const handler = () => listener();
     ipcRenderer.on(IPC_EVENTS.externalChange, handler);

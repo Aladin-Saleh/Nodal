@@ -11,6 +11,7 @@ import {
 } from 'electron';
 import started from 'electron-squirrel-startup';
 import { IPC_EVENTS, type AppInfo } from '../shared/ipc-contract';
+import { NODE_LINK_SCHEME } from '../shared/node-links';
 import {
   stepZoom,
   type AppPreferences,
@@ -31,6 +32,7 @@ import {
 } from './mcp-config-update';
 import { installMcpServer, MCP_SERVER_FILE_NAME } from './mcp-server-install';
 import { installNode } from './node-install';
+import { nodeLinkInArgs, resolveNodeLink } from './node-link-handler';
 import { refreshSkills } from './skill-install';
 import { registerIpcHandlers } from './ipc/register';
 import { PreferencesStore, WindowStateStore } from './preferences-store';
@@ -54,6 +56,11 @@ const EXTERNAL_CHANGE_POLL_MS = 1000;
 const e2eUserData = process.env.NODAL_E2E_USER_DATA;
 if (!app.isPackaged && e2eUserData) {
   app.setPath('userData', e2eUserData);
+}
+
+// Désinstallation : les liens nodal:// ne doivent plus viser Nodal.
+if (process.argv.includes('--squirrel-uninstall')) {
+  app.removeAsDefaultProtocolClient(NODE_LINK_SCHEME);
 }
 
 // Installation / désinstallation Squirrel : créer les raccourcis puis quitter.
@@ -218,11 +225,40 @@ function bootstrap(): void {
     }
   };
 
+  // Liens nodal://node/… reçus au lancement, par une seconde instance ou
+  // depuis un document : gardés jusqu'à ce que le renderer les demande
+  // (link:takePending), puis résolus avec l'espace ouvert à ce moment-là.
+  let pendingLink = nodeLinkInArgs(process.argv);
+  const receiveNodeLink = (raw: string) => {
+    pendingLink = raw;
+    if (!mainWindow) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+    mainWindow.webContents.send(IPC_EVENTS.nodeLink);
+  };
+  const takeNodeLink = () => {
+    const raw = pendingLink;
+    pendingLink = null;
+    if (raw === null) return null;
+    return resolveNodeLink(raw, {
+      current: () => {
+        const info = workspaces.getCurrent();
+        return info ? { id: info.id, db: workspaces.getDatabase() } : null;
+      },
+      recent: () => recent.list(),
+    });
+  };
+
   app.on('web-contents-created', (_event, contents) =>
-    hardenWebContents(contents, isAppUrl),
+    hardenWebContents(contents, isAppUrl, receiveNodeLink),
   );
 
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, argv) => {
+    const link = nodeLinkInArgs(argv);
+    if (link) {
+      receiveNodeLink(link);
+      return;
+    }
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
@@ -295,6 +331,9 @@ function bootstrap(): void {
   };
 
   void app.whenReady().then(() => {
+    // Version installée seulement : en développement, l'enregistrement
+    // remplacerait celui de la Nodal installée.
+    if (app.isPackaged) app.setAsDefaultProtocolClient(NODE_LINK_SCHEME);
     applySessionSecurity(session.defaultSession);
     Menu.setApplicationMenu(buildAppMenu(getMainWindow));
     registerIpcHandlers(ipcMain, {
@@ -316,6 +355,8 @@ function bootstrap(): void {
       ),
       quickCapture: capture,
       terminals,
+      takeNodeLink,
+      receiveNodeLink,
     });
     openWindow();
     capture.applyPreferences(preferences.get());

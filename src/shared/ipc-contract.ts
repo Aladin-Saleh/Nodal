@@ -55,6 +55,7 @@ import type {
   CaptureResult,
   CaptureTarget,
 } from './quick-capture';
+import type { NodeLinkTarget } from './node-links';
 import type { DocumentTemplate, TemplateList } from './templates';
 import type {
   MarkdownImportPreview,
@@ -346,6 +347,10 @@ export interface IpcContract {
   };
   /** Choix de fichiers par le main (dans un dossier de code) ; `null` si annulé. */
   'anchor:pickFiles': { args: [IdInput]; result: string[] | null };
+  /** Lien `nodal://` en attente, résolu (espace à ouvrir, nœud) ; `null` sinon. */
+  'link:takePending': { args: []; result: NodeLinkTarget | null };
+  /** Lien `nodal://` cliqué dans l'application (terminal) : traité comme un lien reçu. */
+  'link:open': { args: [{ url: string }]; result: null };
   /** Contenu d'un fichier ancré au nœud (chemin affiché), en lecture seule. */
   'anchor:readFile': {
     args: [{ nodeId: string; path: string }];
@@ -532,6 +537,8 @@ export const IPC_CHANNELS = [
   'anchor:set',
   'anchor:pickFiles',
   'anchor:readFile',
+  'link:takePending',
+  'link:open',
   'anchor:markReviewed',
   'anchor:staleNodes',
   'node:get',
@@ -602,6 +609,8 @@ export const IPC_EVENTS = {
   preferencesChanged: 'preferences:changed',
   /** Sortie ou fin d'un terminal intégré. */
   terminal: 'terminal:event',
+  /** Lien `nodal://` reçu : le renderer le demande par link:takePending. */
+  nodeLink: 'link:received',
 } as const;
 
 /** Enveloppe de réponse : le main ne laisse jamais remonter d'exception brute. */
@@ -619,6 +628,8 @@ export interface NodalApi {
   onFlushRequest(listener: () => void): () => void;
   /** Abonnement aux modifications externes de l'espace ; retourne le désabonnement. */
   onExternalChange(listener: () => void): () => void;
+  /** Abonnement aux liens `nodal://` reçus ; retourne le désabonnement. */
+  onNodeLink(listener: () => void): () => void;
   /** Abonnement aux sorties des terminaux intégrés. */
   onTerminalEvent(listener: (event: TerminalEvent) => void): () => void;
   /** Abonnement aux changements de préférences venus du main. */

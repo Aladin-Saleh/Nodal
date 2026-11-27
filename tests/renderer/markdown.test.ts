@@ -51,6 +51,11 @@ describe('rendu Markdown', () => {
     expect(md.render('[site](https://example.com)')).toContain(
       'href="https://example.com"',
     );
+    // Liens vers un nœud (nodal://node/…) gardés ; autre forme refusée.
+    expect(md.render('[nœud](nodal://node/3f2a9c1b?espace=w1)')).toContain(
+      'href="nodal://node/3f2a9c1b?espace=w1"',
+    );
+    expect(md.render('[x](nodal://open/n1)')).not.toContain('href=');
   });
 
   it('transforme [[Titre]] et [[node:id]] en liens vers le nœud, par identifiant', () => {

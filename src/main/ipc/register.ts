@@ -75,6 +75,7 @@ import {
   recentId,
   type RecentWorkspacesStore,
 } from '../workspace/recent-workspaces';
+import { parseNodeLink, type NodeLinkTarget } from '../../shared/node-links';
 import type { WorkspaceService } from '../workspace/workspace-service';
 import {
   createIpcHandler,
@@ -100,6 +101,10 @@ export interface IpcDependencies {
   quickCapture: QuickCaptureControls;
   /** Terminaux intégrés (node-pty). */
   terminals: TerminalControls;
+  /** Lien `nodal://` reçu et pas encore traité, résolu. */
+  takeNodeLink(): NodeLinkTarget | null;
+  /** Lien `nodal://` cliqué dans l'application. */
+  receiveNodeLink(url: string): void;
 }
 
 export type TerminalControls = Pick<
@@ -311,6 +316,14 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       return files.length > 0 ? codeAnchors.addFiles(id, files) : null;
     },
     'anchor:readFile': ({ nodeId, path }) => codeAnchors.readFile(nodeId, path),
+    'link:takePending': () => deps.takeNodeLink(),
+    'link:open': ({ url }) => {
+      if (!parseNodeLink(url)) {
+        throw new NodalError('VALIDATION_ERROR', 'Lien Nodal invalide.');
+      }
+      deps.receiveNodeLink(url);
+      return null;
+    },
     'anchor:markReviewed': ({ id }) => {
       codeAnchors.markReviewed(id);
       return null;

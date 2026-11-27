@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
+import { NODE_LINK_PATTERN } from '../../../shared/node-links';
 import type { TerminalEvent, TerminalSession } from '../../../shared/terminal';
 import { useClient } from '../../app/context';
 
@@ -59,6 +60,12 @@ export function TerminalView({
     folderRef.current = folder;
   });
 
+  const openNodeLink = useCallback(
+    (url: string) =>
+      void client.call('link:open', { url }).catch(() => undefined),
+    [client],
+  );
+
   /** Ajuste la taille en caractères au panneau et la transmet au shell. */
   const fit = useCallback(() => {
     const current = terminal.current;
@@ -86,6 +93,14 @@ export function TerminalView({
       cursorBlink: true,
       scrollback: 5000,
       theme: THEME,
+      // Liens OSC 8 (assistants) : nodal:// ouvert dans Nodal, le reste par
+      // le navigateur (window.open, filtré par le main).
+      linkHandler: {
+        activate: (_event, text) => {
+          if (text.startsWith('nodal://')) openNodeLink(text);
+          else window.open(text);
+        },
+      },
     });
     const addon = new FitAddon();
     term.loadAddon(addon);
@@ -103,15 +118,32 @@ export function TerminalView({
       // Ctrl+V : collage par le navigateur ; Ctrl+J : masquer le panneau.
       return key !== 'v' && key !== 'j';
     });
+    // Liens nodal:// écrits en clair : cliquables.
+    const links = term.registerLinkProvider({
+      provideLinks(y, callback) {
+        const line =
+          term.buffer.active.getLine(y - 1)?.translateToString(true) ?? '';
+        const found = [...line.matchAll(NODE_LINK_PATTERN)].map((match) => ({
+          range: {
+            start: { x: match.index + 1, y },
+            end: { x: match.index + match[0].length, y },
+          },
+          text: match[0],
+          activate: () => openNodeLink(match[0]),
+        }));
+        callback(found.length > 0 ? found : undefined);
+      },
+    });
     terminal.current = { term, fit: addon };
     const observer = new ResizeObserver(() => fit());
     observer.observe(element);
     return () => {
       observer.disconnect();
+      links.dispose();
       term.dispose();
       terminal.current = null;
     };
-  }, [fit]);
+  }, [fit, openNodeLink]);
 
   // Session du shell : ouverte au montage et à chaque redémarrage.
   useEffect(() => {

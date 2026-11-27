@@ -53,6 +53,7 @@ export const NODE_MENU = [
   'node.toggleHidden',
   'node.solo',
   SEP,
+  'node.copyLink',
   'node.move',
   'node.duplicate',
   'node.merge',
@@ -70,6 +71,8 @@ export interface WorkspaceCommands {
   center(id: string): void;
   /** « Chemin vers… » : choisir le nœud d'arrivée depuis ce nœud. */
   pathFrom(id: string): void;
+  /** Copie le lien nodal:// du nœud dans le presse-papiers. */
+  copyLink(id: string): void;
   /** Ce qui dépend de ce nœud. */
   impact(id: string): void;
   move(node: NodeSummary): void;
@@ -196,6 +199,14 @@ export function nodeActions(
       keywords: 'relation lien plus court trajet',
       enabled: on,
       run: () => commands.pathFrom(id),
+    },
+    {
+      id: 'node.copyLink',
+      label: 'Copier le lien',
+      group: 'Nœud',
+      keywords: 'url adresse partager nodal://',
+      enabled: on,
+      run: () => commands.copyLink(id),
     },
     {
       id: 'node.impact',

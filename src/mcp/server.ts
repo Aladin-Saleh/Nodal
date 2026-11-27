@@ -91,6 +91,8 @@ const READ_INSTRUCTIONS = `Nodal : base de connaissances en nœuds hiérarchique
 
 Réponses en TOON : \`clé: valeur\`, et pour une liste \`nom[N]{champ1,champ2}:\`
 puis une ligne par élément. Identifiants abrégés : réutilisez-les tels quels.
+Nœud cité dans votre réponse : ajoutez son lien en clair, nodal://node/<id>
+(un clic l'ouvre dans Nodal).
 Réponse coupée : maxCharsNeeded, maxRowsNeeded ou maxNodesNeeded donne le budget
 qu'il faudrait (sinon, resserrez la demande).
 createdBy / by = "assistant" : ajouté par une IA, moins sûr tant que

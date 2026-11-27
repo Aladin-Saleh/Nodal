@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NodalError } from '../../../shared/errors';
+import { buildNodeLink } from '../../../shared/node-links';
 import type { NodeType } from '../../../shared/domain';
 import type { WorkspaceInfo } from '../../../shared/ipc-contract';
 import type {
@@ -74,12 +75,22 @@ import {
   type Overlays,
 } from './WorkspaceDialogs';
 
+/** Nœud demandé par un lien nodal:// ; `nonce` change à chaque demande. */
+export interface NodeRequest {
+  nodeId: string;
+  nonce: number;
+}
+
 export interface WorkspaceScreenProps {
   workspace: WorkspaceInfo;
   onWorkspaceChanged(workspace: WorkspaceInfo): void;
   onClose(): void;
   onDeleted(): void;
   onOpenPreferences(): void;
+  /** Nœud à sélectionner et centrer dès qu'il est chargé. */
+  nodeRequest?: NodeRequest | null;
+  /** La demande est traitée (ou le nœud introuvable). */
+  onNodeRequestDone?(): void;
 }
 
 /**
@@ -102,6 +113,8 @@ function WorkspaceView({
   onClose,
   onDeleted,
   onOpenPreferences,
+  nodeRequest = null,
+  onNodeRequestDone,
 }: WorkspaceScreenProps) {
   const client = useClient();
   const run = useRunner();
@@ -542,6 +555,27 @@ function WorkspaceView({
     }));
   };
 
+  // Lien nodal:// : nœud sélectionné et centré dès que le graphe est chargé.
+  const centerRef = useRef(center);
+  useEffect(() => {
+    centerRef.current = center;
+  });
+  const graphLoaded = data.graph !== null;
+  useEffect(() => {
+    if (!nodeRequest || !graphLoaded) return;
+    if (index.byId.has(nodeRequest.nodeId)) {
+      centerRef.current(nodeRequest.nodeId);
+    } else {
+      reportError(
+        new NodalError(
+          'NOT_FOUND',
+          'Le nœud de ce lien n’existe plus dans cet espace.',
+        ),
+      );
+    }
+    onNodeRequestDone?.();
+  }, [nodeRequest, graphLoaded, index, reportError, onNodeRequestDone]);
+
   // --- Actions : palette, menus, raccourcis clavier (§7.1) -----------------
 
   const commands: WorkspaceCommands = {
@@ -553,6 +587,13 @@ function WorkspaceView({
     showAll: () => dispatch({ type: 'showAll' }),
     center,
     pathFrom: setPathPickFrom,
+    copyLink: (id) => {
+      const link = buildNodeLink(id, workspace.id);
+      navigator.clipboard.writeText(link).then(
+        () => reportInfo(`Lien copié : ${link}`),
+        () => reportInfo(`Copie impossible ; lien : ${link}`),
+      );
+    },
     mergeFrom: setMergePickFrom,
     impact: (id) => {
       setPathQuery(null);

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppInfo, WorkspaceInfo } from '../../shared/ipc-contract';
 import type { RecentWorkspace } from '../../shared/model';
+import type { NodeLinkTarget } from '../../shared/node-links';
+import type { NodeRequest } from '../features/workspace/WorkspaceScreen';
 import { WelcomeScreen } from '../features/workspace/WelcomeScreen';
 import { WorkspaceScreen } from '../features/workspace/WorkspaceScreen';
 import { describeError, type NodalClient } from '../services/nodal-client';
@@ -27,6 +29,16 @@ export function App({ client }: AppProps) {
   const [busy, setBusy] = useState(false);
   const [importErrors, setImportErrors] = useState<string[] | null>(null);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  /** Nœud à afficher, demandé par un lien nodal:// (`nonce` : nouvelle demande). */
+  const [nodeRequest, setNodeRequest] = useState<NodeRequest | null>(null);
+  const showLinkedNode = useCallback(
+    (nodeId: string) =>
+      setNodeRequest((previous) => ({
+        nodeId,
+        nonce: (previous?.nonce ?? 0) + 1,
+      })),
+    [],
+  );
 
   // Ctrl+, : préférences, depuis n'importe quel écran.
   useEffect(() => {
@@ -68,21 +80,34 @@ export function App({ client }: AppProps) {
       client.call('workspace:getCurrent'),
       client.call('preferences:get'),
       client.call('workspace:listRecent'),
+      // Nodal lancé par un lien nodal:// : son espace plutôt que le dernier.
+      client.call('link:takePending').catch(() => null),
     ])
-      .then(async ([info, current, preferences, recentList]) => {
+      .then(async ([info, current, preferences, recentList, link]) => {
         if (cancelled) return;
         setAppInfo(info);
         const last = recentList[0];
-        const reopened =
-          !current && preferences.reopenLastWorkspace && last?.exists
-            ? await client
-                .call('workspace:openRecent', { id: last.id })
-                // Échec silencieux : l'accueil reste affiché.
-                .catch(() => null)
-            : null;
+        const toOpen =
+          link?.kind === 'node' && link.recentId
+            ? link.recentId
+            : !current && preferences.reopenLastWorkspace && last?.exists
+              ? last.id
+              : null;
+        const reopened = toOpen
+          ? await client
+              .call('workspace:openRecent', { id: toOpen })
+              // Échec silencieux : l'accueil reste affiché.
+              .catch(() => null)
+          : null;
         if (cancelled) return;
         // Ne pas écraser un espace ouvert par l'utilisateur entre-temps.
-        setWorkspace((previous) => previous ?? current ?? reopened);
+        setWorkspace((previous) =>
+          link?.kind === 'node' && link.recentId && reopened
+            ? reopened
+            : (previous ?? current ?? reopened),
+        );
+        if (link?.kind === 'node') showLinkedNode(link.nodeId);
+        else if (link) setNotice({ kind: 'error', message: link.message });
       })
       .catch((err: unknown) => {
         if (!cancelled) reportError(err);
@@ -91,7 +116,7 @@ export function App({ client }: AppProps) {
     return () => {
       cancelled = true;
     };
-  }, [client, reportError, refreshRecent]);
+  }, [client, reportError, refreshRecent, showLinkedNode]);
 
   // Fermeture de la fenêtre : écrire ce qui est en attente (§6.1).
   useEffect(
@@ -144,6 +169,39 @@ export function App({ client }: AppProps) {
       void refreshRecent();
     });
 
+  /** Lien nodal:// reçu pendant que Nodal est ouvert. */
+  const openLink = async (target: NodeLinkTarget) => {
+    if (target.kind === 'missing') {
+      setNotice({ kind: 'error', message: target.message });
+      return;
+    }
+    const recentId = target.recentId;
+    if (recentId) {
+      await run(async () => {
+        await leaveWorkspace();
+        const opened = await client.call('workspace:openRecent', {
+          id: recentId,
+        });
+        setWorkspace(opened);
+        void refreshRecent();
+      });
+    }
+    showLinkedNode(target.nodeId);
+  };
+  const openLinkRef = useRef(openLink);
+  useEffect(() => {
+    openLinkRef.current = openLink;
+  });
+  useEffect(
+    () =>
+      client.onNodeLink(() => {
+        void client
+          .call('link:takePending')
+          .then((target) => target && openLinkRef.current(target), reportError);
+      }),
+    [client, reportError],
+  );
+
   const handleClose = () =>
     run(async () => {
       await leaveWorkspace();
@@ -175,6 +233,8 @@ export function App({ client }: AppProps) {
               onWorkspaceChanged={setWorkspace}
               onClose={() => void handleClose()}
               onOpenPreferences={() => setPreferencesOpen(true)}
+              nodeRequest={nodeRequest}
+              onNodeRequestDone={() => setNodeRequest(null)}
               onDeleted={() => {
                 setWorkspace(null);
                 void refreshRecent();

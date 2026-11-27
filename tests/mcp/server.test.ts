@@ -479,6 +479,8 @@ describe('serveur MCP', () => {
   it('annonce des outils en lecture seule et des instructions', async () => {
     const client = await connect(file);
     expect(client.init.instructions).toContain('TOON');
+    // Les nœuds cités par l'assistant sont cliquables (identifiant abrégé).
+    expect(client.init.instructions).toContain('nodal://node/<id>');
     const { tools } = (await client.listTools()) as {
       tools: { name: string; annotations?: { readOnlyHint?: boolean } }[];
     };

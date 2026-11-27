@@ -1,6 +1,6 @@
 /**
  * Rendu Markdown sécurisé (§6.3) : le HTML brut est désactivé (échappé),
- * seuls les liens web, mail et internes sont conservés, et la syntaxe
+ * seuls les liens web, mail, internes et nodal://node/… sont conservés, et la syntaxe
  * [[...]] (voir shared/wiki-links) produit un lien vers un autre nœud.
  */
 import MarkdownIt from 'markdown-it';
@@ -9,6 +9,7 @@ import {
   resolveTarget,
   type LinkResolver,
 } from '../../../shared/wiki-links';
+import { parseNodeLink } from '../../../shared/node-links';
 
 /** Préfixe des liens internes vers un nœud (jamais navigable par Chromium). */
 export const NODE_LINK_PREFIX = 'nodal:node/';
@@ -79,6 +80,7 @@ export function createMarkdownRenderer(): MarkdownIt {
   const md = new MarkdownIt({ html: false, linkify: true, typographer: false });
   md.validateLink = (url) =>
     SAFE_LINK.test(url) ||
+    parseNodeLink(url) !== null ||
     url.startsWith(NODE_LINK_PREFIX) ||
     url.startsWith(BROKEN_LINK_PREFIX);
   md.inline.ruler.before('link', 'wikilink', wikiLink);

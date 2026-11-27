@@ -397,6 +397,8 @@ export const ipcArgsSchemas = {
     }),
   ),
   'anchor:markReviewed': one(idInput),
+  'link:takePending': noArgs,
+  'link:open': one(z.strictObject({ url: z.string().min(1).max(400) })),
   'anchor:staleNodes': noArgs,
   'node:get': one(idInput),
   'node:create': one(createNodeInputSchema),

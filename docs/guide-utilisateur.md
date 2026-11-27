@@ -285,6 +285,30 @@ Quatre modèles sont fournis :
   tableau dont la première ligne est l'en-tête. Le séparateur (virgule,
   point-virgule ou tabulation) est détecté automatiquement.
 
+### Liens vers un nœud depuis l'extérieur (`nodal://`)
+
+**Copier le lien** (menu contextuel d'un nœud, menu **⋯** de sa fiche ou
+palette) copie une adresse `nodal://node/<nœud>?espace=<espace>` à coller
+dans un ticket, une PR, un README ou une page web. Un clic dessus ouvre Nodal
+(ou la fenêtre déjà ouverte), ouvre l'espace du nœud s'il le faut et
+sélectionne le nœud dans le graphe.
+
+- L'espace est cherché dans l'espace ouvert puis parmi les **espaces
+  récents** : un lien ne fait jamais ouvrir un fichier que vous n'avez pas
+  déjà ouvert dans Nodal. Sinon, un message l'indique.
+- Un lien ne fait qu'ouvrir et sélectionner : il ne modifie rien.
+- **Réponses des assistants** (Claude Code, Gemini…) : le serveur MCP leur
+  demande d'ajouter un lien `nodal://node/<id>` aux nœuds qu'ils citent.
+  L'identifiant y est abrégé (8 caractères au moins) et l'espace n'est pas
+  précisé : Nodal cherche dans l'espace ouvert puis les récents, et refuse un
+  lien qui désignerait plusieurs nœuds. Pour un lien à partager, préférez
+  **Copier le lien**.
+- Ces liens sont aussi cliquables dans le **terminal intégré** et dans
+  l'aperçu d'un document Markdown (`[texte](nodal://node/…)`).
+- Le protocole est déclaré à Windows par la version installée, à chaque
+  lancement ; un navigateur demande en général confirmation avant d'ouvrir
+  Nodal.
+
 ### Fichiers du code
 
 Un nœud qui documente du code peut être **ancré** aux fichiers qu'il décrit :
