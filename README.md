@@ -301,6 +301,11 @@ pièces jointes en BLOB).
   - `/nodal-scan` documente un repo entier (JSON, Mermaid, CSV, code…), et
     cinq autres skills ;
   - plusieurs repos par espace, ancrages propres à chacun (`api:src/**`).
+- **v1.7.2 — Naviguer entre code, repos et nœuds** :
+  - fichiers ancrés consultables en lecture seule depuis le panneau du nœud ;
+  - menu « Repos » et liste des dossiers de code dans le terminal ;
+  - liens `nodal://` vers un nœud (« Copier le lien », terminal, Markdown,
+    réponses des assistants).
 
 Raccourcis : `Ctrl+P` palette de commandes, `Alt+←` / `Alt+→` nœud
 précédent / suivant, `Ctrl+N` sous-nœud du nœud sélectionné, `Ctrl+Maj+N` nœud racine,
