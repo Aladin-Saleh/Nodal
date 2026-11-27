@@ -219,6 +219,73 @@ describe('CodeAnchorService', () => {
   });
 });
 
+describe('consultation d’un fichier ancré', () => {
+  it('lit un fichier couvert par un motif du nœud, rien d’autre', async () => {
+    const { anchors, dir } = service();
+    const code = path.join(dir, 'code');
+    fs.mkdirSync(code);
+    anchors.addRoot(code);
+    const id = createNode();
+    anchors.setAnchors(id, ['src/**']);
+    fs.mkdirSync(path.join(code, 'src'));
+    fs.writeFileSync(path.join(code, 'src', 'a.ts'), 'export const a = 1;\n');
+    fs.writeFileSync(path.join(code, 'autre.ts'), 'secret');
+    fs.writeFileSync(path.join(dir, 'dehors.ts'), 'secret');
+
+    expect(await anchors.readFile(id, 'src/a.ts')).toEqual({
+      path: 'src/a.ts',
+      size: 20,
+      content: 'export const a = 1;\n',
+      note: null,
+    });
+    for (const file of [
+      'autre.ts',
+      'src/../autre.ts',
+      'src/../../dehors.ts',
+      'src/..\\autre.ts',
+    ]) {
+      await expect(anchors.readFile(id, file)).rejects.toMatchObject({
+        code: 'NOT_FOUND',
+      });
+    }
+    await expect(anchors.readFile(id, 'src/absent.ts')).rejects.toMatchObject({
+      code: 'FILE_NOT_FOUND',
+    });
+  });
+
+  it('n’affiche pas un fichier binaire', async () => {
+    const { anchors, dir } = service();
+    const code = path.join(dir, 'code');
+    fs.mkdirSync(code);
+    anchors.addRoot(code);
+    const id = createNode();
+    anchors.setAnchors(id, ['image.png']);
+    fs.writeFileSync(
+      path.join(code, 'image.png'),
+      Buffer.from([137, 80, 0, 1]),
+    );
+    expect(await anchors.readFile(id, 'image.png')).toMatchObject({
+      content: null,
+      note: expect.stringContaining('binaire'),
+    });
+  });
+
+  it('avec plusieurs dossiers, le chemin commence par le nom du dossier', async () => {
+    const { anchors, dir } = service();
+    for (const name of ['api', 'web']) {
+      fs.mkdirSync(path.join(dir, name, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(dir, name, 'src', 'main.ts'), name);
+      anchors.addRoot(path.join(dir, name));
+    }
+    const id = createNode();
+    anchors.setAnchors(id, ['web:src/**']);
+    expect((await anchors.readFile(id, 'web/src/main.ts')).content).toBe('web');
+    await expect(anchors.readFile(id, 'api/src/main.ts')).rejects.toMatchObject(
+      { code: 'NOT_FOUND' },
+    );
+  });
+});
+
 describe('motifs modifiés hors de Nodal', () => {
   it('ignore un motif invalide écrit directement dans le fichier', () => {
     const { context } = workspace();

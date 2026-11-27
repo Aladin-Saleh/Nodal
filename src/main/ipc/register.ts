@@ -308,6 +308,7 @@ export function createImplementations(deps: IpcDependencies): Implementations {
       const files = await dialogs.pickAnchorFiles(codeAnchors.firstRoot());
       return files.length > 0 ? codeAnchors.addFiles(id, files) : null;
     },
+    'anchor:readFile': ({ nodeId, path }) => codeAnchors.readFile(nodeId, path),
     'anchor:markReviewed': ({ id }) => {
       codeAnchors.markReviewed(id);
       return null;

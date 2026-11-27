@@ -44,7 +44,12 @@ import type {
   LinkSuggestion,
   HealthReport,
 } from './model';
-import type { CodeRootInfo, NodeAnchors, StaleNode } from './code-anchors';
+import type {
+  CodeFileContent,
+  CodeRootInfo,
+  NodeAnchors,
+  StaleNode,
+} from './code-anchors';
 import type {
   CaptureInput,
   CaptureResult,
@@ -336,6 +341,11 @@ export interface IpcContract {
   };
   /** Choix de fichiers par le main (dans un dossier de code) ; `null` si annulé. */
   'anchor:pickFiles': { args: [IdInput]; result: string[] | null };
+  /** Contenu d'un fichier ancré au nœud (chemin affiché), en lecture seule. */
+  'anchor:readFile': {
+    args: [{ nodeId: string; path: string }];
+    result: CodeFileContent;
+  };
   /** « Marquer comme à jour ». */
   'anchor:markReviewed': { args: [IdInput]; result: null };
   /** Nœuds dont un fichier ancré a changé depuis leur dernière mise à jour. */
@@ -515,6 +525,7 @@ export const IPC_CHANNELS = [
   'anchor:listForNode',
   'anchor:set',
   'anchor:pickFiles',
+  'anchor:readFile',
   'anchor:markReviewed',
   'anchor:staleNodes',
   'node:get',

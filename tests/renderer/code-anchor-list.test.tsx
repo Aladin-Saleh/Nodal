@@ -40,6 +40,10 @@ const anchors: NodeAnchors = {
 function setup(state: NodeAnchors = anchors) {
   const call = vi.fn(async (channel: string, input?: unknown) => {
     if (channel === 'anchor:listForNode') return state;
+    if (channel === 'anchor:readFile') {
+      const { path } = input as { path: string };
+      return { path, size: 12, content: 'const a = 1;', note: null };
+    }
     if (channel === 'anchor:set') {
       return (input as { patterns: string[] }).patterns;
     }
@@ -98,6 +102,24 @@ describe('CodeAnchorList', () => {
         patterns: ['src/mcp/**'],
       }),
     );
+  });
+
+  it('ouvre un fichier ancré en lecture seule', async () => {
+    const { call } = setup();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'src/mcp/tools.ts' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: 'src/mcp/tools.ts',
+    });
+    expect(call).toHaveBeenCalledWith('anchor:readFile', {
+      nodeId: 'n1',
+      path: 'src/mcp/tools.ts',
+    });
+    expect(await within(dialog).findByText(/Lecture seule/)).toBeTruthy();
+    expect(dialog.textContent).toContain('const a = 1;');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fermer' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('invite à déclarer un dossier de code', async () => {

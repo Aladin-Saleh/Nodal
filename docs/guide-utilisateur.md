@@ -299,6 +299,12 @@ du nœud.
   dossier (`src/mcp` = `src/mcp/**`). Chaque motif affiche le nombre de
   fichiers trouvés (**Voir les fichiers**) ou **introuvable** ; **×** le
   retire.
+- **Consulter un fichier** : cliquez sur son chemin (dans **Voir les
+  fichiers**, sur un fichier ancré seul, ou dans la liste des fichiers
+  modifiés) pour l'ouvrir en lecture seule, avec la coloration syntaxique et
+  la recherche (Ctrl + F), sans quitter Nodal. Seuls les fichiers couverts par
+  les motifs du nœud s'ouvrent ; au-delà de 2 Mo, ou pour un fichier binaire,
+  le contenu n'est pas affiché.
 - **Possiblement obsolète** : un fichier ancré a changé depuis la dernière
   mise à jour du nœud (le nœud lui-même ou l'un de ses documents). Le
   panneau liste les fichiers concernés et leur date ; l'arborescence marque

@@ -4,6 +4,7 @@ import {
   type NodeAnchors,
 } from '../../../shared/code-anchors';
 import { useClient, useReportError, useRunner } from '../../app/context';
+import { CodeFileDialog } from './CodeFileDialog';
 
 export interface CodeAnchorListProps {
   nodeId: string;
@@ -33,6 +34,8 @@ export function CodeAnchorList({
   const [state, setState] = useState<NodeAnchors | null>(null);
   const [reload, setReload] = useState(0);
   const [pattern, setPattern] = useState('');
+  /** Fichier consulté (chemin affiché). */
+  const [viewing, setViewing] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +87,16 @@ export function CodeAnchorList({
   };
 
   const { stale } = state;
+  const fileButton = (file: string, className?: string) => (
+    <button
+      type="button"
+      className={`link-button code-file-link${className ? ` ${className}` : ''}`}
+      title="Consulter le fichier"
+      onClick={() => setViewing(file)}
+    >
+      <code>{file}</code>
+    </button>
+  );
   return (
     <section className="code-anchors" aria-label="Fichiers du code">
       <h3>Fichiers du code</h3>
@@ -99,7 +112,11 @@ export function CodeAnchorList({
           <ul className="stale-files">
             {stale.files.map((file) => (
               <li key={file.path}>
-                <code>{file.path}</code>{' '}
+                {file.deleted ? (
+                  <code>{file.path}</code>
+                ) : (
+                  fileButton(file.path)
+                )}{' '}
                 <span className="muted">
                   {file.deleted
                     ? 'supprimé'
@@ -131,7 +148,11 @@ export function CodeAnchorList({
           {state.anchors.map((anchor) => (
             <li key={anchor.pattern}>
               <div className="anchor-row">
-                <code className="anchor-pattern">{anchor.pattern}</code>
+                {anchor.count === 1 && anchor.files[0] === anchor.pattern ? (
+                  fileButton(anchor.pattern, 'anchor-pattern')
+                ) : (
+                  <code className="anchor-pattern">{anchor.pattern}</code>
+                )}
                 {anchor.count === 0 ? (
                   <span className="anchor-missing">introuvable</span>
                 ) : (
@@ -158,9 +179,7 @@ export function CodeAnchorList({
                   <summary>Voir les fichiers</summary>
                   <ul>
                     {anchor.files.map((file) => (
-                      <li key={file}>
-                        <code>{file}</code>
-                      </li>
+                      <li key={file}>{fileButton(file)}</li>
                     ))}
                     {anchor.count > anchor.files.length && (
                       <li className="muted">
@@ -200,6 +219,13 @@ export function CodeAnchorList({
         <button type="button" className="secondary" onClick={() => void pick()}>
           Choisir des fichiers…
         </button>
+      )}
+      {viewing && (
+        <CodeFileDialog
+          nodeId={nodeId}
+          path={viewing}
+          onClose={() => setViewing(null)}
+        />
       )}
     </section>
   );

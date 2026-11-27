@@ -7,8 +7,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  CODE_FILE_VIEW_MAX_BYTES,
+  matchesAnchor,
+  patternIn,
   qualifiedPath,
   rootName,
+  type CodeFileContent,
   type CodeRootInfo,
   type NodeAnchors,
   type StaleNode,
@@ -165,6 +169,85 @@ export class CodeAnchorService {
     });
     const current = listAnchors(this.context(), nodeId);
     return this.setAnchors(nodeId, [...current, ...relative]);
+  }
+
+  /**
+   * Contenu d'un fichier ancré au nœud, pour le consulter sans quitter
+   * l'application. `file` est le chemin affiché (préfixé du nom du dossier
+   * s'il y en a plusieurs) ; il doit correspondre à un motif du nœud et rester
+   * dans son dossier de code, liens symboliques compris.
+   */
+  async readFile(nodeId: string, file: string): Promise<CodeFileContent> {
+    const roots = this.getRoots()
+      .filter((root) => root.exists)
+      .map((root) => root.path);
+    const slash = roots.length > 1 ? file.indexOf('/') : -1;
+    const root =
+      roots.length > 1
+        ? roots.find((candidate) =>
+            samePath(rootName(candidate), file.slice(0, slash)),
+          )
+        : roots[0];
+    const relative = file.slice(slash + 1);
+    const segments = relative.split('/');
+    const anchored =
+      root !== undefined &&
+      !relative.includes('\\') &&
+      segments.every(
+        (segment) => segment && segment !== '.' && segment !== '..',
+      ) &&
+      listAnchors(this.context(), nodeId).some((pattern) => {
+        const local = patternIn(pattern, root, PATHS_CASE_INSENSITIVE);
+        return (
+          local !== null &&
+          matchesAnchor(local, relative, PATHS_CASE_INSENSITIVE)
+        );
+      });
+    if (!anchored) {
+      throw new NodalError(
+        'NOT_FOUND',
+        `« ${file} » n'est pas un fichier ancré à ce nœud.`,
+      );
+    }
+
+    let real: string;
+    let realRoot: string;
+    let stats: fs.Stats;
+    try {
+      [real, realRoot] = await Promise.all([
+        fs.promises.realpath(path.join(root, ...segments)),
+        fs.promises.realpath(root),
+      ]);
+      stats = await fs.promises.stat(real);
+    } catch {
+      throw new NodalError('FILE_NOT_FOUND', `« ${file} » est introuvable.`);
+    }
+    if (!stats.isFile() || !real.startsWith(realRoot + path.sep)) {
+      throw new NodalError(
+        'NOT_FOUND',
+        `« ${file} » n'est pas un fichier du dossier de code.`,
+      );
+    }
+    const size = stats.size;
+    if (size > CODE_FILE_VIEW_MAX_BYTES) {
+      return {
+        path: file,
+        size,
+        content: null,
+        note: 'Fichier trop volumineux pour être affiché.',
+      };
+    }
+    const bytes = await fs.promises.readFile(real);
+    // Un octet nul dans le début du fichier : contenu binaire.
+    if (bytes.subarray(0, 8000).includes(0)) {
+      return {
+        path: file,
+        size,
+        content: null,
+        note: 'Fichier binaire : aperçu impossible.',
+      };
+    }
+    return { path: file, size, content: bytes.toString('utf8'), note: null };
   }
 
   markReviewed(nodeId: string): void {

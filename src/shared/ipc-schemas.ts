@@ -379,6 +379,15 @@ export const ipcArgsSchemas = {
     }),
   ),
   'anchor:pickFiles': one(idInput),
+  'anchor:readFile': one(
+    z.strictObject({
+      nodeId: idSchema,
+      path: z
+        .string()
+        .min(1)
+        .max(ANCHOR_PATTERN_MAX_LENGTH * 4),
+    }),
+  ),
   'anchor:markReviewed': one(idInput),
   'anchor:staleNodes': noArgs,
   'node:get': one(idInput),

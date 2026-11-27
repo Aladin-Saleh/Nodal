@@ -296,6 +296,19 @@ export interface AnchorFiles {
   truncated: boolean;
 }
 
+/** Taille maximale d'un fichier du code affiché dans l'application (octets). */
+export const CODE_FILE_VIEW_MAX_BYTES = 2_000_000;
+
+/** Fichier ancré lu pour être consulté (lecture seule). */
+export interface CodeFileContent {
+  /** Chemin tel qu'affiché dans le panneau du nœud. */
+  path: string;
+  size: number;
+  /** `null` : fichier binaire ou trop gros (voir `note`). */
+  content: string | null;
+  note: string | null;
+}
+
 /** Dossier de code déclaré pour l'espace. */
 export interface CodeRootInfo {
   path: string;

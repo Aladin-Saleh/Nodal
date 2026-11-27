@@ -1086,6 +1086,17 @@ kbd.palette-detail {
   padding: 0 4px;
 }
 
+.code-file-link {
+  padding: 0;
+  font-size: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.code-file-link:hover code {
+  text-decoration: underline;
+}
+
 .anchor-files summary {
   font-size: 12px;
   color: var(--muted);
